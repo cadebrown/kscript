@@ -1,0 +1,924 @@
+#!/bin/sh
+# configure.sh - cross-platform configuration for kscript
+#
+# Usage:
+# $ ./configure
+# $ ./configure --help
+#
+# @author: Cade Brown <cade@kscript.org>
+
+
+# -- Configuration (defaults) --
+
+: ${CC:="cc"}
+: ${DEFS:="-D_GNU_SOURCE -D_POSIX_C_SOURCE=200112L"}
+: ${CFLAGS:="-O3"}
+: ${LDFLAGS:=""}
+: ${LIBS:=""}
+
+: ${PREFIX:="/usr/local"}
+: ${DESTDIR:=""}
+
+: ${PLATFORM:="auto"}
+: ${PATHSEP:="auto"}
+: ${EXTSHARED:="auto"}
+: ${EXTSTATIC:="auto"}
+: ${EXTBINARY:="auto"}
+: ${COLORS:="auto"}
+
+
+# --- Optional Packages ---
+
+WITH_gmp="auto"
+WITH_pthreads="auto"
+WITH_readline="auto"
+WITH_fftw="auto"
+
+
+# -- Commandline --
+
+# Original program arguments, saved for reproducibility
+oargs="$0 $@"
+
+while [ $# -gt 0 ]
+do
+case $1 in
+    -h|--help)
+        echo "Usage: ./configure [options]"
+        echo ""
+        echo "  -h,--help               Print this help/usage message and exit"
+        echo "  --prefix V              Sets the prefix that the software should install to (default: /usr/local)"
+        echo "  --dest-dir V            Destination locally to install to (but is not kept for runtime) (default: )"
+        echo ""
+        echo "  --ucd-ascii             If given, then only use ASCII characters in the unicode database"
+        echo ""
+        echo "  --with-gmp V            Whether or not to use GMP for integers (default: auto)"
+        echo "  --with-readline V       Whether or not to use Readline for line-editing (default: auto)"
+        echo "  --with-pthreads V       Whether or not to use pthreads (Posix-threads) for threading interface (default: auto)"
+        echo "  --with-fftw3 V          Whether or not to use FFTW3 for Fast-Fourier-Transforms (default: auto)"
+        echo ""
+        echo "Any questions, comments, or concerns can be sent to:"
+        echo "Cade Brown <cade@kscript.org>"
+        exit 0
+        ;;
+
+    --prefix)
+        PREFIX="$2"
+        shift
+        shift
+        ;;
+
+    --dest-dir)
+        DESTDIR="$2"
+        shift
+        shift
+        ;;
+
+    --ucd-ascii)
+        DEFS="$DEFS -DKSUCD_ASCII_ONLY"
+        shift
+        ;;
+
+    --with-*)
+        # dynamically assign
+        M_WITH="WITH_${1#--with-}"
+        M_WITH_VAL="on"
+        shift
+        case "$1" in
+            "-"*|"")
+                # ignore
+            ;;
+            *)  
+                M_WITH_VAL="$1"
+                shift
+            ;;
+        esac
+        eval "$M_WITH"=\"\$M_WITH_VAL\"
+        ;;
+
+    *)  
+        echo "Unrecognized argument: $1, run '$0 --help'"
+        shift
+        exit 1
+        ;;
+esac
+done
+
+
+# -- System/Platform Information --
+
+uname_="$(uname -s)"
+
+# auto-detect
+if [ "x$PLATFORM" = 'xauto' ]; then
+    case "${Vuname}" in
+        Linux*)     PLATFORM=linux;;
+        Darwin*)    PLATFORM=mac;;
+        CYGWIN*)    PLATFORM=cygwin;;
+        MINGW*)     PLATFORM=mingw;;
+        *)          PLATFORM="unknown-$uname_"
+    esac
+fi
+
+if [ "x$PATHSEP" = 'xauto' ]; then
+    case "${Vuname}" in
+        Linux*)     PATHSEP="/";;
+        Darwin*)    PATHSEP="/";;
+        CYGWIN*)    PATHSEP="/";;
+        MINGW*)     PATHSEP="\\";;
+        *)          PATHSEP="/"
+    esac
+fi
+
+if [ "x$EXTSHARED" = 'xauto' ]; then
+    case "${Vuname}" in
+        Linux*)     EXTSHARED=".so";;
+        Darwin*)    EXTSHARED=".dylib";;
+        CYGWIN*)    EXTSHARED=".dll";;
+        MINGW*)     EXTSHARED=".dll";;
+        *)          EXTSHARED=".so"
+    esac
+fi
+
+if [ "x$EXTSTATIC" = 'xauto' ]; then
+    case "${Vuname}" in
+        Linux*)     EXTSTATIC=".a";;
+        Darwin*)    EXTSTATIC=".a";;
+        CYGWIN*)    EXTSTATIC=".lib";;
+        MINGW*)     EXTSTATIC=".lib";;
+        *)          EXTSTATIC=".a"
+    esac
+fi
+
+if [ "x$EXTBINARY" = 'xauto' ]; then
+    case "${Vuname}" in
+        Linux*)     EXTBINARY="";;
+        Darwin*)    EXTBINARY="";;
+        CYGWIN*)    EXTBINARY=".exe";;
+        MINGW*)     EXTBINARY=".exe";;
+        *)          EXTBINARY=""
+    esac
+fi
+
+if [ "x$COLORS" = 'xauto' ]; then
+    case "$PLATFORM" in
+        web*)   COLORS="off";;
+        *)      COLORS="on"
+    esac
+fi
+
+
+# -- Detect Features --
+
+HAVES=""
+
+# temporary files
+_check_c="./configure-check.c"
+_check_o="./configure-check.o"
+
+echo ""
+echo " -- Headers -- "
+echo ""
+
+# check_header <name> <file> <cflags>
+check_header() {
+    printf "Searching for '%-24s' ... " "$2"
+
+    echo "
+#include <$2>
+
+int main(int argc, char** argv) {
+    return 0;
+}
+" > $_check_c
+
+    $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ $? -eq 0 ]; then
+        printf "Succeeded\n"
+        HAVES="$HAVES$1 "
+        DEFS="$DEFS -DKS_HAVE_$1"
+        CFLAGS="$CFLAGS $3"
+    else
+        printf "Failed\n"
+    fi
+}
+
+check_header STDIO_H "stdio.h" ""
+check_header STDLIB_H "stdlib.h" ""
+check_header STDARG_H "stdarg.h" ""
+check_header STDDEF_H "stddef.h" ""
+check_header STDBOOL_H "stdbool.h" ""
+check_header STDINT_H "stdint.h" ""
+check_header UNISTD_H "unistd.h" ""
+check_header ERRNO_H "errno.h" ""
+check_header STRING_H "string.h" ""
+check_header ASSERT_H "assert.h" ""
+check_header MATH_H "math.h" ""
+check_header TIME_H "time.h" ""
+check_header LIMITS_H "limits.h" ""
+check_header FLOAT_H "float.h" ""
+
+#check_header SYS_TIME_H "sys/time.h" ""
+#check_header DLFCN_H "dlfcn.h" ""
+
+#check_header SYS_SOCKET_H "sys/socket.h" ""
+#check_header ARPA_INET_H "arpa/inet.h" ""
+#check_header NETDB_H "netdb.h" ""
+#check_header NETINET_IN_H "netinet/in.h" ""
+
+#check_header WINSOCK2_H "winsock2.h" ""
+#check_header WS2TCPIP_H "Ws2tcpip.h" ""
+
+
+echo ""
+echo " -- Libraries -- "
+echo ""
+
+# check_clib <name> <--with> <cflags> <ldflags> <prog>
+check_clib() {
+    name="$1"
+    with="$2"
+    cflags="$3"
+    ldflags="$4"
+
+    eval "HAVE_$1"=\"off\"
+
+    if [ "x$2" = 'xoff' ]; then
+        printf "Not searching for '%s'\n" "$1"
+    else
+        printf "Searching for '%s' ...\n" "$1"
+
+        # compile and run it
+        echo "$5" > $_check_c
+        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o && $_check_o
+        if [ $? -eq 0 ]; then
+            echo "  :: Succeeded"
+
+            eval "HAVE_$1"=\"on\"
+            HAVES="$HAVES$1 "
+            DEFS="$DEFS -DKS_HAVE_$1"
+            CFLAGS="$CFLAGS $3"
+            LDFLAGS="$LDFLAGS $4"
+
+        else
+            # failed
+            echo "  :: Failed"
+
+            case "$2" in
+                on)
+                    echo "Failed to find '$1' (and was required via --with)"
+                    exit 1
+                    ;;
+                *) ;; # ignore
+            esac
+        fi
+    fi
+}
+
+
+check_clib m "on" "" "-lm" "
+#include <math.h>
+
+int main(int argc, char** argv) {
+    sin(0.0);
+    return 0;
+}
+"
+
+check_clib dl "on" "" "-ldl" "
+#include <dlfcn.h>
+
+int main(int argc, char** argv) {
+    return 0;
+}
+"
+
+check_clib pthreads "$WITH_pthreads" "" "-pthread" "
+#include <pthread.h>
+
+int main(int argc, char** argv) {
+    pthread_t thd;
+    return 0;
+}
+"
+
+check_clib gmp "$WITH_gmp" "" "-lgmp" "
+#include <gmp.h>
+
+int main(int argc, char** argv) {
+    mpz_t x;
+    mpz_init(x);
+    mpz_clear(x);
+    return 0;
+}
+"
+
+check_clib readline "$WITH_readline" "" "-lreadline" "
+#ifdef KS_HAVE_STDIO_H
+ #include <stdio.h>
+#endif
+#include <readline/readline.h>
+
+int main(int argc, char** argv) {
+    rl_bind_key('\\t', rl_insert);
+    return 0;
+}
+"
+
+echo ""
+echo " -- Structures -- "
+echo ""
+
+# check_struct <name> <struct>
+check_struct() {
+    printf "Searching for '%-24s' ... " "$2"
+    echo "
+#ifdef KS_HAVE_STDIO_H
+ #include <stdio.h>
+#endif
+#ifdef KS_HAVE_STDLIB_H
+ #include <stdlib.h>
+#endif
+
+#ifdef KS_HAVE_MATH_H
+ #include <math.h>
+#endif
+#ifdef KS_HAVE_TIME_H
+ #include <time.h>
+#endif
+#ifdef KS_HAVE_SYS_TIME_H
+ #include <sys/time.h>
+#endif
+
+int main(int argc, char** argv) {
+    $2 v;
+    return 0;
+}
+" > $_check_c
+
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ $? -eq 0 ]; then
+        printf "Succeeded\n"
+        HAVES="$HAVES$1 "
+        DEFS="$DEFS -DKS_HAVE_$1"
+    else
+        printf "Failed\n"
+    fi
+}
+
+check_struct "long_double" "long double"
+check_struct "float128" "_Float128"
+#check_struct "struct_tm" "struct tm"
+#check_struct "time_t" "time_t"
+#check_struct "clock_t" "clock_t"
+#check_struct "struct_timespec" "struct timespec"
+
+echo ""
+echo " -- Members -- "
+echo ""
+
+# check_member <name> <struct> <member>
+check_member() {
+    printf "Searching for '%-24s' ... " "($2).$3"
+    echo "
+#ifdef KS_HAVE_STDIO_H
+ #include <stdio.h>
+#endif
+#ifdef KS_HAVE_STDLIB_H
+ #include <stdlib.h>
+#endif
+
+#ifdef KS_HAVE_MATH_H
+ #include <math.h>
+#endif
+#ifdef KS_HAVE_TIME_H
+ #include <time.h>
+#endif
+#ifdef KS_HAVE_SYS_TIME_H
+ #include <sys/time.h>
+#endif
+
+int main(int argc, char** argv) {
+    void* _rv;
+    $2 v;
+    _rv = &(v.$3);
+    return 0;
+}
+" > $_check_c
+
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ $? -eq 0 ]; then
+        printf "Succeeded\n"
+        HAVES="$HAVES$1 "
+        DEFS="$DEFS -DKS_HAVE_$1"
+    else
+        printf "Failed\n"
+    fi
+}
+
+#check_member "struct_tm_tm_gmtoff" "struct tm" "tm_gmtoff"
+#check_member "struct_tm_tm_zone" "struct tm" "tm_zone"
+
+echo ""
+echo " -- Functions -- "
+echo ""
+
+# check_func <name> <rtype> <params>
+check_func() {
+    printf "Searching for '%-24s' ... " "$2 $1($3)"
+    assignto="$2 ="
+    case "$2" in
+        v)
+            assignto="(void)"
+            ;;
+        *) ;; # ignore
+    esac
+    echo "
+#ifdef KS_HAVE_STDIO_H
+ #include <stdio.h>
+#endif
+#ifdef KS_HAVE_STDLIB_H
+ #include <stdlib.h>
+#endif
+
+#ifdef KS_HAVE_MATH_H
+ #include <math.h>
+#endif
+#ifdef KS_HAVE_TIME_H
+ #include <time.h>
+#endif
+#ifdef KS_HAVE_SYS_TIME_H
+ #include <sys/time.h>
+#endif
+
+int main(int argc, char** argv) {
+    int i = 0;
+    #ifdef KS_HAVE_time_t
+    time_t t;
+    #endif
+    #ifdef KS_HAVE_clock_t
+    clock_t c;
+    #endif
+    float f = 0.0f;
+    double d = 0.0;
+    char* s = \".\", *fmt = \"%.4f\";
+    
+    #ifdef KS_HAVE_long_double
+     long double ld;
+    #endif
+    #ifdef KS_HAVE_float128
+     __float128 f128;
+    #endif
+    #ifdef KS_HAVE_struct_tm
+     struct tm tm;
+     struct tm* tm_p;
+    #endif
+    #ifdef KS_HAVE_struct_timespec
+     struct timespec ts;
+     struct timespec* ts_p;
+    #endif
+    $assignto $1($3);
+    return 0;
+}
+" > $_check_c
+
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ $? -eq 0 ]; then
+        printf "Succeeded\n"
+        HAVES="$HAVES$1 "
+        DEFS="$DEFS -DKS_HAVE_$1"
+    else
+        printf "Failed\n"
+    fi
+}
+
+# check_func_math1 <name>
+# checks for different precisions
+check_func_math1() {
+    _name="$1"
+    check_func "${_name}f" "f" "f"
+    check_func "${_name}" "d" "d"
+    check_func "${_name}l" "ld" "ld"
+    check_func "${_name}f128" "f128" "f128"
+}
+
+# check_func_math2 <name>
+# checks for different precisions
+check_func_math2() {
+    _name="$1"
+    check_func "${_name}f" "f" "f,f"
+    check_func "${_name}" "d" "d,d"
+    check_func "${_name}l" "ld" "ld,ld"
+    check_func "${_name}f128" "f128" "f128,f128"
+}
+
+#check_func_math1 fabs
+#check_func_math1 ceil
+#check_func_math1 floor
+#check_func_math1 trunc
+#check_func_math1 sqrt
+#check_func_math1 cbrt
+#check_func_math1 exp
+#check_func_math1 log
+#check_func_math1 log1p
+#check_func_math1 erf
+#check_func_math1 erfc
+#check_func_math1 tgamma
+#check_func_math1 sin
+#check_func_math1 cos
+#check_func_math1 tan
+#check_func_math1 asin
+#check_func_math1 acos
+#check_func_math1 atan
+#check_func_math1 sinh
+#check_func_math1 cosh
+#check_func_math1 tanh
+#check_func_math1 asinh
+#check_func_math1 acosh
+#check_func_math1 atanh
+#check_func_math2 copysign
+#check_func_math2 fmin
+#check_func_math2 fmax
+#check_func_math2 fmod
+#check_func_math2 nextafter
+#check_func_math2 hypot
+#check_func_math2 atan2
+#check_func_math2 pow
+#check_func strfromf "i" "s,i,fmt,f"
+#check_func strfromd "i" "s,i,fmt,d"
+#check_func strfroml "i" "s,i,fmt,ld"
+#check_func strfromf128 "i" "s,i,fmt,f128"
+#check_func strtof "f" "s,&s"
+#check_func strtod "d" "s,&s"
+#check_func strtold "ld" "s,&s"
+#check_func strtof128 "f128" "s,&s"
+#check_func modff "f" "f,&f"
+#check_func modf "d" "d,&d"
+#check_func modfl "ld" "ld,&ld"
+#check_func modff128 "f128" "f128,&f128"
+#check_func sincosf "v" "f,&f,&f"
+#check_func sincos "v" "d,&d,&d"
+#check_func sincosl "v" "ld,&ld,&ld"
+#check_func sincosf128 "v" "f128,&f128,&f128"
+
+check_func "realpath" "s" "s,NULL"
+
+check_func "clock" "c" ""
+check_func "time" "t" "&t"
+check_func "gmtime" "tm_p" "&t"
+check_func "localtime" "tm_p" "&t"
+check_func "strftime" "i" "s,i,s,&tm"
+check_func "strptime" "s" "s,s,&tm"
+check_func "clock_gettime" "i" "i,&ts"
+check_func "clock_settime" "i" "i,&ts"
+check_func "clock_nanosleep" "i" "i,i,&ts,&ts"
+
+
+# check_name <name> <cname>
+check_name() {
+
+    printf "Searching for '%-24s' ... " "$2"
+    echo "
+#ifdef KS_HAVE_STDIO_H
+ #include <stdio.h>
+#endif
+#ifdef KS_HAVE_STDLIB_H
+ #include <stdlib.h>
+#endif
+
+#ifdef KS_HAVE_MATH_H
+ #include <math.h>
+#endif
+#ifdef KS_HAVE_TIME_H
+ #include <time.h>
+#endif
+#ifdef KS_HAVE_SYS_TIME_H
+ #include <sys/time.h>
+#endif
+
+#ifdef _WIN32
+
+/* Windows Headers */
+#ifdef KS_HAVE_WINSOCK2_H
+ #include <winsock2.h>
+#endif
+#ifdef KS_HAVE_WS2TCPIP_H
+ #include <Ws2tcpip.h>
+#endif
+
+#else
+
+/* Unix (assume they're all unix-like) */
+#ifdef KS_HAVE_SYS_SOCKET_H
+ #include <sys/socket.h>
+#endif
+#ifdef KS_HAVE_ARPA_INET_H
+ #include <arpa/inet.h>
+#endif
+#ifdef KS_HAVE_NETDB_H
+ #include <netdb.h>
+#endif
+#ifdef KS_HAVE_NETINET_IN_H
+ #include <netinet/in.h>
+#endif
+
+#endif
+
+int main(int argc, char** argv) {
+    $2;
+    return 0;
+}
+" > $_check_c
+
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ $? -eq 0 ]; then
+        printf "Succeeded\n"
+        HAVES="$HAVES$1 "
+        DEFS="$DEFS -DKS_HAVE_$1"
+    else
+        printf "Failed\n"
+    fi
+}
+
+
+check_name AF_BLUETOOTH "AF_BLUETOOTH"
+check_name SOCK_PACKET "SOCK_PACKET"
+check_name CLOCK_REALTIME "CLOCK_REALTIME"
+check_name CLOCK_REALTIME_COARSE "CLOCK_REALTIME_COARSE"
+check_name CLOCK_MONOTONIC "CLOCK_MONOTONIC"
+check_name CLOCK_MONOTONIC_COARSE "CLOCK_MONOTONIC_COARSE"
+
+# --
+
+echo ""
+
+cleanup() {
+    echo "$@" | sed -e 's/  */ /g'
+}
+
+DEFS=`cleanup $DEFS`
+CFLAGS=`cleanup $CFLAGS`
+LDFLAGS=`cleanup $LDFLAGS`
+
+echo "Configuration:"
+
+echo ""
+echo "DEFS               = $DEFS"
+echo "CFLAGS             = $CFLAGS"
+echo "LDFLAGS            = $LDFLAGS"
+echo "PLATFORM_NAME      = $PLATFORM_NAME"
+echo "PATHSEP            = $PATHSEP"
+echo "EXTSHARED          = $EXTSHARED"
+echo "EXTSTATIC          = $EXTSTATIC"
+echo "EXTBINARY          = $EXTBINARY"
+echo "COLORS             = $COLORS"
+echo ""
+echo "HAVES              = $HAVES"
+echo ""
+
+if [ "x$PATHSEP" = 'x\' ]; then
+    PATHSEP='\\\\'
+fi
+
+rm -f $_check_c $_check_o
+
+
+# ---------------------------------------
+# File Generation
+
+T=include/ks/config.h
+echo "Generating '$T' ..."
+
+echo "/* ks/config.h (GENERATED) - generated configuration file for kscript" > $T
+echo " * " >> $T
+echo " * -- DO NOT EDIT THIS FILE (rerun './configure' to regenerate it) --" >> $T
+echo " * " >> $T
+echo " * Configuration Script Invoked:" >> $T
+echo " * \$ $oargs" >> $T
+echo " * " >> $T
+echo " * Variables:" >> $T
+echo " * CC              = $CC" >> $T
+echo " * CFLAGS          = $CFLAGS" >> $T
+echo " * LDFLAGS         = $LDFLAGS" >> $T
+echo " * PREFIX          = $PREFIX" >> $T
+echo " * DESTDIR         = $DESTDIR" >> $T
+echo " * COLORS          = $COLORS" >> $T
+echo " * " >> $T
+echo " * " >> $T
+echo " */" >> $T
+echo "" >> $T
+echo "#pragma once" >> $T
+echo "#ifndef KS_CONFIG_H__" >> $T
+echo "#define KS_CONFIG_H__" >> $T
+echo "" >> $T
+echo "#ifdef __cplusplus" >> $T
+echo "extern \"C\" {" >> $T
+echo "#endif" >> $T
+echo "" >> $T
+echo "" >> $T
+echo "/* Build Definitions / Constants */" >> $T
+echo "" >> $T
+echo "#define KS_BUILD_PREFIX \"$PREFIX\"" >> $T
+echo "#define KS_BUILD_CONFIGURE_SCRIPT \"$oargs\"" >> $T
+echo "" >> $T
+echo "" >> $T
+echo "/* Platform Defines */" >> $T
+echo "" >> $T
+echo "#define KS_PLATFORM_NAME \"$PLATFORM_NAME\"" >> $T
+echo "#define KS_PLATFORM_PATHSEP \"$PATHSEP\"" >> $T
+echo "#define KS_PLATFORM_EXTSHARED \"$EXTSHARED\"" >> $T
+echo "#define KS_PLATFORM_EXTSTATIC \"$EXTSTATIC\"" >> $T
+echo "#define KS_PLATFORM_EXTBINARY \"$EXTBINARY\"" >> $T
+echo "" >> $T
+echo "" >> $T
+echo "/* Compile-Time Environment Detection */" >> $T
+echo "" >> $T
+echo "#if defined(__EMSCRIPTEN__) || defined(EMSCRIPTEN)" >> $T
+echo "#define KS_IN_EMSCRIPTEN" >> $T
+echo "#define KS_EMSCRIPTEN_API EMSCRIPTEN_KEEPALIVE" >> $T
+echo "#else" >> $T
+echo "#define KS_EMSCRIPTEN_API" >> $T
+echo "#endif" >> $T
+echo "" >> $T
+echo "/* This is needed for declaring symbols to be exported (only required for windows) */" >> $T
+echo "#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)" >> $T
+echo "#define KS_API_IMPORT __declspec(dllimport)" >> $T
+echo "#define KS_API_EXPORT __declspec(dllexport)" >> $T
+echo "#else" >> $T
+echo "#define KS_API_IMPORT " >> $T
+echo "#define KS_API_EXPORT " >> $T
+echo "#endif" >> $T
+echo "" >> $T
+echo "#ifdef KS_BUILD" >> $T
+echo "#define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API" >> $T
+echo "#else" >> $T
+echo "#define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API" >> $T
+echo "#endif" >> $T
+echo "" >> $T
+if [ "x$COLORS" = 'xon' ]; then
+    echo "#define KS_USE_COLORS" >> $T
+else
+    echo "//#define KS_USE_COLORS" >> $T
+fi
+echo "" >> $T
+echo "/* Optional Dependencies */" >> $T
+echo "" >> $T
+
+
+if [ "x$HAVE_pthreads" = 'xon' ]; then
+    echo "#define KS_HAVE_PTHREADS" >> $T
+fi
+if [ "x$HAVE_gmp" = 'xon' ]; then
+    echo "#define KS_HAVE_GMP" >> $T
+fi
+if [ "x$HAVE_readline" = 'xon' ]; then
+    echo "#define KS_HAVE_READLINE" >> $T
+fi
+if [ "x$HAVE_fftw3" = 'xon' ]; then
+    echo "#define KS_HAVE_FFTW3" >> $T
+fi
+
+echo "" >> $T
+echo "" >> $T
+echo "/* API Import/Export Symbols (mainly for Windows builds) */" >> $T
+echo "" >> $T
+echo "" >> $T
+echo "" >> $T
+echo "/* Features & Defines */" >> $T
+echo "" >> $T
+
+# output defs
+for def in $DEFS; do
+    v=`echo $def | sed -e 's/\-D//' | sed -e 's/\=/ /'`
+    n=`echo $v | cut -d' ' -f1`
+    echo "#define $v" >> $T
+done
+
+echo "" >> $T
+echo "" >> $T
+echo "#ifdef __cplusplus" >> $T
+echo "} /* extern \"C\" */" >> $T
+echo "#endif" >> $T
+echo "" >> $T
+echo "#endif /* KS_CONFIG_H__ */" >> $T
+echo "" >> $T
+
+
+echo "  Done!"
+
+# ---------------------------------------
+
+T=makefile
+echo "Generating '$T' ..."
+
+echo "# Makefile (GENERATED) - auto-generated build script" > $T
+echo "" >> $T
+echo "# -*- Paths -*-" >> $T
+echo "PREFIX           ?= $PREFIX" >> $T
+echo "DESTDIR          ?= $DESTDIR" >> $T
+echo "TODIR            := \$(DESTDIR)\$(PREFIX)" >> $T
+echo "" >> $T
+echo "# -*- Variables -*-" >> $T
+echo "MAKEINFO       ?= makeinfo" >> $T
+echo "CC               := $CC" >> $T
+echo "CFLAGS           := $CFLAGS" >> $T
+echo "LDFLAGS          := $LDFLAGS" >> $T
+echo "" >> $T
+echo "# -*- Functions -*-" >> $T
+echo "rwildcard = \$(foreach d,\$(wildcard \$(1:=/*)),\$(call rwildcard,\$d,\$2) \$(filter \$(subst *,%,\$2),\$d))" >> $T
+echo "" >> $T
+echo "# -*- Sources, Files, Targets -*-" >> $T
+echo "libks_C          := \$(wildcard src/*.c) \$(wildcard src/types/*.c) \$(wildcard src/ext/*.c) \$(wildcard src/ucd/*.c) \$(call rwildcard,src/modules,*.c)" >> $T
+echo "libks_O          := \$(patsubst %.c,.tmp/%.o,\$(libks_C))" >> $T
+echo "libks_SHARED     := lib/libks$EXTSHARED" >> $T
+echo "libks_STATIC     := lib/libks$EXTSTATIC" >> $T
+echo "" >> $T
+echo "ks_C             := \$(wildcard src/ks/*.c)" >> $T
+echo "ks_O             := \$(patsubst %.c,.tmp/%.o,\$(ks_C))" >> $T
+echo "ks_BIN           := bin/ks$EXTBINARY" >> $T
+echo "" >> $T
+echo "main_H           := include/ks/ks.h include/ks/config.h" >> $T
+echo "all_H            := \$(wildcard include/ks/*.h include/ks/*.hh)" >> $T
+echo "" >> $T
+echo "tests_KS         := \$(wildcard tests/*.ks)" >> $T
+echo "" >> $T
+echo "docs_TEXI        := docs/texi/kscript.texi" >> $T
+echo "docs_PDF         := docs/texi/kscript.pdf" >> $T
+echo "docs_HTML_MONO   := docs/texi/kscript.html" >> $T
+echo "docs_HTML_DIR    := docs/texi/kscript" >> $T
+echo "" >> $T
+echo "" >> $T
+echo "# -*- Rules -*-" >> $T
+echo "" >> $T
+echo ".PHONY: default lib bin check install uninstall clean FORCE" >> $T
+echo "" >> $T
+echo "# meta-rules that just are shorthands for other ones" >> $T
+echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN)" >> $T
+echo "lib: \$(libks_SHARED) \$(libks_STATIC)" >> $T
+echo "bin: \$(ks_BIN)" >> $T
+echo "clean: FORCE" >> $T
+echo "	rm -rf \$(wildcard .tmp debian/usr build lib bin *.deb)" >> $T
+echo "	rm -rf \$(wildcard *.aux *.cp *.cps *.index *.log *.toc *.info)" >> $T
+echo "" >> $T
+echo "install: \$(ks_BIN) \$(libks_SHARED) \$(all_H) FORCE" >> $T
+echo "	install -d \$(TODIR)/bin" >> $T
+echo "	install -d \$(TODIR)/include/ks" >> $T
+#echo "	install -d \$(TODIR)/lib/ksm" >> $T
+#echo "	install -d \$(TODIR)/share/man/man1" >> $T
+#echo "	install -d \$(TODIR)/share/doc/kscript" >> $T
+echo "	install -m 755 \$(ks_BIN) \$(TODIR)/bin" >> $T
+echo "	install -m 644 \$(libks_SHARED) \$(TODIR)/lib" >> $T
+echo "	install -m 644 \$(all_H) \$(TODIR)/include/ks" >> $T
+echo "" >> $T
+echo "uninstall: FORCE" >> $T
+echo "	rm -f \$(TODIR)/bin/\$(notdir \$(ks_BIN))" >> $T
+echo "	rm -f \$(TODIR)/lib/\$(notdir \$(libks_SHARED))" >> $T
+echo "	rm -f \$(patsubst %,\$(TODIR)/include/ks/%,\$(notdir \$(all_H)))" >> $T
+echo "" >> $T
+echo "check: \$(tests_KS) FORCE" >> $T
+echo "	@echo Success" >> $T
+echo "" >> $T
+echo "# special-rules that are needed for some things to handle correctly" >> $T
+echo "FORCE:" >> $T
+echo "tests/%.ks: \$(ks_BIN) FORCE" >> $T
+echo "	@\$(ks_BIN) \$@ && echo PASSED: \$@ || (echo FAILED: \$@ && exit 1)" >> $T
+echo "" >> $T
+echo "# compile-rules for compiling source to object files" >> $T
+echo ".tmp/src/%.o: src/%.c \$(main_H)" >> $T
+echo "	@mkdir -p \$(dir \$@)" >> $T
+echo "	\$(CC) \$(CFLAGS) -I./include -DKS_BUILD -fPIC -c -o \$@ \$<" >> $T
+echo "" >> $T
+echo "\$(libks_SHARED): \$(libks_O)" >> $T
+echo "	@mkdir -p \$(dir \$@)" >> $T
+echo "	\$(CC) -L./lib \\" >> $T
+echo "		\$(libks_O) \\" >> $T
+echo "		\$(LDFLAGS) -fPIC -shared -o \$@" >> $T
+echo "" >> $T
+echo "\$(libks_STATIC): \$(libks_O)" >> $T
+echo "	@mkdir -p \$(dir \$@)" >> $T
+echo "	\$(AR) cr \$@ \$^" >> $T
+echo "" >> $T
+echo "\$(ks_BIN): \$(ks_O) \$(libks_SHARED)" >> $T
+echo "	@mkdir -p \$(dir \$@)" >> $T
+echo "	\$(CC) -L./lib -Wl,-rpath,'\$\$ORIGIN' -Wl,-rpath,'\$\$ORIGIN/../lib' \\" >> $T
+echo "		\$(ks_O) \\" >> $T
+echo "		-lks \$(LDFLAGS) -o \$@" >> $T
+echo "" >> $T
+echo "\$(docs_PDF): \$(docs_TEXI)" >> $T
+echo "	\$(MAKEINFO) --pdf $^ -o \$@" >> $T
+echo "" >> $T
+echo "\$(docs_HTML_MONO): \$(docs_TEXI)" >> $T
+echo "	\$(MAKEINFO) --no-split --html --css-include=docs/texi/kscript.css $^ -o \$@" >> $T
+echo "" >> $T
+echo "\$(docs_HTML_DIR): \$(docs_TEXI)" >> $T
+echo "	\$(MAKEINFO) --html --css-include=docs/texi/kscript.css $^ -o \$@" >> $T
+echo "" >> $T
+echo "" >> $T
+
+echo "  Done!"
+
+echo ""
+echo "Configuration was successful, run 'make' to build kscript"
+echo ""
+echo "Any problems, questions, concerns, etc. can be sent to:"
+echo "Cade Brown <brown.cade@gmail.com>"
