@@ -523,7 +523,7 @@ typedef struct ks_logger_s {
 
 }* ks_logger;
 
-/* 'Exception' - 
+/* 'Exception' - object typically thrown up the call stack
  *
  * 
  */
@@ -533,13 +533,15 @@ typedef struct ks_Exception_s {
     /* Inner exception, which is the exception being handled while this one was thrown 
      * or, NULL if it was the first exception thrown currently
      */
-    struct ks_Exception_s** inner;
+    struct ks_Exception_s* inner;
 
     /* Arguments to the exception's constructor */
     ks_list args;
 
-}* ks_Exception;
+    /* String describing the error */
+    ks_str what;
 
+}* ks_Exception;
 
 struct ks_type_s {
     KSO_BASE
@@ -622,10 +624,72 @@ struct ks_type_s {
 
 };
 
+
+
+/* Instantiate macro for all special attributes 
+ * Macro should take 'name'
+ */
+#define _KS_DO_SPEC(m) \
+    m(__base) \
+    m(__name) \
+    m(__fullname) \
+    m(__new) \
+    m(__init) \
+    m(__free) \
+    m(__call) \
+    m(__iter) \
+    m(__next) \
+    m(__number) \
+    m(__integral) \
+    m(__bool) \
+    m(__int) \
+    m(__float) \
+    m(__complex) \
+    m(__str) \
+    m(__bytes) \
+    m(__set) \
+    m(__dict) \
+    m(__getattr) \
+    m(__setattr) \
+    m(__delattr) \
+    m(__getelem) \
+    m(__setelem) \
+    m(__delelem) \
+    m(__hash) \
+    m(__abs) \
+    m(__len) \
+    m(__repr) \
+    m(__add) \
+    m(__sub) \
+    m(__mul) \
+    m(__div) \
+    m(__floordiv) \
+    m(__mod) \
+    m(__pow) \
+    m(__eq) \
+    m(__ne) \
+    m(__lt) \
+    m(__le) \
+    m(__gt) \
+    m(__ge) \
+    m(__lsh) \
+    m(__rsh) \
+    m(__binior) \
+    m(__binxor) \
+    m(__binand) \
+    m(__pos) \
+    m(__neg) \
+    m(__sqig) \
+
+
+
 /* 'module' - represents an imported or builtin module
  */
 typedef ks_names ks_module;
 
+
+/* C-style function wrapper */
+typedef kso (*ks_cfunc)(int _nargs, kso* _args);
 
 /* 'func' - callable function type
  *
@@ -638,7 +702,7 @@ typedef struct ks_func_s {
 
     union {
         /* if it is a C-function */
-        kso (*cfunc)(int _nargs, kso* _args);
+        ks_cfunc cfunc;
 
         /* if it is a bytecode-function */
         struct {

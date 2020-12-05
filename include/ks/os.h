@@ -42,6 +42,33 @@ typedef struct ksos_path_s {
 
 }* ksos_path;
 
+
+/* 'os.frame' - Single execution frame
+ *
+ */
+typedef struct ksos_frame_s* ksos_frame;
+
+struct ksos_frame_s {
+    KSO_BASE
+
+    /* Function being executed */
+    kso func;
+
+    /* Arguments being executed */
+    ks_tuple args;
+
+    /* Dictionary of local variables (if NULL, there were none) */
+    ks_dict locals;
+
+    /* If non-NULL */
+    ksos_frame closure;
+
+
+    /* Program counter, current position */
+    unsigned char* pc;
+
+};
+
 /* 'os.thread' - Single thread of execution
  *
  */
@@ -61,6 +88,10 @@ typedef struct ksos_thread_s {
 
     /* Arguments the thread was started */
     ks_tuple args;
+
+
+    /* List of objects currently inside 'repr()' */
+    ks_list inrepr;
 
 
     /* Stack frames for functions currently executing */
@@ -141,6 +172,17 @@ KS_API bool ksos_thread_start(ksos_thread self);
 KS_API bool ksos_thread_join(ksos_thread self);
 
 
+/* Create new 'os.frame'
+ */
+KS_API ksos_frame ksos_frame_new(kso func);
+
+/* Create a copy of an 'os.frame', with shared reference to 'of''s variables,
+ *   but now is distinct (usefull for when exceptions are thrown)
+ */
+KS_API ksos_frame ksos_frame_copy(ksos_frame of);
+
+
+
 /* Create a new mutex (which will be unlocked)
  */
 KS_API ksos_mutex ksos_mutex_new(ks_type tp);
@@ -159,6 +201,7 @@ KS_API bool ksos_mutex_trylock(ksos_mutex self);
 KS_API extern ks_type
     ksost_path,
     ksost_thread,
+    ksost_frame,
     ksost_mutex
 ;
 

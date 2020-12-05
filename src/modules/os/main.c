@@ -22,6 +22,7 @@ ks_module _ksi_os() {
     _ksi_os_mutex();
     _ksi_os_thread();
     _ksi_os_path();
+    _ksi_os_frame();
 
     ksos_stdin = ksio_FileIO_wrap(ksiot_FileIO, stdin, false, true, false, false, _ksv_stdin);
     ksos_stdout = ksio_FileIO_wrap(ksiot_FileIO, stdout, false, false, true, false, _ksv_stdout);

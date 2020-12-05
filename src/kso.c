@@ -3,16 +3,39 @@
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
+#include <ks/compiler.h>
 
 
 bool kso_issub(ks_type a, ks_type b) {
-    if (a->type == b->type) return true;
-    if (a->type == kst_object) return false;
+    if (a == b) return true;
+    if (a == kst_object) return false;
     return kso_issub(a->i__base, b);
 }
 bool kso_isinst(kso a, ks_type b) {
     return kso_issub(a->type, b);
 }
+
+
+bool kso_inrepr(kso obj) {
+    ksos_thread th = ksos_thread_get();
+
+    int i = th->inrepr->len;
+    while (--i >= 0) {
+        if (obj == th->inrepr->elems[i]) return true;
+    }
+
+    /* Not found */
+    ks_list_push(th->inrepr, obj);
+    return false;
+}
+
+
+void kso_outrepr() {
+    ksos_thread th = ksos_thread_get();
+
+    ks_list_popu(th->inrepr);
+}
+
 
 bool kso_truthy(kso ob, bool* out) {
     if (kso_issub(ob->type, kst_int)) {
@@ -43,6 +66,44 @@ bool kso_truthy(kso ob, bool* out) {
     *out = true;
     return true;
 }
+
+bool kso_eq(kso L, kso R, bool* out) {
+    if (kso_isinst(L, kst_str) && kso_isinst(R, kst_str)) {
+        *out = L == R || ks_str_eq((ks_str)L, (ks_str)R);
+        return true;
+    } else if (kso_isinst(L, kst_int) && kso_isinst(R, kst_int) && L->type->i__eq == kst_int->i__eq) {
+        if (L == R) {
+            *out = true;
+        } else {
+            *out = mpz_cmp(((ks_int)L)->val, ((ks_int)R)->val) == 0;
+        }
+        return true;
+    }
+
+    assert(false);
+    return false;
+}
+
+bool kso_hash(kso ob, ks_hash_t* val) {
+    if (kso_isinst(ob, kst_int) && ob->type->i__hash == kst_int->i__hash) {
+        ks_int v = (ks_int)ob;
+
+        /* Calculate hash */
+        *val = mpz_fdiv_ui(v->val, KS_HASH_P);
+        return true;
+    } else if (kso_isinst(ob, kst_str) && ob->type->i__hash == kst_str->i__hash) {
+        *val = ((ks_str)ob)->v_hash;
+        return true;
+    }
+
+    KS_THROW(kst_TypeError, "'%T' object is not hashable", ob);
+    return false;
+}
+
+bool kso_len(kso ob, ks_ssize_t* val) {
+    assert(false);
+}
+
 
 bool kso_get_ci(kso ob, ks_cint* val) {
     if (kso_issub(ob->type, kst_int)) {
@@ -186,21 +247,54 @@ ks_int kso_int(kso ob) {
     return NULL;
 }
 
+kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
+    ksos_thread th = ksos_thread_get();
+    assert(th != NULL);
+    ksos_frame frame = ksos_frame_new(func);
+    assert(frame);
+
+    ks_list_push(th->frames, (kso)frame);
+
+    kso res = NULL;
+    if (kso_issub(func->type, kst_func) && func->type->i__call == kst_func->i__call) {
+        ks_func f = (ks_func)func;
+        if (f->is_cfunc) {
+            res = f->cfunc(nargs, args);
+        } else {
+
+        }
+    } else if (kso_issub(func->type, kst_code) && func->type->i__call == kst_code->i__call) {
+        res = _ks_exec((ks_code)func);
+    }
+
+    ks_list_popu(th->frames);
+    return res;
+}
+
 
 kso kso_call(kso func, int nargs, kso* args) {
-
-    return NULL;
+    return kso_call_ext(func, nargs, args, NULL);
 }
 
 void* kso_throw(ks_Exception exc) {
+    ksos_thread th = ksos_thread_get();
+    assert(th != NULL);
+
+    /* Set the inner exception to the current exception thrown (which may be NULL) */
+    exc->inner = th->exc;
+
+    /* Set the thread's exception */
+    th->exc = exc;
+
     return NULL;
 }
 
 void* kso_throw_c(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, ...) {
     ks_Exception exc = ks_Exception_new_c(tp, cfile, cfunc, cline, fmt);
-
     return kso_throw(exc);
 }
+
+
 ks_Exception kso_catch() {
     ksos_thread th = ksos_thread_get();
 
@@ -223,7 +317,8 @@ bool kso_catch_ignore() {
 bool kso_catch_ignore_print() {
     ks_Exception exc = kso_catch();
     if (exc) {
-        printf("HAD EXC\n");
+        ksio_add((ksio_AnyIO)ksos_stderr, "%T: %S\n", exc, exc->what);
+
         KS_DECREF(exc);
         return true;
     }
@@ -231,20 +326,17 @@ bool kso_catch_ignore_print() {
 }
 
 void kso_exit_if_err() {
-    ks_Exception exc = kso_catch();
-    if (exc) {
-        printf("HAD EXC\n");
-        KS_DECREF(exc);
-        assert(false);
+    if (kso_catch_ignore_print()) {
+        exit(1);
     }
 }
-
 
 
 
 /** Internal methods **/
 
 kso _kso_new(ks_type tp) {
+    assert(tp->ob_sz > 0);
     kso res = ks_zmalloc(1, tp->ob_sz);
     memset(res, 0, tp->ob_sz);
 
@@ -270,6 +362,8 @@ void _kso_del(kso ob) {
     
         KS_DECREF(*attr);
     }
+
+    ks_free(ob);
 }
 
 kso _ks_newref(kso ob) {
@@ -294,8 +388,15 @@ void _kso_free(kso obj, const char* file, const char* func, int line) {
              */
             res = ((ks_func)i__free)->cfunc(1, &obj);
         } else {
+
             res = kso_call(i__free, 1, &obj);
         }
+
+        if (!res) {
+            fprintf(stderr, "Failed to free object @ %p\n", obj);
+            kso_exit_if_err();
+        }
+
     } else {
         KSO_DEL(obj);
     }

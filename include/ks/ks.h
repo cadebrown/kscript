@@ -147,6 +147,7 @@
 /** Constants **/
 
 #include <ks/const.h>
+#include <ks/colors.h>
 
 
 /** Type Definitions **/
@@ -194,6 +195,10 @@ KS_API extern ksos_thread
     ksg_main_thread
 ;
 
+KS_API extern ks_dict
+    ksg_globals
+;
+
 KS_API extern ks_type
 
     kst_object,
@@ -214,6 +219,7 @@ KS_API extern ks_type
     kst_tuple,
     kst_set,
     kst_dict,
+    kst_names,
     kst_graph,
     kst_map,
     kst_filter,
@@ -223,6 +229,9 @@ KS_API extern ks_type
     kst_func,
     kst_partial,
     kst_module,
+
+    kst_ast,
+    kst_code,
 
     kst_Exception,
       kst_OutOfIterException,
@@ -264,6 +273,8 @@ KS_API extern ks_func
     ksf_eval,
     ksf_exec,
 
+    ksf_print,
+
     ksf_hash,
     ksf_abs,
     ksf_len,
@@ -293,8 +304,22 @@ struct ks_ikv {
 
 };
 
+struct ks_eikv {
+
+    /* NUL-terminated C-style string */
+    const char* key;
+
+    /* Value */
+    ks_cint val;
+
+};
+
 /* Creates a list of NULL-terminated initializers for a (key, val) entry */
 #define KS_IKV(...) ((struct ks_ikv[]){ __VA_ARGS__ { NULL, NULL} })
+
+/* Creates a list of NULL-terminated initializers for an enumeration creation */
+#define KS_EIKV(...) ((struct ks_eikv[]){ __VA_ARGS__ { NULL, 0} })
+
 
 /* Creates a new object (via standard allocation methods), and initializes the basic fields (type, refs, and attribute dict if available)
  */
@@ -352,7 +377,6 @@ struct ks_ikv {
 #define KS_THROW_METH(_obj, _meth) KS_THROW(kst_TypeError, "'%T' object had no '%s' method", _obj, _meth)
 
 
-
 /* Throw an 'OutOfIter' Exception
  */
 #define KS_OUTOFITER() do { \
@@ -394,6 +418,13 @@ KS_API bool ks_init();
 /* Return true if kscript has been fully initialized
  */
 KS_API bool ks_has_init();
+
+/* Print a formatted string to 'stdout'
+ * See 'ks_fmt()' for format strings
+ */
+KS_API bool ks_printf(const char* fmt, ...);
+
+
 
 /*** Memory ***/
 
@@ -454,6 +485,17 @@ KS_API ks_ssize_t ks_nextsize(ks_ssize_t cur_sz, ks_ssize_t req);
 
 
 /** Util **/
+
+/* Returns the next prime > x
+ * 
+ */
+KS_API ks_ssize_t ks_nextprime(ks_ssize_t x);
+
+/* hash a sequence of bytes
+ */
+KS_API ks_hash_t ks_hash_bytes(ks_ssize_t len_b, const unsigned char* data);
+
+
 
 /* Converts a string (in 'str', size of 'sz', or if '-1', then it is NUL-terminated) to a 'ks_cfloat' 
  *   (in full precision), and stores in 'out'
@@ -525,9 +567,6 @@ KS_API ks_module ks_import(ks_str name);
 
 /*** Conversions ***/
 
-/* Convert 'obj' to a boolean
- */
-KS_API bool kso_truthy(kso obj, bool* out);
 
 /* Attempt to convert 'ob' to the specified C-style value
  */
@@ -535,6 +574,14 @@ KS_API bool kso_get_ci(kso ob, ks_cint* val);
 KS_API bool kso_get_ui(kso ob, ks_uint* val);
 KS_API bool kso_get_cf(kso ob, ks_cfloat* val);
 KS_API bool kso_get_cc(kso ob, ks_ccomplex* val);
+
+/* Convert 'obj' to a boolean
+ */
+KS_API bool kso_truthy(kso obj, bool* out);
+
+/* Calculate whether 'L == R'
+ */
+KS_API bool kso_eq(kso L, kso R, bool* out);
 
 /* Get the hash of an object
  */
@@ -580,11 +627,27 @@ KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
  */
 KS_API ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, struct ks_ikv* ikv);
 
+/* Sets an attribute of the type
+ */
+KS_API bool ks_type_set(ks_type self, ks_str attr, kso val);
+KS_API bool ks_type_set_c(ks_type self, const char* attr, kso val);
 
 /* Create a new integer
  */
 KS_API ks_int ks_int_new(ks_cint val);
 KS_API ks_int ks_int_newu(ks_uint val);
+
+/* Create a new integer from a string representation
+ * Give 'base==0' for default/detected
+ */
+KS_API ks_int ks_int_news(ks_ssize_t sz, const char* src, int base);
+
+/* Create from 'mpz_t', with 'zn' absorbing the reference
+ */
+KS_API ks_int ks_int_newz(mpz_t val);
+KS_API ks_int ks_int_newzn(mpz_t val);
+
+
 
 /* Create a new float
  */
@@ -596,10 +659,26 @@ KS_API ks_complex ks_complex_new(ks_ccomplex val);
 KS_API ks_complex ks_complex_newre(ks_cfloat re, ks_cfloat im);
 
 
+/* Create an enumeration type
+ */
+KS_API ks_type ks_enum_make(const char* name, struct ks_eikv* eikv);
+
+/* Retrieve an element of an enumeration
+ * (by value, and name)
+ */
+KS_API ks_enum ks_enum_get(ks_type tp, ks_cint val);
+
 /* Create a new string from UTF-8 data (also works for ASCII)
  * If 'len_b < 0', it is assumed to be NUL-terminated, otherwise that is the length in bytes
  */
 KS_API ks_str ks_str_new(ks_ssize_t len_b, const char* data);
+
+/* Create a new string from 'data', which should be the *root* of 'ks_malloc()'/friends,
+ *   and the newly created string object will own that data (i.e. you should NOT free it)
+ * 'data' should have space for a NUL-terminator after it
+ */
+KS_API ks_str ks_str_newn(ks_ssize_t len_b, char* data);
+
 
 /* Compare 'L' and 'R', returning either a comparator, or a boolean telling equality
  */
@@ -616,6 +695,10 @@ KS_API ks_ucp ks_str_ord(ks_str chr);
  */
 KS_API ks_bytes ks_bytes_new(ks_ssize_t len_b, const char* data);
 
+/* Creates a new 'bytes' object, which should absorb the data pointer passed to it
+ *   (which should be allocated via 'ks_malloc()'). Do not free the data after calling this
+ */
+KS_API ks_bytes ks_bytes_newn(ks_ssize_t len_b, char* data);
 
 /* Calculate the length, in characters, of a UTF-8 string
  */
@@ -630,15 +713,90 @@ KS_API ks_list ks_list_new(ks_ssize_t len_b, kso* elems);
  */
 KS_API bool ks_list_push(ks_list self, kso ob);
 
+/* Push value and absorb reference
+ */
+KS_API bool ks_list_pushu(ks_list self, kso ob);
+
+/* Pop an item and return a reference
+ */
+KS_API kso ks_list_pop(ks_list self);
+
+/* Pop an unused reference from a list
+ */
+KS_API void ks_list_popu(ks_list self);
 
 /* Create a new 'tuple' from elements
  */
 KS_API ks_tuple ks_tuple_new(ks_ssize_t len_b, kso* elems);
 
 
+/* Create a new C-style function wrapper
+ */
+KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
+
+
 /* Create a new dictionary
+ * newn absorbs references to the values given
  */
 KS_API ks_dict ks_dict_new(struct ks_ikv* ikv);
+KS_API ks_dict ks_dict_newn(struct ks_ikv* ikv);
+
+/* Empty the dictionary
+ */
+KS_API void ks_dict_clear(ks_dict self);
+
+/* Merge entries from 'from' into 'self'
+ */
+KS_API bool ks_dict_merge(ks_dict self, ks_dict from);
+
+/* Merge in entries that are in 'ikv'
+ */
+KS_API bool ks_dict_merge_ikv(ks_dict self, struct ks_ikv* ikv);
+
+
+/* Look up a key in the dictionary, returning a new reference to it
+ * '_ih' ignores lookup errors
+ */
+KS_API kso ks_dict_get(ks_dict self, kso key);
+KS_API kso ks_dict_get_h(ks_dict self, kso key, ks_hash_t hash);
+KS_API kso ks_dict_get_ih(ks_dict self, kso key, ks_hash_t hash);
+KS_API kso ks_dict_get_c(ks_dict self, const char* ckey);
+
+/* Set a given key to a given value, or update the existing value for that key if it already existed
+ *
+ */
+KS_API bool ks_dict_set(ks_dict self, kso key, kso val);
+KS_API bool ks_dict_set_h(ks_dict self, kso key, ks_hash_t hash, kso val);
+KS_API bool ks_dict_set_c(ks_dict self, const char* ckey, kso val);
+
+/* Set value, and absorb reference from 'val' */
+KS_API bool ks_dict_set_c1(ks_dict self, const char* ckey, kso val);
+
+/* Calculate whether a dictionary contains a given key
+ *
+ */
+KS_API bool ks_dict_has(ks_dict self, kso key, bool* exists);
+KS_API bool ks_dict_has_h(ks_dict self, kso key, ks_hash_t hash, bool* exists);
+KS_API bool ks_dict_has_c(ks_dict self, const char* key, bool* exists);
+
+/* Delete a given key (and its value) from 'self', if it existed.
+ *
+ * Attempting to delete a key that didn't exist will not throw an error; if you want to, you should
+ *   pass in a reference to a boolean to '*existed' and check that
+ * 
+ */
+KS_API bool ks_dict_del(ks_dict self, kso key, bool* existed);
+KS_API bool ks_dict_del_h(ks_dict self, kso key, ks_hash_t hash, bool* existed);
+
+
+/* Return a list of the entries array
+ */
+KS_API ks_list ks_dict_calc_ents(ks_dict self);
+
+/* Return a list of the buckets array
+ */
+KS_API ks_list ks_dict_calc_buckets(ks_dict self);
+
 
 
 /* Create an exception (for returning exceptions from C code)
@@ -657,6 +815,11 @@ KS_API ks_module ks_module_new(const char* name, const char* source, const char*
 /* Call a a function or function-like object
  */
 KS_API kso kso_call(kso func, int nargs, kso* args);
+
+/* Extended calling method which allows you to pass in locals to forward to it
+ */
+KS_API kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals);
+
 
 /* Create an iterable from 'ob'
  */
@@ -686,6 +849,16 @@ KS_API bool kso_setelems(kso ob, int n_keys, kso* keys);
 KS_API bool kso_delelems(kso ob, int n_keys, kso* keys);
 
 
+/* Declare that the object is in the 'repr' stack, and return whether it was already in the repr stack,
+ *   otherwise, add it
+ */
+KS_API bool kso_inrepr(kso obj);
+
+/* Stop repr'ing 
+ */
+KS_API void kso_outrepr();
+
+
 /*** Internal Functions ***/
 
 /* Allocation/deallocation */
@@ -693,6 +866,7 @@ KS_API kso _kso_new(ks_type tp);
 KS_API void _kso_del(kso ob);
 KS_API kso _ks_newref(kso ob);
 KS_API void _kso_free(kso obj, const char* file, const char* func, int line);
+
 
 /* Parse 'args' into a list of addresses, with optionally specifying types. Use the 'KS_ARGS' macros
  */

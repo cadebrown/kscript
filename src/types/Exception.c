@@ -15,12 +15,20 @@ ks_Exception ks_Exception_new_c(ks_type tp, const char* cfile, const char* cfunc
     va_end(ap);
     return res;
 }
+
 ks_Exception ks_Exception_new_cv(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, va_list ap) {
+    assert(kso_issub(tp, kst_Exception));
     ks_str what = ks_fmtv(fmt, ap);
     if (!what) return NULL;
 
+    ks_Exception self = KSO_NEW(ks_Exception, tp);
 
-    return (ks_Exception)what;
+    self->args = ks_list_new(0, NULL);
+    self->what = what;
+
+    self->inner = NULL;
+
+    return self;
 }
 
 /* Export */
@@ -61,13 +69,13 @@ DO_SUBTYPES(DECL)
 
 
 void _ksi_Exception() {
-    _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, NULL);
+    _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, KS_IKV(
+        
+    ));
     
-
     #define INIT(_name, _par) \
         _ksinit(kst_##_name, kst_##_par, #_name, sizeof(struct ks_Exception_s), -1, NULL);
          
     DO_SUBTYPES(INIT)
-
 
 }

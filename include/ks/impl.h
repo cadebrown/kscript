@@ -18,7 +18,6 @@
 /** Initializer functions (internal use only) **/
 
 void _ksi_object();
-void _ksi_type();
 
 void _ksi_none();
 void _ksi_undefined();
@@ -45,6 +44,12 @@ void _ksi_names();
 void _ksi_graph();
 
 void _ksi_module();
+void _ksi_type();
+void _ksi_func();
+void _ksi_partial();
+
+void _ksi_ast();
+void _ksi_code();
 
 void _ksi_map();
 void _ksi_filter();
@@ -61,6 +66,7 @@ ks_module _ksi_os();
 void _ksi_os_mutex();
 void _ksi_os_thread();
 void _ksi_os_path();
+void _ksi_os_frame();
 
 ks_module _ksi_getarg();
 ks_module _ksi_m();
@@ -72,6 +78,8 @@ ks_module _ksi_re();
 ks_module _ksi_gram();
 ks_module _ksi_ucd();
 
+void _ksi_parser();
+void _ksi_funcs();
 
 /* Initialize type */
 void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, struct ks_ikv* ikv);
@@ -85,8 +93,19 @@ KS_API extern ks_str
     _ksv_stdin,
     _ksv_stdout,
     _ksv_stderr,
+
+#define _KSACT(_attr) _ksva##_attr,
+_KS_DO_SPEC(_KSACT)
+#undef _KSACT
+
     _ksv_r
 ;
+
+
+KS_API extern ks_tuple
+    _ksv_emptytuple
+;
+
 
 /* Integer constants */
 KS_API extern ks_int

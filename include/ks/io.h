@@ -75,6 +75,9 @@ typedef struct ksio_StringIO_s {
     /* Allocated array of data */
     char* data;
 
+    /* Internal maximum length it is allocated to hold */
+    ks_ssize_t max_len_b;
+
 }* ksio_StringIO;
 
 /* 'io.BytesIO' - in-memory stream of raw bytes
@@ -93,7 +96,10 @@ typedef struct ksio_BytesIO_s {
     int len_b;
 
     /* Allocated array of data */
-    char* data;
+    unsigned char* data;
+
+    /* Internal maximum length it is allocated to hold */
+    ks_ssize_t max_len_b;
 
 }* ksio_BytesIO;
 
@@ -137,6 +143,15 @@ KS_API ks_str ksio_StringIO_get(ksio_StringIO self);
 KS_API ks_str ksio_StringIO_getf(ksio_StringIO self);
 
 
+/* Create a new BytesIO
+ */
+KS_API ksio_BytesIO ksio_BytesIO_new();
+
+/* Get the current contents
+ * 'getf' also calls 'KS_DECREF(self)'
+ */
+KS_API ks_bytes ksio_BytesIO_get(ksio_BytesIO self);
+KS_API ks_bytes ksio_BytesIO_getf(ksio_BytesIO self);
 
 /* Adds a C-style printf-like formatting to the output
  *

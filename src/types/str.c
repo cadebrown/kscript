@@ -12,16 +12,26 @@
 ks_str ks_str_new(ks_ssize_t len_b, const char* data) {
     if (len_b < 0) len_b = strlen(data);
 
+    char* new_data= ks_zmalloc(1, len_b + 1);
+    memcpy(new_data, data, len_b);
+    new_data[len_b] = '\0';
+
+    return ks_str_newn(len_b, new_data);
+}
+
+
+ks_str ks_str_newn(ks_ssize_t len_b, char* data) {
+    if (len_b < 0) len_b = strlen(data);
+
     ks_str self = KSO_NEW(ks_str, kst_str);
     
     self->len_b = len_b;
     self->len_c = 0;
 
-    self->data = ks_zmalloc(1, len_b + 1);
-    memcpy(self->data, data, self->len_b);
-    self->data[self->len_b] = '\0';
+    self->data = data;
+    self->data[len_b] = '\0';
 
-    self->v_hash = 1;
+    self->v_hash = ks_hash_bytes(len_b, (const unsigned char*)data);
 
     const char* p = self->data;
     while (*p) {
@@ -37,6 +47,9 @@ ks_str ks_str_new(ks_ssize_t len_b, const char* data) {
 
     return self;
 }
+
+
+
 
 int ks_str_cmp(ks_str L, ks_str R) {
     if (L == R) return 0;
@@ -75,7 +88,18 @@ ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data) {
     return r;
 }
 
+/* Type Functions */
 
+static KS_TFUNC(T, free) {
+    ks_str self;
+    KS_ARGS("self:*", &self, kst_str);
+
+    ks_free(self->data);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
 
 
 /* Export */
@@ -83,6 +107,9 @@ ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data) {
 static struct ks_type_s tp;
 ks_type kst_str = &tp;
 
+
 void _ksi_str() {
-    _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, NULL);
+    _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, KS_IKV(
+        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+    ));
 }

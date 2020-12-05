@@ -1,8 +1,40 @@
 /* io/util.c - 'io' module stream formatting utilities
  *
+ * This file defines the standard IO of common types (their individual '__str' and
+ *   '__repr' methods don't do anything, it's all done here)
+ * 
  */
 #include <ks/impl.h>
 #include <ks/io.h>
+
+
+/** Internals **/
+
+
+
+
+/* Digits used for base conversions */
+static const char numeric_digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+/* Byte strings to be used for particiular values */
+static const char* byte_strs[] = {
+    "\\x00", "\\x01", "\\x02", "\\x03", "\\x04", "\\x05", "\\x06", "\\x07", "\\x08", "\\x09", "\\x0A", "\\x0B", "\\x0C", "\\x0D", "\\x0E", "\\x0F",
+    "\\x10", "\\x11", "\\x12", "\\x13", "\\x14", "\\x15", "\\x16", "\\x17", "\\x18", "\\x19", "\\x1A", "\\x1B", "\\x1C", "\\x1D", "\\x1E", "\\x1F",
+    "\\x20", "\\x21", "\\x22", "\\x23", "\\x24", "\\x25", "\\x26", "\\x27", "\\x28", "\\x29", "\\x2A", "\\x2B", "\\x2C", "\\x2D", "\\x2E", "\\x2F",
+    "\\x30", "\\x31", "\\x32", "\\x33", "\\x34", "\\x35", "\\x36", "\\x37", "\\x38", "\\x39", "\\x3A", "\\x3B", "\\x3C", "\\x3D", "\\x3E", "\\x3F",
+    "\\x40", "\\x41", "\\x42", "\\x43", "\\x44", "\\x45", "\\x46", "\\x47", "\\x48", "\\x49", "\\x4A", "\\x4B", "\\x4C", "\\x4D", "\\x4E", "\\x4F",
+    "\\x50", "\\x51", "\\x52", "\\x53", "\\x54", "\\x55", "\\x56", "\\x57", "\\x58", "\\x59", "\\x5A", "\\x5B", "\\x5C", "\\x5D", "\\x5E", "\\x5F",
+    "\\x60", "\\x61", "\\x62", "\\x63", "\\x64", "\\x65", "\\x66", "\\x67", "\\x68", "\\x69", "\\x6A", "\\x6B", "\\x6C", "\\x6D", "\\x6E", "\\x6F",
+    "\\x70", "\\x71", "\\x72", "\\x73", "\\x74", "\\x75", "\\x76", "\\x77", "\\x78", "\\x79", "\\x7A", "\\x7B", "\\x7C", "\\x7D", "\\x7E", "\\x7F",
+    "\\x80", "\\x81", "\\x82", "\\x83", "\\x84", "\\x85", "\\x86", "\\x87", "\\x88", "\\x89", "\\x8A", "\\x8B", "\\x8C", "\\x8D", "\\x8E", "\\x8F",
+    "\\x90", "\\x91", "\\x92", "\\x93", "\\x94", "\\x95", "\\x96", "\\x97", "\\x98", "\\x99", "\\x9A", "\\x9B", "\\x9C", "\\x9D", "\\x9E", "\\x9F",
+    "\\xA0", "\\xA1", "\\xA2", "\\xA3", "\\xA4", "\\xA5", "\\xA6", "\\xA7", "\\xA8", "\\xA9", "\\xAA", "\\xAB", "\\xAC", "\\xAD", "\\xAE", "\\xAF",
+    "\\xB0", "\\xB1", "\\xB2", "\\xB3", "\\xB4", "\\xB5", "\\xB6", "\\xB7", "\\xB8", "\\xB9", "\\xBA", "\\xBB", "\\xBC", "\\xBD", "\\xBE", "\\xBF",
+    "\\xC0", "\\xC1", "\\xC2", "\\xC3", "\\xC4", "\\xC5", "\\xC6", "\\xC7", "\\xC8", "\\xC9", "\\xCA", "\\xCB", "\\xCC", "\\xCD", "\\xCE", "\\xCF",
+    "\\xD0", "\\xD1", "\\xD2", "\\xD3", "\\xD4", "\\xD5", "\\xD6", "\\xD7", "\\xD8", "\\xD9", "\\xDA", "\\xDB", "\\xDC", "\\xDD", "\\xDE", "\\xDF",
+    "\\xE0", "\\xE1", "\\xE2", "\\xE3", "\\xE4", "\\xE5", "\\xE6", "\\xE7", "\\xE8", "\\xE9", "\\xEA", "\\xEB", "\\xEC", "\\xED", "\\xEE", "\\xEF",
+    "\\xF0", "\\xF1", "\\xF2", "\\xF3", "\\xF4", "\\xF5", "\\xF6", "\\xF7", "\\xF8", "\\xF9", "\\xFA", "\\xFB", "\\xFC", "\\xFD", "\\xFE", "\\xFF",
+};
 
 /* Format specifier */
 struct sbfield {
@@ -28,9 +60,10 @@ struct sbfield {
 
 #define SBFIELD_DEFAULT ((struct sbfield){ .w = -1, .p = -1, .f = SBF_NONE })
 
+/* Forward declarations */
+static bool add_str(ksio_AnyIO self, kso obj);
+static bool add_repr(ksio_AnyIO self, kso obj);
 
-/* Digits used for base conversions */
-static const char numeric_digits[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
 
 /* Base method to add a C-style integer to the output */
 static bool add_int(ksio_AnyIO self, ks_cint val, int base, struct sbfield sbf) {
@@ -128,7 +161,6 @@ static bool add_float(ksio_AnyIO self, ks_cfloat val, int base, struct sbfield s
     return true;
 }
 
-
 /* Add generic object */
 static bool add_O(ksio_AnyIO self, kso obj) {
     return 
@@ -139,16 +171,142 @@ static bool add_O(ksio_AnyIO self, kso obj) {
         ksio_addbuf(self, 1, ">");
 }
 
+
+/** Builtin object types **/
+
+
+/* Add integer type */
+static bool add_O_int(ksio_AnyIO self, ks_int val) {
+    int base = 10;
+    ks_size_t mlb = 16 + mpz_sizeinbase(val->val, base);
+    char* buf = ks_malloc(mlb);
+    mpz_get_str(buf, base, val->val);
+
+    /* Translate to upper case */
+    int i = 0;
+    while (buf[i]) {
+        if ('a' <= buf[i] && buf[i] <= 'f') {
+            buf[i] += 'A' - 'a';
+        }
+        i++;
+    }
+
+    bool res = ksio_addbuf(self, i, buf);
+    ks_free(buf);
+
+    return res;
+}
+
+
+/* Add integer type */
+
+static bool add_O_list(ksio_AnyIO self, ks_list val) {
+    if (!ksio_addbuf(self, 1, "[")) return false;
+
+    if (kso_inrepr((kso)val)) {
+        ksio_addbuf(self, 3, "...");
+    } else {
+        ks_size_t i;
+        for (i = 0; i < val->len; ++i) {
+            if (i > 0) ksio_addbuf(self, 2, ", ");
+            if (!add_repr(self, val->elems[i])) return false;
+        }
+        kso_outrepr();
+    }
+
+
+    if (!ksio_addbuf(self, 1, "]")) return false;
+    return true;
+}
+
+static bool add_O_tuple(ksio_AnyIO self, ks_tuple val) {
+    if (!ksio_addbuf(self, 1, "(")) return false;
+
+    if (kso_inrepr((kso)val)) {
+        ksio_addbuf(self, 3, "...");
+    } else {
+        ks_size_t i;
+        for (i = 0; i < val->len; ++i) {
+            if (i > 0) ksio_addbuf(self, 2, ", ");
+            if (!add_repr(self, val->elems[i])) return false;
+        }
+        if (val->len == 1) ksio_addbuf(self, 1, ",");
+        kso_outrepr();
+    }
+
+    if (!ksio_addbuf(self, 1, ")")) return false;
+    return true;
+}
+
+static bool add_O_set(ksio_AnyIO self, ks_set val) {
+    if (!ksio_addbuf(self, 1, "{")) return false;
+
+    if (kso_inrepr((kso)val)) {
+        ksio_addbuf(self, 3, "...");
+    } else {
+        ks_size_t i, ct = 0;
+        for (i = 0; i < val->len_ents; ++i) {
+            if (val->ents[i].key) {
+                if (ct > 0) ksio_addbuf(self, 2, ", ");
+                if (!add_repr(self, val->ents[i].key)) return false;
+                ct++;
+            }
+        }
+        kso_outrepr();
+    }
+
+    if (!ksio_addbuf(self, 1, "}")) return false;
+    return true;
+}
+
+static bool add_O_dict(ksio_AnyIO self, ks_dict val) {
+    if (!ksio_addbuf(self, 1, "{")) return false;
+    if (kso_inrepr((kso)val)) {
+        ksio_addbuf(self, 3, "...");
+    } else {
+        ks_size_t i, ct = 0;
+        for (i = 0; i < val->len_ents; ++i) {
+            if (val->ents[i].key) {
+                if (ct > 0) ksio_addbuf(self, 2, ", ");
+                if (!add_repr(self, val->ents[i].key)) return false;
+                ksio_addbuf(self, 2, ": ");
+                if (!add_repr(self, val->ents[i].val)) return false;
+                ct++;
+            }
+        }
+        kso_outrepr();
+    }
+
+    if (!ksio_addbuf(self, 1, "}")) return false;
+    return true;
+}
+
+
 /* Add 'str(obj)' */
 static bool add_str(ksio_AnyIO self, kso obj) {
-
-    if (kso_issub(obj->type, kst_str)) {
+    if (kso_issub(obj->type, kst_str) && obj->type->i__str == kst_str->i__str) {
         ks_str sobj = (ks_str)obj;
         return ksio_addbuf(self, sobj->len_b, sobj->data);
+    } else if (kso_issub(obj->type, kst_bytes) && obj->type->i__str == kst_bytes->i__str) {
+        return add_repr(self, obj);
+    } else if (obj->type == kst_type) {
+        return add_str(self, (kso)((ks_type)obj)->i__fullname);
     } else if (obj == KSO_NONE) {
         return ksio_addbuf(self, 4, "none");
     } else if (obj->type == kst_bool) {
         return ksio_add(self, obj == KSO_TRUE ? "true" : "false");
+    } else if (kso_isinst(obj, kst_int) && obj->type->i__str == kst_int->i__str) {
+        return add_O_int(self, (ks_int)obj);
+    } else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
+        return add_float(self, ((ks_float)obj)->val, 10, SBFIELD_DEFAULT);
+    } else if (kso_isinst(obj, kst_list) && obj->type->i__str == kst_list->i__str) {
+        return add_O_list(self, (ks_list)obj);
+    } else if (kso_isinst(obj, kst_tuple) && obj->type->i__str == kst_tuple->i__str) {
+        return add_O_tuple(self, (ks_tuple)obj);
+    } else if (kso_isinst(obj, kst_set) && obj->type->i__str == kst_set->i__str) {
+        return add_O_set(self, (ks_set)obj);
+    } else if (kso_isinst(obj, kst_dict) && obj->type->i__str == kst_dict->i__str) {
+        return add_O_dict(self, (ks_dict)obj);
     } else if (obj->type->i__str != kst_object->i__str) {
         ks_str sobj = (ks_str)kso_call(obj->type->i__str, 1, &obj);
         if (!sobj) return false;
@@ -164,16 +322,13 @@ static bool add_str(ksio_AnyIO self, kso obj) {
         return res;
     }
 
-
-
     /* not found, so do generically */
     return add_O(self, obj);
 }
 
 /* Add 'repr(obj)' */
 static bool add_repr(ksio_AnyIO self, kso obj) {
-
-    if (kso_issub(obj->type, kst_str)) {
+    if (kso_issub(obj->type, kst_str) && obj->type->i__str == kst_str->i__str) {
         ks_str sobj = (ks_str)obj;
 
         /* TODO: escape unicode? */
@@ -199,10 +354,38 @@ static bool add_repr(ksio_AnyIO self, kso obj) {
         }
 
         return ksio_addbuf(self, 1, "'");
+    } else if (kso_issub(obj->type, kst_bytes) && obj->type->i__str == kst_str->i__bytes) {
+        ks_bytes bobj = (ks_bytes)obj;
+
+        /* TODO: include ASCII by default? */
+
+        ksio_addbuf(self, 2, "b'");
+
+        ks_cint i;
+        for (i = 0; i < bobj->len_b; ++i) {
+            unsigned char c = bobj->data[i];
+            ksio_addbuf(self, 4, byte_strs[c]);
+        }
+
+        return ksio_addbuf(self, 1, "'");
+    } else if (obj->type == kst_type) {
+        return add_str(self, (kso)((ks_type)obj)->i__fullname);
     } else if (obj == KSO_NONE) {
         return ksio_addbuf(self, 4, "none");
     } else if (obj->type == kst_bool) {
         return ksio_add(self, obj == KSO_TRUE ? "true" : "false");
+    } else if (kso_isinst(obj, kst_int) && obj->type->i__repr == kst_int->i__repr) {
+        return add_O_int(self, (ks_int)obj);
+    } else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
+        return add_float(self, ((ks_float)obj)->val, 10, SBFIELD_DEFAULT);
+    } else if (kso_isinst(obj, kst_list) && obj->type->i__str == kst_list->i__str) {
+        return add_O_list(self, (ks_list)obj);
+    } else if (kso_isinst(obj, kst_tuple) && obj->type->i__str == kst_tuple->i__str) {
+        return add_O_tuple(self, (ks_tuple)obj);
+    } else if (kso_isinst(obj, kst_set) && obj->type->i__str == kst_set->i__str) {
+        return add_O_set(self, (ks_set)obj);
+    } else if (kso_isinst(obj, kst_dict) && obj->type->i__str == kst_dict->i__str) {
+        return add_O_dict(self, (ks_dict)obj);
 
     } else if (obj->type->i__repr != kst_object->i__repr) {
         ks_str sobj = (ks_str)kso_call(obj->type->i__repr, 1, &obj);
@@ -224,6 +407,7 @@ static bool add_repr(ksio_AnyIO self, kso obj) {
 }
 
 bool ksio_addbuf(ksio_AnyIO self, ks_ssize_t sz, const char* data) {
+
     if (kso_issub(self->type, ksiot_FileIO)) {
         ksio_FileIO fio = (ksio_FileIO)self;
         return ksio_FileIO_writes(fio, sz, data);
@@ -240,6 +424,20 @@ bool ksio_addbuf(ksio_AnyIO self, ks_ssize_t sz, const char* data) {
         sio->data[sio->len_b] = '\0';
 
         return true;
+
+    } else if (kso_issub(self->type, ksiot_BytesIO)) {
+        ksio_BytesIO sio = (ksio_BytesIO)self;
+        ks_ssize_t pos = sio->len_b;
+
+        /* Determine number of characters */
+        sio->len_b += sz;
+
+        sio->data = ks_zrealloc(sio->data, 1, 1 + sio->len_b);
+        memcpy(sio->data + pos, data, sz);
+        sio->data[sio->len_b] = '\0';
+
+        return true;
+
     } else {
         return false;
     }
@@ -396,6 +594,7 @@ bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap) {
                     break;
 
                 default:
+
                     fprintf(stderr, "Internal error: given bad C-format 'c': %c\n", c);
                     assert(false);
                     return false;
@@ -405,6 +604,7 @@ bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap) {
         }
     }
 
+    return true;
 }
 
 bool ksio_add(ksio_AnyIO self, const char* fmt, ...) {

@@ -60,6 +60,7 @@ ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
 
     self->name = name;
 
+
     KS_NINCREF(of);
     self->of = of;
     KS_INCREF(args);
@@ -67,6 +68,7 @@ ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
 
     self->scopename = ks_fmt("");
 
+    self->inrepr = ks_list_new(0, NULL);
 
     /* Initialize execution environment */
     self->stk = ks_list_new(0, NULL);
@@ -85,7 +87,6 @@ ksos_thread ksos_thread_get() {
     #else
 
     #endif
-
     return res ? res : ksg_main_thread;
 }
 
@@ -152,5 +153,6 @@ ks_type ksost_thread = &tp;
 
 void _ksi_os_thread() {
     _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, NULL);
-    
+
+    ksg_main_thread = ksos_thread_new(ksost_thread, NULL, NULL, _ksv_emptytuple);
 }
