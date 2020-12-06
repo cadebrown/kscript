@@ -187,6 +187,48 @@ kso _ks_exec(ks_code bc) {
             goto done;
         VMD_OP_END
 
+        /* Template for binary operators */
+        #define T_BOP(_b, _name) VMD_OP(_b) \
+            R = ks_list_pop(stk); \
+            L = ks_list_pop(stk); \
+            V = ks_bop_##_name(L, R); \
+            KS_DECREF(L); KS_DECREF(R); \
+            if (!V) goto thrown; \
+            ks_list_pushu(stk, V); \
+        VMD_OP_END
+        
+        /* Binary operators */
+        T_BOP(KSB_BOP_ADD, add)
+        T_BOP(KSB_BOP_SUB, sub)
+        T_BOP(KSB_BOP_MUL, mul)
+        T_BOP(KSB_BOP_DIV, div)
+        T_BOP(KSB_BOP_FLOORDIV, floordiv)
+        T_BOP(KSB_BOP_MOD, mod)
+        T_BOP(KSB_BOP_POW, pow)
+        T_BOP(KSB_BOP_IOR, binior)
+        T_BOP(KSB_BOP_AND, binand)
+        T_BOP(KSB_BOP_XOR, binxor)
+        T_BOP(KSB_BOP_LSH, lsh)
+        T_BOP(KSB_BOP_RSH, rsh)
+        T_BOP(KSB_BOP_LT, lt)
+        T_BOP(KSB_BOP_LE, le)
+        T_BOP(KSB_BOP_GT, gt)
+        T_BOP(KSB_BOP_GE, ge)
+
+        /* Template for unary operators */
+        #define T_UOP(_b, _name) VMD_OP(_b) \
+            L = ks_list_pop(stk); \
+            V = ks_uop_##_name(L); \
+            KS_DECREF(L); \
+            if (!V) goto thrown; \
+            ks_list_pushu(stk, V); \
+        VMD_OP_END
+
+        T_UOP(KSB_UOP_POS, pos)
+        T_UOP(KSB_UOP_NEG, neg)
+        T_UOP(KSB_UOP_SQIG, sqig)
+
+
         /* Error on unknown */
         VMD_CATCH_REST
     }

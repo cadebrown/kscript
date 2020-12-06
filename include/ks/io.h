@@ -104,6 +104,77 @@ typedef struct ksio_BytesIO_s {
 }* ksio_BytesIO;
 
 
+
+/** Unicode Translation **/
+
+
+
+/* Decodes a single character from UTF8 source
+ *
+ * Set '_to' (which should be a 'ks_ucp') to the ordinal given by '_src' (in UTF8 encoding, as a 'char*') 
+ * And, set '_n' to the number of bytes read
+ */
+#define KS_UCP_FROM_UTF8(_to, _src, _n) do { \
+    unsigned char _c = (_src)[0]; \
+    if (_c < 0x80) { \
+        _to = _c; \
+        _n = 1;   \
+    } else if ((_c & 0xE0) == 0xC0) { \
+        _to = ((ks_unich)(_c & 0x1F) << 6) \
+            | ((ks_unich)((_src)[1] & 0x3F) << 0); \
+        _n = 2; \
+    } else if ((_c & 0xF0) == 0xE0) { \
+        _to = ((ks_unich)(_c & 0x0F) << 12) \
+            | ((ks_unich)((_src)[1] & 0x3F) << 6) \
+            | ((ks_unich)((_src)[2] & 0x3F) << 0); \
+        _n = 3; \
+    } else if ((_c & 0xF8) == 0xF0 && (_c <= 0xF4)) { \
+        _to = ((ks_unich)(_c & 0x07) << 18) \
+            | ((ks_unich)((_src)[1] & 0x3F) << 12) \
+            | ((ks_unich)((_src)[2] & 0x3F) << 6) \
+            | ((ks_unich)((_src)[3] & 0x3F) << 0); \
+        _n = 4; \
+    } else { \
+        _to = 0; \
+        _n = -1; \
+    } \
+} while (0)
+
+/* Encode a single character to UTF8
+ *
+ * Expects '_src' to be a 'ks_ucp', '_to' to be a 'char*',
+ *   and '_n' be an assignable name which tells how many bytes were written
+ *   to '_to'. '_to' should have at least 4 bytes allocated after it
+ * 
+ * See: https://www.fileformat.info/info/unicode/utf8.htm
+ */
+#define KS_UCP_TO_UTF8(_to, _n, _src) do { \
+    if (_src <= 0x7F) { \
+        _n = 1; \
+        _to[0] = _src; \
+    } else if (_src <= 0x7FF) { \
+        _n = 2; \
+        _to[0] = 0xC0 | ((_src >>  6) & 0x1F); \
+        _to[1] = 0x80 | ((_src >>  0) & 0x3F); \
+    } else if (_src <= 0xFFFF) { \
+        _n = 3; \
+        _to[0] = 0xE0 | ((_src >> 12) & 0x0F); \
+        _to[1] = 0x80 | ((_src >>  6) & 0x3F); \
+        _to[2] = 0x80 | ((_src >>  0) & 0x3F); \
+    } else if (_src <= 0x10FFFF) { \
+        _n = 4; \
+        _to[0] = 0xF0 | ((_src >> 18) & 0x0F); \
+        _to[1] = 0x80 | ((_src >> 12) & 0x3F); \
+        _to[2] = 0x80 | ((_src >>  6) & 0x3F); \
+        _to[3] = 0x80 | ((_src >>  0) & 0x3F); \
+    } else { \
+        _n = -1; \
+        _to[0] = 0; \
+    } \
+} while (0)
+
+
+
 /** Functions **/
 
 /* Return a wrapper around an opened C-style FILE*
@@ -163,6 +234,10 @@ KS_API bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap);
  */
 KS_API bool ksio_addbuf(ksio_AnyIO self, ks_ssize_t sz, const char* data);
 
+
+/* Read entire file and return as a string. Returns NULL and throws an error if there was a problem
+ */
+KS_API ks_str ksio_readall(ks_str fname);
 
 
 /* Types */

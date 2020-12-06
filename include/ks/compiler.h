@@ -332,7 +332,7 @@ enum {
 
     /** Binary Operators **/
     
-    KS_AST_BOP_ASSIGN = 100, /* x=y */
+    KS_AST_BOP_ASSIGN = 50, /* x=y */
     KS_AST_BOP_AIOR, /* x|=y */
     KS_AST_BOP_AXOR, /* x^=y */
     KS_AST_BOP_AAND, /* x&=y */
@@ -398,6 +398,9 @@ enum {
     KS_AST_UOP_STAR /* ?x */
 
 };
+
+#define KS_AST_BOP__FIRST KS_AST_BOP_ASSIGN
+#define KS_AST_BOP__LAST KS_AST_BOP_POW
 
 /* 'ast' - Abstract Syntax Tree, representing a program in abstract terms
  *
@@ -484,8 +487,68 @@ enum {
     KSB_RET,
 
 
+    /** Binary Operators **/
+
+    _KSB_BOP_ASSIGN = 50,
+    _KSB_BOP_AIOR,
+    _KSB_BOP_AXOR,
+    _KSB_BOP_AAND,
+    _KSB_BOP_ALSH,
+    _KSB_BOP_ARSH,
+    _KSB_BOP_AADD,
+    _KSB_BOP_ASUB,
+    _KSB_BOP_AMUL,
+    _KSB_BOP_ADIV,
+    _KSB_BOP_AFLOORDIV,
+    _KSB_BOP_AMOD,
+    _KSB_BOP_APOW,
+    _KSB_BOP_QUESQUES,
+    _KSB_BOP_OROR,
+    _KSB_BOP_ANDAND,
+
+    KSB_BOP_IN,
+
+    KSB_BOP_EEQ,
+    KSB_BOP_EQ,
+    KSB_BOP_NE,
+    KSB_BOP_LT,
+    KSB_BOP_LE,
+    KSB_BOP_GT,
+    KSB_BOP_GE,
+
+    KSB_BOP_IOR,
+
+    KSB_BOP_XOR,
+
+    KSB_BOP_AND,
+
+    KSB_BOP_LSH,
+    KSB_BOP_RSH,
+
+    KSB_BOP_ADD,
+    KSB_BOP_SUB,
+
+    KSB_BOP_MUL,
+    KSB_BOP_DIV,
+    KSB_BOP_FLOORDIV,
+    KSB_BOP_MOD,
+
+    KSB_BOP_POW,
+
+    KSB_UOP_POS = 100, 
+    KSB_UOP_NEG,
+    KSB_UOP_SQIG,
+    _KSB_UOP_POSPOS,
+    _KSB_UOP_POSPOS_POST,
+    _KSB_UOP_NEGNEG,
+    _KSB_UOP_NEGNEG_POST,
+    KSB_UOP_NOT,
+    _KSB_UOP_QUES,
+    _KSB_UOP_STAR
 
 };
+
+
 
 /* Attempt to define bytecode as being aligned to a single byte bounary, so that they
  *   are as small as possible

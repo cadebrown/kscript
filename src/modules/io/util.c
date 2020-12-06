@@ -615,3 +615,34 @@ bool ksio_add(ksio_AnyIO self, const char* fmt, ...) {
     return res;
 }
 
+ks_str ksio_readall(ks_str fname) {
+    FILE* fp = fopen(fname->data, "r");
+    if (!fp) {
+        KS_THROW(kst_IOError, "Failed to open %R: %s", fname, strerror(errno));
+        return NULL;
+    }
+    ksio_FileIO fio = ksio_FileIO_wrap(ksiot_FileIO, fp, true, true, false, false, fname);
+
+    /* Buffered read, and append */
+    ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0, num_c;
+    void* dest = NULL;
+    while (true) {
+        dest = ks_realloc(dest, rsz + bsz * 4);
+        ks_ssize_t csz = ksio_FileIO_reads(fio, bsz, ((char*)dest) + rsz, &num_c);
+        if (csz < 0) {
+            ks_free(dest);
+            KS_DECREF(fio);
+            return NULL;
+        }
+        rsz += csz;
+        if (csz == 0) break;
+    }
+
+    /* Construct string and return it */
+    ks_str res = ks_str_new(rsz, dest);
+    ks_free(dest);
+    KS_DECREF(fio);
+    return res;
+}
+
+

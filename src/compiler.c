@@ -93,9 +93,22 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             CLEAR(ssl);
         }
         META(v->tok);
+
+    } else if (KS_AST_BOP__FIRST <= k && k <= KS_AST_BOP__LAST) {
+        assert(NSUB == 2 && "binary operator requires 2 children");
+        /* Binary operator */
+        if (!COMPILE(SUB(0)) || !COMPILE(SUB(1))) return false;
+
+        /* The enumerations are set up so that the AST types match directly to the bytecode 
+         *   index, so we can just emit it
+         */
+        EMIT(k);
+        META(v->tok);
+        LEN += 1 - 2;
+
     } else {
         /* unknown */
-        KS_THROW_SYNTAX(fname, src, v->tok, "Haven't implemented '%i' AST nodes", v->kind);
+        KS_THROW_SYNTAX(fname, src, v->tok, "Haven't implemented AST nodes of kind '%i'", v->kind);
         return false;
     }
 

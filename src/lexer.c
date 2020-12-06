@@ -204,6 +204,8 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
                 } else if (c == '\n') {
                     ADV();
                     break;
+                } else {
+                    ADV();
                 }
             }
         } else if (is_digit(c, 10) || (c == '.' && is_digit(src->data[pos+1], 10))) {

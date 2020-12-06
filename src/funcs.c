@@ -55,8 +55,6 @@ static KS_FUNC(print) {
 }
 
 
-
-
 void _ksi_funcs() {
 
     /* Create a function */

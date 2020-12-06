@@ -290,7 +290,10 @@ void* kso_throw(ks_Exception exc) {
 }
 
 void* kso_throw_c(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, ...) {
-    ks_Exception exc = ks_Exception_new_c(tp, cfile, cfunc, cline, fmt);
+    va_list ap;
+    va_start(ap, fmt);
+    ks_Exception exc = ks_Exception_new_cv(tp, cfile, cfunc, cline, fmt, ap);
+    va_end(ap);
     return kso_throw(exc);
 }
 

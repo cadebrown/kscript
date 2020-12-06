@@ -101,6 +101,13 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, add) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    return (kso)ks_fmt("%S%S", L, R);
+}
+
 
 /* Export */
 
@@ -111,5 +118,6 @@ ks_type kst_str = &tp;
 void _ksi_str() {
     _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__add",                ksf_wrap(T_add_, T_NAME ".__add(self)", "")},
     ));
 }

@@ -250,6 +250,7 @@ RULE(E14);
 RULE(PROG) {
     ks_ast res = ks_ast_new(KS_AST_BLOCK, 0, NULL, KSO_NONE, KS_TOK_MAKE_EMPTY());
 
+    SKIP_N();
     while (!DONE) {
         ks_ast sub = SUB(STMT);
         if (!sub) {
@@ -258,6 +259,7 @@ RULE(PROG) {
         }
 
         ks_ast_pushn(res, sub);
+        SKIP_N();
     }
 
     return res;
@@ -693,7 +695,174 @@ RULE(ATOM) {
         ks_cfloat v;
         if (!ks_cfloat_from_str(src->data + t.spos, t.epos - t.spos, &v)) return NULL;
         return ks_ast_newn(KS_AST_CONST, 0, NULL, (kso)ks_float_new(v), t);
-    }
+    } else if (TOK.kind == KS_TOK_STR) {
+        ks_tok t = EAT();
+        /* Parse string literal */
+        ksio_StringIO sio = ksio_StringIO_new();
+        ksio_AnyIO aio = (ksio_AnyIO)sio;
+
+        char c = src->data[t.spos];
+        assert(c == '\'' || c == '"');
+
+        /* Whether its a triple quoted literal */
+        bool is3 = (t.epos - t.spos) > 3  && strncmp(src->data + t.spos, c == '\'' ? "'''" : "\"\"\"", 3) == 0;
+
+        /* Get section where the contents are */
+        int sz = t.epos - t.spos - (is3 ? 6 : 2);
+        char* s = src->data + t.spos + (is3 ? 3 : 1);
+        int i = 0;
+
+        unsigned char utf8[5];
+
+        while (i < sz) {
+            int l = i;
+            while (i < sz && s[i] != '\\') {
+                i++;
+            }
+            /* Add literal string */
+            ksio_addbuf(aio, i - l, s + l);
+
+            if (i >= sz) break;
+
+            /* Should be an escape code */
+            assert(s[i] == '\\');
+            i++;
+            c = s[i];
+            i++;
+
+            /**/ if (c == '\\') ksio_addbuf(aio, 1, "\\");
+            else if (c == '\'') ksio_addbuf(aio, 1, "'");
+            else if (c == '"') ksio_addbuf(aio, 1, "\"");
+            else if (c == 'a') ksio_addbuf(aio, 1, "\a");
+            else if (c == 'b') ksio_addbuf(aio, 1, "\b");
+            else if (c == 'f') ksio_addbuf(aio, 1, "\f");
+            else if (c == 'n') ksio_addbuf(aio, 1, "\n");
+            else if (c == 'r') ksio_addbuf(aio, 1, "\r");
+            else if (c == 't') ksio_addbuf(aio, 1, "\t");
+            else if (c == 'v') ksio_addbuf(aio, 1, "\v");
+            else if (c == 'x') {
+                /* \xHH, single byte */
+                int ct = 0;
+                ks_ucp v;
+                while (ct < 2) {
+                    c = s[i + ct];
+                    int d;
+
+                    /**/ if ('0' <= c && c <= '9') d = c - '0';
+                    else if ('a' <= c && c <= 'f') d = c - 'a' + 10;
+                    else if ('A' <= c && c <= 'F') d = c - 'A' + 10;
+                    else {
+                        KS_DECREF(sio);
+                        KS_THROW_SYNTAX(fname, src, t, "Truncated ecape sequence: '\\xHH'");
+                        return NULL;
+                    }
+
+                    v = 16 * v + d;
+                    ++ct;
+                }
+                i += ct;
+
+                /* Add byte */
+                utf8[0] = v;
+                ksio_addbuf(aio, 1, utf8);
+            } else if (c == 'u') {
+                /* \uHHHH, codepoint */
+                int ct = 0;
+                ks_ucp v;
+                while (ct < 4) {
+                    c = s[i + ct];
+                    int d;
+
+                    /**/ if ('0' <= c && c <= '9') d = c - '0';
+                    else if ('a' <= c && c <= 'f') d = c - 'a' + 10;
+                    else if ('A' <= c && c <= 'F') d = c - 'A' + 10;
+                    else {
+                        KS_DECREF(sio);
+                        KS_THROW_SYNTAX(fname, src, t, "Truncated ecape sequence: '\\uHHHH'");
+                        return NULL;
+                    }
+
+                    v = 16 * v + d;
+                    ++ct;
+                }
+                i += ct;
+
+                /* Decode and add */
+                int n;
+                KS_UCP_TO_UTF8(utf8, n, v);
+                ksio_addbuf(aio, n, utf8);
+            } else if (c == 'U') {
+                /* \uHHHHHHHH, codepoint */
+                int ct = 0;
+                ks_ucp v;
+                while (ct < 8) {
+                    c = s[i + ct];
+                    int d;
+
+                    /**/ if ('0' <= c && c <= '9') d = c - '0';
+                    else if ('a' <= c && c <= 'f') d = c - 'a' + 10;
+                    else if ('A' <= c && c <= 'F') d = c - 'A' + 10;
+                    else {
+                        KS_DECREF(sio);
+                        KS_THROW_SYNTAX(fname, src, t, "Truncated ecape sequence: '\\UHHHHHHHH'");
+                        return NULL;
+                    }
+
+                    v = 16 * v + d;
+                    ++ct;
+                }
+                i += ct;
+
+                /* Decode and add */
+                int n;
+                KS_UCP_TO_UTF8(utf8, n, v);
+                ksio_addbuf(aio, n, utf8);
+            } else if (c == 'N') {
+                /* \N[NAME] */
+                if (s[i] != '[') {
+                    KS_DECREF(sio);
+                    KS_THROW_SYNTAX(fname, src, t, "Escape sequence '\\N' expects '[]' enclosing the name", c);
+                    return NULL;
+                }
+                i++;
+                
+                /* Read until the end */
+                int sn = i;
+                while (i < sz && s[i] != ']') {
+                    i++;
+                }
+                int en = i;
+
+                /* Check for end */
+                if (s[i] != ']') {
+                    KS_DECREF(sio);
+                    KS_THROW_SYNTAX(fname, src, t, "Escape sequence '\\N' expects '[]' enclosing the name", c);
+                    return NULL;
+                }
+                i++;
+
+                assert(false);
+
+                /*
+                struct ksucd_info info;
+                v = ksucd_lookup(&info, len, s+pos);
+                if (v == KSUCD_ERR) {
+                    KS_DECREF(sio);
+                    KS_THROW_SYNTAX(fname, src, t, "Unknown unicode character: '%.*s'", t.epos - t.spos, s + t.spos);
+                    return NULL;
+                }
+                */
+
+            } else {
+                KS_THROW_SYNTAX(fname, src, t, "Unexpected escape sequence '\\%c'", c);
+                KS_DECREF(sio);
+                return NULL;
+            }
+        }
+
+        return ks_ast_newn(KS_AST_CONST, 0, NULL, (kso)ksio_StringIO_getf(sio), t);
+    } 
+
     KS_THROW_SYNTAX(fname, src, TOK, "Unexpected token");
     return NULL;
 }

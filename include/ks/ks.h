@@ -159,6 +159,7 @@
 #include <ks/io.h>
 #include <ks/os.h>
 
+
 /** Globals **/
 
 #define KSO_NONE ((kso)ksg_none)
@@ -382,7 +383,6 @@ struct ks_eikv {
 #define KS_OUTOFITER() do { \
     KS_THROW(kst_OutOfIterException, ""); \
 } while (0)
-
 
 
 /* Define a C function which can be wrapped into a kscript function. Appends an '_' after the name
@@ -857,6 +857,32 @@ KS_API bool kso_inrepr(kso obj);
 /* Stop repr'ing 
  */
 KS_API void kso_outrepr();
+
+
+/*** Operators ***/
+
+/* Compute 'L <op> R' */
+KS_API kso ks_bop_add(kso L, kso R);
+KS_API kso ks_bop_sub(kso L, kso R);
+KS_API kso ks_bop_mul(kso L, kso R);
+KS_API kso ks_bop_div(kso L, kso R);
+KS_API kso ks_bop_floordiv(kso L, kso R);
+KS_API kso ks_bop_mod(kso L, kso R);
+KS_API kso ks_bop_pow(kso L, kso R);
+KS_API kso ks_bop_binior(kso L, kso R);
+KS_API kso ks_bop_binand(kso L, kso R);
+KS_API kso ks_bop_binxor(kso L, kso R);
+KS_API kso ks_bop_lsh(kso L, kso R);
+KS_API kso ks_bop_rsh(kso L, kso R);
+KS_API kso ks_bop_lt(kso L, kso R);
+KS_API kso ks_bop_gt(kso L, kso R);
+KS_API kso ks_bop_le(kso L, kso R);
+KS_API kso ks_bop_ge(kso L, kso R);
+
+/* Compute '<op> V' */
+KS_API kso ks_uop_pos(kso V);
+KS_API kso ks_uop_neg(kso V);
+KS_API kso ks_uop_sqig(kso V);
 
 
 /*** Internal Functions ***/
