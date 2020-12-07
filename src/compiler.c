@@ -77,6 +77,10 @@ static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, 
 
     if (lhs->kind == KS_AST_NAME) {
         EMITO(KSB_STORE, lhs->val);
+
+    } else if (lhs->kind == KS_AST_ATTR) {
+        EMITO(KSB_SETATTR, lhs->val);
+
     } else {
         KS_THROW_SYNTAX(fname, src, par->tok, "Can't assign to the left hand side");
         return false;
@@ -272,9 +276,143 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         LEN = ssl;
 
+    } else if (k == KS_AST_FOR) {
+        /* Emit conditional */
+        assert((NSUB == 3 || NSUB == 4) && "'for' AST requires either 3 or 4 children");
+        int cond_l = BC_N;
+        if (!COMPILE(SUB(1))) return false;
+        assert(LEN == ssl + 1);
+        EMIT(KSB_FOR_START);
+
+        /* CFG:
+         *       +------+
+         *       |      |
+         * +---+  +---+ |
+         * | B |--| T |--+--
+         * +---+  +---+  |
+         *   |    +---+  |
+         *   +----| F |--+
+         *        +---+
+         * 
+         */
+
+        int jc_l = BC_N;
+        EMITI(KSB_FOR_NEXTF, -1);
+        int jc_f = BC_N;
+        LEN += 1;
+
+        /* Assign to the for loop capture */
+        if (!assign(co, fname, src, code, SUB(0), SUB(1), v)) return NULL;
+        CLEAR(ssl+1);
+
+        int body_l = BC_N;
+
+        if (!COMPILE(SUB(2))) return false;
+        CLEAR(ssl+1);
+
+        int jc2_l = BC_N;
+        EMITI(KSB_FOR_NEXTT, -1);
+        int jc2_f = BC_N;
+
+        PATCH(jc2_l, jc2_f, jc_f);
+
+        if (NSUB == 4) {
+
+            /* We need to jump past the else clause by default */
+            int je_l = BC_N;
+            EMITI(KSB_JMP, -1);
+            int je_f = BC_N;
+
+            PATCH(jc_l, jc_f, BC_N);
+
+            if (!COMPILE(SUB(2))) return false;
+            CLEAR(ssl+1);
+
+            /* Patch true branch to jump to after the 'else' */
+            PATCH(je_l, je_f, BC_N);
+
+        } else {
+            /* No 'else' clause, just fall through */
+            PATCH(jc_l, jc_f, BC_N);
+
+        }
+
+        LEN = ssl;
 
     /** Handle Special Operators **/
 
+    } else if (k == KS_AST_BOP_QUESQUES) {
+        /* Short circuiting OR operator */
+        assert(NSUB == 2 && "binary operator requires 2 children");
+
+        /* Begin by creating a try block */
+        int sj_l = BC_N;
+        EMITI(KSB_TRY_START, -1);
+        int sj_f = BC_N;
+
+        /* Try to execute the children */
+        if (!COMPILE(SUB(0))) return false;
+
+        /* End the try block */
+        int ej_l = BC_N;
+        EMITI(KSB_TRY_END, -1);
+        int ej_f = BC_N;
+
+        /* If there was an exception, it will jump to here and use the other child */
+        int cl_l = BC_N;
+        EMIT(KSB_POPU);
+        LEN = ssl;
+        
+        if (!COMPILE(SUB(1))) return false;
+
+        /* Now, the TOS will be the exception */
+        LEN = ssl + 1;
+
+        /* Patch the 'try' handle to jump to other child */
+        PATCH(sj_l, sj_f, cl_l);
+        
+        PATCH(ej_l, ej_f, BC_N);
+        
+    } else if (k == KS_AST_BOP_OROR) {
+        /* Short circuiting OR operator */
+        assert(NSUB == 2 && "binary operator requires 2 children");
+        if (!COMPILE(SUB(0))) return false;
+
+        /* First, duplicate it and jump if its truthy (and jump over execution of the other child) */
+        EMIT(KSB_DUP);
+        LEN += 1;
+        int sj_l = BC_N;
+        EMITI(KSB_JMPT, -1);
+        int sj_f = BC_N;
+        LEN -= 1;
+
+        /* Not truthy, so pop off the last result */
+        EMIT(KSB_POPU);
+        LEN -= 1;
+        if (!COMPILE(SUB(1))) false;
+
+        /* Patch the jump from earlier */
+        PATCH(sj_l, sj_f, BC_N);
+    } else if (k == KS_AST_BOP_ANDAND) {
+        /* Short circuiting AND operator */
+        assert(NSUB == 2 && "binary operator requires 2 children");
+        if (!COMPILE(SUB(0))) return false;
+
+        /* First, duplicate it and jump if its truthy (and jump over execution of the other child) */
+        EMIT(KSB_DUP);
+        LEN += 1;
+        int sj_l = BC_N;
+        EMITI(KSB_JMPF, -1);
+        int sj_f = BC_N;
+        LEN -= 1;
+
+        /* Not truthy, so pop off the last result */
+        EMIT(KSB_POPU);
+        LEN -= 1;
+        if (!COMPILE(SUB(1))) false;
+
+        /* Patch the jump from earlier */
+        PATCH(sj_l, sj_f, BC_N);
     } else if (k == KS_AST_BOP_ASSIGN) {
         assert(NSUB == 2 && "binary operator requires 2 children");
         if (!COMPILE(SUB(1))) return false;

@@ -46,7 +46,7 @@ void _ksi_bool() {
     mpz_set_si(ksg_false->s_int.val, 0);
     mpz_set_si(ksg_true->s_int.val, 1);
 
-    _ksinit(kst_bool, kst_enum, T_NAME, sizeof(struct ks_enum_s), -1, KS_IKV(
+    _ksinit(kst_bool, kst_enum, T_NAME, sizeof(struct ks_enum_s), -1, "Boolean value, which takes on one of two values: (true, yes, 1) or (false, no, 0). Treated as an integer with that value when used in arithmetic expressions", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"false",                  KS_NEWREF(ksg_false)},
         {"true",                   KS_NEWREF(ksg_true)},

@@ -411,7 +411,7 @@ static struct ks_type_s tp;
 ks_type ksiot_FileIO = &tp;
 
 void _ksi_io_FileIO() {
-    _ksinit(ksiot_FileIO, kst_object, T_NAME, sizeof(struct ksio_FileIO_s), -1, KS_IKV(
+    _ksinit(ksiot_FileIO, kst_object, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\n\n    Internally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
 
     ));
 }

@@ -9,8 +9,63 @@
 
 /* C-API */
 
-/* Export */
 
+
+kso ksos_getenv(ks_str name, kso defa) {
+    /* TODO: detect getenv */
+    char* res = getenv(name->data);
+
+    if (res == NULL) {
+        if (defa) {
+            return KS_NEWREF(defa);
+        } else {
+            KS_THROW(kst_KeyError, "Key %R not present in the environment", name);
+            return NULL;
+        }
+    } else {
+        return (kso)ks_str_new(-1, res);
+    }
+}
+
+bool ksos_setenv(ks_str name, ks_str val) {
+    ks_ssize_t sl = name->len_b + val->len_b + 4;
+    char* tmp = malloc(sl);
+
+    snprintf(tmp, sl - 1, "%s=%s", name->data, val->data);
+
+    /* TODO: detect setenv/putenv */
+    int rs = putenv(tmp);
+
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to set %R in environment: %s", name, strerror(errno));
+        return false;
+    }else {
+        return true;
+    }
+}
+
+
+/* Module Functions */
+
+static KS_TFUNC(M, getenv) {
+    ks_str key;
+    kso defa = NULL;
+    KS_ARGS("key:* ?defa", &key, kst_str, &defa);
+
+    return ksos_getenv(key, defa);
+}
+
+
+static KS_TFUNC(M, setenv) {
+    ks_str key, val;
+    KS_ARGS("key:* val:*", &key, kst_str, &val, kst_str);
+
+    if (!ksos_setenv(key, val)) return NULL;
+
+    return KSO_NONE;
+}
+
+/* Export */
 
 ksio_FileIO
     ksos_stdin,
@@ -49,6 +104,8 @@ ks_module _ksi_os() {
         {"argv",                   KS_NEWREF(ksos_argv)},
     
         /* Functions */
+        {"getenv",                 ksf_wrap(M_getenv_, M_NAME ".getenv(key, defa=none)", "Retrieves the environment entry indicated by 'key', or a default if it was not found\n\n    If 'defa' was not given, then an error is thrown")},
+        {"setenv",                 ksf_wrap(M_setenv_, M_NAME ".setenv(key, val)", "Sets an environment entry to another string value")},
     ));
 
 

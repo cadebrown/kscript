@@ -32,6 +32,26 @@ ks_Exception ks_Exception_new_cv(ks_type tp, const char* cfile, const char* cfun
     return self;
 }
 
+
+
+/* Type Functions */
+
+static KS_TFUNC(T, free) {
+    ks_Exception self;
+    KS_ARGS("self:*", &self, kst_Exception);
+
+    KS_DECREF(self->frames);
+    KS_DECREF(self->args);
+    KS_DECREF(self->what);
+
+    if (self->inner) KS_DECREF(self->inner);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -70,12 +90,12 @@ DO_SUBTYPES(DECL)
 
 
 void _ksi_Exception() {
-    _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, KS_IKV(
-        
+    _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, "Exception, which is an anomoly/error, is something that can be 'thrown' up the call stack. Only objects of types deriving from 'Exception' may be thrown\n\n    To throw an exception, use the 'throw' statement, like so: 'throw Exception(\"Reasoning here\")'", KS_IKV(
+        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     
     #define INIT(_name, _par) \
-        _ksinit(kst_##_name, kst_##_par, #_name, sizeof(struct ks_Exception_s), -1, NULL);
+        _ksinit(kst_##_name, kst_##_par, #_name, sizeof(struct ks_Exception_s), -1, "", NULL);
          
     DO_SUBTYPES(INIT)
 

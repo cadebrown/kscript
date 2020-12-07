@@ -337,6 +337,14 @@ int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int b
 static struct ks_type_s tp;
 ks_type kst_float = &tp;
 
+
+ks_float ksg_nan, ksg_inf;
+
 void _ksi_float() {
-    _ksinit(kst_float, kst_number, T_NAME, sizeof(struct ks_float_s), -1, NULL);
+    _ksinit(kst_float, kst_number, T_NAME, sizeof(struct ks_float_s), -1, "Floating point (real) number, which is a quanitity represented by a 'double' in C\n\n    SEE: https://en.wikipedia.org/wiki/Floating-point_arithmetic", KS_IKV(
+
+    ));
+
+    ksg_nan = ks_float_new(KS_CFLOAT_NAN);
+    ksg_inf = ks_float_new(KS_CFLOAT_INF);
 }

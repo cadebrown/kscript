@@ -34,6 +34,7 @@ WITH_pthreads="auto"
 WITH_readline="auto"
 WITH_fftw="auto"
 
+CHECKTO="/dev/null"
 
 # -- Commandline --
 
@@ -47,6 +48,7 @@ case $1 in
         echo "Usage: ./configure [options]"
         echo ""
         echo "  -h,--help               Print this help/usage message and exit"
+        echo "  -v,--verbose            Print verbose output for checks"
         echo "  --prefix V              Sets the prefix that the software should install to (default: /usr/local)"
         echo "  --dest-dir V            Destination locally to install to (but is not kept for runtime) (default: )"
         echo ""
@@ -60,6 +62,10 @@ case $1 in
         echo "Any questions, comments, or concerns can be sent to:"
         echo "Cade Brown <cade@kscript.org>"
         exit 0
+        ;;
+    -v|--verbose)
+        CHECKTO=""
+        shift
         ;;
 
     --prefix)
@@ -192,7 +198,11 @@ int main(int argc, char** argv) {
 }
 " > $_check_c
 
-    $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ "x$CHECKTO" = 'x' ]; then
+        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    else
+        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO && $_check_o
+    fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -251,7 +261,11 @@ check_clib() {
 
         # compile and run it
         echo "$5" > $_check_c
-        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o && $_check_o
+        if [ "x$CHECKTO" = 'x' ]; then
+            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o && $_check_o
+        else
+            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 2>> $CHECKTO -o $_check_o && $_check_o
+        fi
         if [ $? -eq 0 ]; then
             echo "  :: Succeeded"
 
@@ -356,8 +370,11 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ "x$CHECKTO" = 'x' ]; then
+       $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    else
+       $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
+    fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -406,8 +423,11 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ "x$CHECKTO" = 'x' ]; then
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    else
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO && $_check_o
+    fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -482,8 +502,11 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ "x$CHECKTO" = 'x' ]; then
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    else
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
+    fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -630,8 +653,11 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    if [ "x$CHECKTO" = 'x' ]; then
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+    else
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
+    fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "

@@ -664,7 +664,7 @@ KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
  *
  * Use 'sz=0' or 'attr_pos=0' to just use base's without modification
  */
-KS_API ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, struct ks_ikv* ikv);
+KS_API ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, const char* doc, struct ks_ikv* ikv);
 
 /* Return a type attribute
  */
@@ -772,6 +772,12 @@ KS_API ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data);
 KS_API ks_list ks_list_new(ks_ssize_t len, kso* elems);
 KS_API ks_list ks_list_newn(ks_ssize_t len, kso* elems);
 
+/* Create a new list from an iterable
+ */
+KS_API ks_list ks_list_newit(ks_type tp, kso objs);
+KS_API ks_list ks_list_newi(kso objs);
+
+
 /* Clears a list
  */
 KS_API void ks_list_clear(ks_list self);
@@ -800,6 +806,10 @@ KS_API void ks_list_popu(ks_list self);
 KS_API ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems);
 KS_API ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems);
 
+/* Creates a tuple from an iterable, converting all elements
+ * NOTE: if the object is already a tuple, a new reference is returned
+ */
+KS_API ks_tuple ks_tuple_newi(kso objs);
 
 /* Create a new C-style function wrapper
  */
@@ -808,6 +818,7 @@ KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
 /* Create a new partial function with index '0' filled in
  */
 KS_API ks_partial ks_partial_new(kso of, kso arg0);
+
 
 /* Create a new dictionary
  * newn absorbs references to the values given
@@ -872,6 +883,10 @@ KS_API ks_list ks_dict_calc_ents(ks_dict self);
 KS_API ks_list ks_dict_calc_buckets(ks_dict self);
 
 
+/* Create a new 'names' object, which wraps a dictionary
+ */
+KS_API ks_names ks_names_new(ks_dict of, bool copy);
+
 
 /* Add a node to a graph
  */
@@ -884,6 +899,7 @@ KS_API bool ks_graph_add_edge(ks_graph self, ks_cint from, ks_cint to, kso val);
 /* Clear a graph
  */
 KS_API void ks_graph_clear(ks_graph self);
+
 
 
 
@@ -951,6 +967,55 @@ KS_API bool kso_inrepr(kso obj);
 /* Stop repr'ing 
  */
 KS_API void kso_outrepr();
+
+
+/** C Iterator API  **/
+
+/* ks_cit - C-iterator type, for quick iteration in C
+ *
+ * Here's how you use it:
+ * ```c
+ * kso over;
+ * ks_cit it = ks_cit_new(over);
+ * kso ob;
+ * while (ob = ks_cit_next(&it)) {
+ *   ... do stuff with 'ob' ...
+ *   KS_DECREF(ob);
+ * }
+ * ks_cit_done(&it);
+ * if (it.exc) {
+ *   ... there is an exception, you should probably return 'NULL'
+ * }
+ * 
+ * ```
+ * 
+ */
+typedef struct {
+
+    /* Iterator being iterated over, generated from 'iter(obj)' when the struct
+     *   was created
+     */
+    kso it;
+
+    /* If true, there was an unhandled exception that you must now handle
+     * NOTE: This will not be set if the exception was 'OutOfIterException'; that is swallowed
+     */
+    bool exc;
+
+} ks_cit;
+
+/* Create a new C-style iterator from 'obj'
+ */
+KS_API ks_cit ks_cit_make(kso obj);
+
+/* Finalize all resources in 'cit', but keep 'exc' as it was
+ */
+KS_API void ks_cit_done(ks_cit* cit);
+
+/* Return a new reference to the next object in 'cit'
+ */
+KS_API kso ks_cit_next(ks_cit* cit);
+
 
 
 /*** Operators ***/

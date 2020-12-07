@@ -38,15 +38,19 @@ import getarg
 
 p = getarg.Parser("greet", "0.1.0", "Prints a personalized greeting", ["Cade Brown <cade@kscript.org>"])
 
-# arg(name, opts, desc, trans=str, action=none, defa=none)
-p.arg("greeting", ["-g", "--greeting"], "The greeting message to use", str, none, "hello,")
-# pos(name, desc, num=1, trans=str, action=none, defa=none)
-p.pos("name", "What is your user name", str, 1, none, os.getenv("USER", "<unknown>"))
+# opt(name, opts, doc, trans=str, defa=none)
+p.opt("greeting", ["-g", "--greeting"], "The greeting message to use", str, "hello,")
+# pos(name, doc, num=1, trans=str, defa=none)
+p.pos("names", "List of names to greet", -1)
 
 # parse the args, throwing an error if something incorrect was given
 # or, if `-h` or `--help` are given, print out a usage message and exit successfully
 args = p.parse()
 
+if !args.names, args.names = [os.getenv("USER", "<unknown>")]
+
 # print out customized message
-print (args.greeting, args.name)
+for name in args.names {
+    print (args.greeting, name)
+}
 

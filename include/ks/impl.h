@@ -87,7 +87,7 @@ void _ksi_funcs();
 void _ksi_import();
 
 /* Initialize type */
-void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, struct ks_ikv* ikv);
+void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, const char* doc, struct ks_ikv* ikv);
 
 
 /* String constants */

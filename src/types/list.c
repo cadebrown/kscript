@@ -6,7 +6,7 @@
 #include <ks/impl.h>
 
 #define T_NAME "list"
-
+#define TI_NAME T_NAME ".__iter"
 
 
 /* C-API */
@@ -41,6 +41,41 @@ ks_list ks_list_newn(ks_ssize_t len, kso* elems) {
 
     return self;
 }
+
+
+ks_list ks_list_newit(ks_type tp, kso objs) {
+    ks_list res = KSO_NEW(ks_list, tp);
+
+    /* Build the tuple */
+    res->len = 0;
+    res->elems = NULL;
+    res->_max_len = 0;
+
+    ks_cit it = ks_cit_make(objs);
+    kso ob;
+    while ((ob = ks_cit_next(&it)) != NULL) {
+        ks_ssize_t idx = res->len++;
+        if (res->len > res->_max_len) {
+            res->_max_len = ks_nextsize(res->len, res->_max_len);
+            res->elems = ks_zrealloc(res->elems, sizeof(*res->elems), res->_max_len);
+        }
+
+        /* Absorb reference */
+        res->elems[idx] = ob;
+    }
+
+    ks_cit_done(&it);
+    if (it.exc) {
+        KS_DECREF(res);
+        return NULL;
+    }
+
+    return res;
+}
+ks_list ks_list_newi(kso objs) {
+    return ks_list_newit(kst_list, objs);
+}
+
 
 
 void ks_list_clear(ks_list self) {
@@ -120,13 +155,52 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+
+/** Iterator **/
+
+static KS_TFUNC(TI, free) {
+    ks_list_iter self;
+    KS_ARGS("self:*", &self, kst_list_iter);
+
+    KS_DECREF(self->of);
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(TI, new) {
+    ks_type tp;
+    ks_list of;
+    KS_ARGS("tp:* of:*", &tp, kst_type, &of, kst_list);
+
+    ks_list_iter self = KSO_NEW(ks_list_iter, tp);
+
+    KS_INCREF(of);
+    self->of = of;
+
+    self->pos = 0;
+
+    return (kso)self;
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
 ks_type kst_list = &tp;
 
+static struct ks_type_s tp_iter;
+ks_type kst_list_iter = &tp_iter;
+
 void _ksi_list() {
-    _ksinit(kst_list, kst_object, T_NAME, sizeof(struct ks_list_s), -1, KS_IKV(
+
+    _ksinit(kst_list_iter, kst_object, TI_NAME, sizeof(struct ks_list_s), -1, "", KS_IKV(
+        {"__free",               ksf_wrap(TI_free_, TI_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(TI_new_, TI_NAME ".__new(tp, of)", "")},
+    ));
+
+    _ksinit(kst_list, kst_object, T_NAME, sizeof(struct ks_list_s), -1, "List of references to other objects, which is mutable\n\n    Internally, a 'list' is not a linked-list-like data structure, but closer to an array. Specifically, it is an array of references, so children are not copied or duplicated, only a reference is made to them", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__iter",               KS_NEWREF(kst_list_iter)},
     ));
 }

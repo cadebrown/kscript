@@ -101,6 +101,8 @@ ks_type ksost_path = &tp;
 
 
 void _ksi_os_path() {
-    _ksinit(ksost_path, kst_object, T_NAME, sizeof(struct ksos_path_s), -1, NULL);
+    _ksinit(ksost_path, kst_object, T_NAME, sizeof(struct ksos_path_s), -1, "Path on the filesystem, which can be read, written, or 'stat'd to determine properties\n\n    This is a higher level interface than 'str', which can be used in many of the functions, but makes it difficult to reason about the path. Therefore, this type defines a more object-oriented approach to path treatment", KS_IKV(
+
+    ));
     
 }

@@ -114,6 +114,7 @@ kso _ks_exec(ks_code bc) {
     ks_str name;
     kso L, R, V;
     bool truthy;
+    int i, j;
     ksos_frame fit;
 
 
@@ -169,6 +170,10 @@ kso _ks_exec(ks_code bc) {
             KS_DECREF(stk->elems[--stk->len]);
         VMD_OP_END
         
+        VMD_OP(KSB_DUP)
+            ks_list_push(stk, stk->elems[stk->len - 1]);
+        VMD_OP_END
+
         VMD_OPA(KSB_LOAD)
             name = (ks_str)VC(arg);
             assert(name->type == kst_str);
@@ -284,6 +289,56 @@ kso _ks_exec(ks_code bc) {
             goto thrown;
         VMD_OP_END
 
+        VMD_OP(KSB_FOR_START)
+            res = ks_list_pop(stk);
+            V = kso_iter(res);
+            KS_DECREF(res);
+            if (!V) goto thrown;
+            ks_list_pushu(stk, V);
+        VMD_OP_END
+
+        VMD_OPA(KSB_FOR_NEXTT)
+            V = kso_next(stk->elems[stk->len - 1]);
+            if (!V) {
+                if (th->exc->type == kst_OutOfIterException) {
+                    kso_catch_ignore();
+                    KS_DECREF(stk->elems[--stk->len]);
+                } else {
+                    goto thrown;
+                }
+            } else {
+                pc += arg;
+                ks_list_pushu(stk, V);
+            }
+        VMD_OP_END
+
+        VMD_OPA(KSB_FOR_NEXTF)
+            V = kso_next(stk->elems[stk->len - 1]);
+            if (!V) {
+                if (th->exc->type == kst_OutOfIterException) {
+                    kso_catch_ignore();
+                    KS_DECREF(stk->elems[--stk->len]);
+                    pc += arg;
+                } else {
+                    goto thrown;
+                }
+            } else {
+                ks_list_pushu(stk, V);
+            }
+        VMD_OP_END
+
+        VMD_OPA(KSB_TRY_START)
+            i = frame->n_handlers++;
+            frame->handlers = ks_zrealloc(frame->handlers, sizeof(*frame->handlers), frame->n_handlers);
+            frame->handlers[i] = pc + arg;
+        VMD_OP_END
+
+        VMD_OPA(KSB_TRY_END)
+            frame->n_handlers--;
+            pc += arg;
+        VMD_OP_END
+
+
         VMD_OPA(KSB_IMPORT)
             name = (ks_str)VC(arg);
             assert(name->type == kst_str);
@@ -294,7 +349,42 @@ kso _ks_exec(ks_code bc) {
 
         VMD_OP_END
 
+        VMD_OP(KSB_BOP_EEQ)
+            R = ks_list_pop(stk);
+            L = ks_list_pop(stk);
+            truthy = L == R;
+            KS_DECREF(L);
+            KS_DECREF(R);
+            ks_list_push(stk, KSO_BOOL(truthy));
+        VMD_OP_END
 
+        VMD_OP(KSB_BOP_EQ)
+            R = ks_list_pop(stk);
+            L = ks_list_pop(stk);
+            if (!kso_eq(L, R, &truthy)) {
+                KS_DECREF(L);
+                KS_DECREF(R);
+                goto thrown;
+            }
+
+            KS_DECREF(L);
+            KS_DECREF(R);
+            ks_list_push(stk, KSO_BOOL(truthy));
+        VMD_OP_END
+
+        VMD_OP(KSB_BOP_NE)
+            R = ks_list_pop(stk);
+            L = ks_list_pop(stk);
+            if (!kso_eq(L, R, &truthy)) {
+                KS_DECREF(L);
+                KS_DECREF(R);
+                goto thrown;
+            }
+
+            KS_DECREF(L);
+            KS_DECREF(R);
+            ks_list_push(stk , KSO_BOOL(!truthy));
+        VMD_OP_END
 
         /* Template for binary operators */
         #define T_BOP(_b, _name) VMD_OP(_b) \
@@ -338,6 +428,10 @@ kso _ks_exec(ks_code bc) {
         T_UOP(KSB_UOP_SQIG, sqig)
 
 
+
+
+
+
         /* Error on unknown */
         VMD_CATCH_REST
     }
@@ -345,6 +439,14 @@ kso _ks_exec(ks_code bc) {
 
     thrown:;
     /* Exception was thrown */
+    if (frame->n_handlers > 0) {
+        /* Execute handler */
+        ks_Exception exc = kso_catch();
+        assert(exc != NULL);
+        ks_list_pushu(stk, (kso)exc);
+        pc = frame->handlers[--frame->n_handlers];
+        VMD_NEXT();
+    }
 
     done:;
     /* Clean up and return */

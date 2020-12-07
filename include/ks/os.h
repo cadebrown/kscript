@@ -74,9 +74,15 @@ struct ksos_frame_s {
     /* If non-NULL */
     ksos_frame closure;
 
-
     /* Program counter, current position */
     unsigned char* pc;
+
+
+    /* Number of bytecode handlers in the current thread */
+    int n_handlers;
+
+    /* Array of bytecode handlers */
+    unsigned char** handlers;
 
 };
 
@@ -183,6 +189,7 @@ KS_API bool ksos_thread_start(ksos_thread self);
 KS_API bool ksos_thread_join(ksos_thread self);
 
 
+
 /* Create new 'os.frame'
  */
 KS_API ksos_frame ksos_frame_new(kso func);
@@ -216,6 +223,14 @@ KS_API void ksos_mutex_unlock(ksos_mutex self);
 KS_API bool ksos_mutex_trylock(ksos_mutex self);
 
 
+/* Attempt to retrieve an environment variable, and return 'defa' if none was found
+ * If 'defa==NULL', then an exception will be thrown if the key was not found
+ * Returns whether one was found
+ */
+KS_API kso ksos_getenv(ks_str key, kso defa);
+KS_API bool ksos_setenv(ks_str key, ks_str val);
+
+
 /* Types */
 KS_API extern ks_type
     ksost_path,
@@ -223,8 +238,6 @@ KS_API extern ks_type
     ksost_frame,
     ksost_mutex
 ;
-
-
 
 /* Globals */
 KS_API extern ksio_FileIO

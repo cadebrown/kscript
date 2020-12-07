@@ -32,7 +32,7 @@ kso ksg_undefined = &i_undefined;
 
 void _ksi_undefined() {
     
-    _ksinit(kst_undefined, kst_object, T_NAME, 0, -1, KS_IKV(
+    _ksinit(kst_undefined, kst_object, T_NAME, 0, -1, "Like 'none', but used for operations which should be reserved for another code path\n\n   For example, when overloading operators, 'undefined' can be returned and it allows the other object's type to attempt to compute the result", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     

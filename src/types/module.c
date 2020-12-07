@@ -61,7 +61,7 @@ static struct ks_type_s tp;
 ks_type kst_module = &tp;
 
 void _ksi_module() {
-    _ksinit(kst_module, kst_object, T_NAME, sizeof(struct ks_module_s), offsetof(struct ks_module_s, attr), KS_IKV(
+    _ksinit(kst_module, kst_object, T_NAME, sizeof(struct ks_module_s), offsetof(struct ks_module_s, attr), "Modules are organizations of code which may be imported, and seperated", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},

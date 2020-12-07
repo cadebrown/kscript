@@ -61,7 +61,7 @@ static struct ks_type_s tp;
 ks_type ksiot_BytesIO = &tp;
 
 void _ksi_io_BytesIO() {
-    _ksinit(ksiot_BytesIO, kst_object, T_NAME, sizeof(struct ksio_BytesIO_s), -1, KS_IKV(
+    _ksinit(ksiot_BytesIO, kst_object, T_NAME, sizeof(struct ksio_BytesIO_s), -1, "In memory input/output for data in the form of 'bytes' objects", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
 
     ));

@@ -293,7 +293,7 @@ bool ks_inter() {
     /* Keep taking prompts */
     bool done = false;
     while (!done) {
-        ks_str fname = ks_fmt("<inter-%i>", ct);
+        ks_str fname = ks_fmt("<inter-%i>", ct++);
         
         /* Clear buffer for source code */
         code->len_b = code->len_c = 0;
@@ -360,7 +360,6 @@ bool ks_inter() {
             break;
         }
 
-
         /* Now, actually compile and run the input */
         ks_str src = ksio_StringIO_get(code);
 
@@ -421,8 +420,6 @@ bool ks_inter() {
         }
         ks_dict_set(ksg_inter_vars, (kso)prompt2, res);
         KS_DECREF(res);
-
-        ct++;
     }
 
     return true;

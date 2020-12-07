@@ -80,7 +80,7 @@ void ks_tok_add(ksio_AnyIO self, ks_str fname, ks_str src, ks_tok tok) {
     /* Subidivide line */
     if (tok.sline < 0 || tok.scol < 0 || tok.spos < 0) {
         /* Invalid token/not real file */
-        ksio_add(self, "@ <EOF> in %R", tok.sline + 1, tok.scol + 1, fname);
+        ksio_add(self, "@ <EOF> in %R", fname);
 
     } else {
         /* Real token, so add context */
@@ -114,7 +114,7 @@ void ks_tok_add(ksio_AnyIO self, ks_str fname, ks_str src, ks_tok tok) {
             is_multi ? 0 : el - tok.epos, s + tok.epos,
 
             tok.scol, ' ',
-            (is_multi ? el : tok.ecol) - tok.scol - 1, '~',
+            (is_multi ? el - pl - tok.scol - 14 : tok.ecol - tok.scol) - 1, '~',
             is_multi ? "(continued on next line)" : ""
         );
         

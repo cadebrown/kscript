@@ -37,22 +37,10 @@ static ks_cfloat i_mpz_div_d(mpz_t n, mpz_t d) {
     mpz_mul_2exp(q, n, s);
     mpz_tdiv_q(q, q, d);
 
-    ks_cfloat qf;
 
     /* Convert 'q' back */
-    #if defined(KS_FLOAT_float) || defined(KS_FLOAT_double)
-    qf = mpz_get_d(q);
-    #else
-    ks_int tmpi = ks_int_newzn(q);
-    /* string conversion required for larger precisions */
-    char *tmpstr = ks_malloc(mpz_sizeinbase(q, 16) + 4);
-    tmpstr[0] = '0';
-    tmpstr[1] = 'x';
-    mpz_get_str(tmpstr+2, 16, q);
-    bool _res = ks_cfloat_from_str(tmpstr, -1, &qf);
-    assert(_res);
-    ks_free(tmpstr);
-    #endif
+    ks_cfloat qf = mpz_get_d(q);
+    mpz_clear(q);
 
     if (qf == INFINITY) return qf;
     
@@ -857,7 +845,7 @@ static struct ks_type_s tp;
 ks_type kst_number = &tp;
 
 void _ksi_number() {
-    _ksinit(kst_number, kst_object, T_NAME, sizeof(struct kso_s), -1, KS_IKV(
+    _ksinit(kst_number, kst_object, T_NAME, sizeof(struct kso_s), -1, "Abstract base type of other numeric quantities\n\n   Defines operators for different types of numbers, but cannot be instantiated directly (see types 'int', 'float', 'complex' for examples)", KS_IKV(
 
         {"__pos",                  ksf_wrap(T_pos_, T_NAME ".__pos(self)", "")},
         {"__neg",                  ksf_wrap(T_neg_, T_NAME ".__neg(self)", "")},

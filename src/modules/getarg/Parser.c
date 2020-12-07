@@ -453,6 +453,41 @@ ks_str ksga_help(ksga_Parser self) {
 
 /* Type functions */
 
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    ks_str name, version, doc;
+    kso authors;
+    KS_ARGS("tp:* name:* version:* doc:* authors", &tp, kst_type, &name, kst_str, &version, kst_str, &doc, kst_str, &authors);
+    
+    ks_list la = NULL;
+    if (kso_issub(authors->type, kst_str)) {
+        la = ks_list_new(0, NULL);
+        ks_list_push(la, authors);
+    } else {
+        la = ks_list_newi(authors);
+    }
+    if (!la) return NULL;
+
+    ksga_Parser self = KSO_NEW(ksga_Parser, tp);
+
+    self->n_pos = self->n_opt = self->n_flag = 0;
+    self->pos = NULL;
+    self->opt = NULL;
+    self->flag = NULL;
+
+    KS_INCREF(name);
+    self->name = name;
+    KS_INCREF(version);
+    self->version = version;
+    KS_INCREF(doc);
+    self->doc = doc;
+
+    self->authors = la;
+
+    return (kso)self;
+}
+
+
 static KS_TFUNC(T, free) {
     ksga_Parser self;
     KS_ARGS("self:*", &self, ksgat_Parser);
@@ -493,6 +528,114 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, flag) {
+    ksga_Parser self;
+    ks_str name;
+    kso opts;
+    ks_str doc;
+    kso action = KSO_NONE;
+    KS_ARGS("self:* name:* opts doc:* ?action", &self, ksgat_Parser, &name, kst_str, &opts, &doc, kst_str, &action);
+
+    ks_list la = NULL;
+    if (kso_issub(opts->type, kst_str)) {
+        la = ks_list_new(0, NULL);
+        ks_list_push(la, opts);
+    } else {
+        la = ks_list_newi(opts);
+    }
+    if (!la) return NULL;
+
+    int i = self->n_flag++;
+    self->flag = ks_zrealloc(self->flag, sizeof(*self->flag), self->n_flag);
+
+    KS_INCREF(name);
+    self->flag[i].name = name;
+    KS_INCREF(doc);
+    self->flag[i].doc = doc;
+
+    self->flag[i].opts = la;
+
+    KS_INCREF(action);
+    self->flag[i].action = action;
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, opt) {
+    ksga_Parser self;
+    ks_str name;
+    kso opts;
+    ks_str doc;
+    kso trans = (kso)kst_str;
+    kso defa = NULL;
+    KS_ARGS("self:* name:* opts doc:* ?trans ?defa", &self, ksgat_Parser, &name, kst_str, &opts, &doc, kst_str, &trans, &defa);
+
+    ks_list la = NULL;
+    if (kso_issub(opts->type, kst_str)) {
+        la = ks_list_new(0, NULL);
+        ks_list_push(la, opts);
+    } else {
+        la = ks_list_newi(opts);
+    }
+    if (!la) return NULL;
+
+    int i = self->n_opt++;
+    self->opt = ks_zrealloc(self->opt, sizeof(*self->opt), self->n_opt);
+
+    KS_INCREF(name);
+    self->opt[i].name = name;
+    KS_INCREF(doc);
+    self->opt[i].doc = doc;
+
+    self->opt[i].opts = la;
+
+    KS_INCREF(trans);
+    self->opt[i].trans = trans;
+    if (defa) KS_INCREF(defa);
+    self->opt[i].defa = defa;
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, pos) {
+    ksga_Parser self;
+    ks_str name;
+    ks_str doc;
+    ks_cint num = 1;
+    kso trans = (kso)kst_str;
+    KS_ARGS("self:* name:* doc:* ?num:cint ?trans", &self, ksgat_Parser, &name, kst_str, &doc, kst_str, &num, &trans);
+
+    int i = self->n_pos++;
+    self->pos = ks_zrealloc(self->pos, sizeof(*self->pos), self->n_pos);
+
+    KS_INCREF(name);
+    self->pos[i].name = name;
+    KS_INCREF(doc);
+    self->pos[i].doc = doc;
+
+    self->pos[i].num = num;
+
+    KS_INCREF(trans);
+    self->pos[i].trans = trans;
+
+    return KSO_NONE;
+}
+
+
+static KS_TFUNC(T, parse) {
+    ksga_Parser parser;
+    ks_list args = ksos_argv;
+    KS_ARGS("self:* ?args:*", &parser, ksgat_Parser, &args, kst_list);
+
+    ks_dict vals = ksga_parse(parser, args);
+    if (!vals) return NULL;
+
+    ks_names res = ks_names_new(vals, false);
+    KS_DECREF(vals);
+
+    return (kso)res;
+}
+
 static KS_TFUNC(T, on_help) {
     ksga_Parser parser;
     ks_str name, opt;
@@ -531,8 +674,16 @@ static struct ks_type_s tp;
 ks_type ksgat_Parser = &tp;
 
 void _ksi_getarg_Parser() {
-    _ksinit(ksgat_Parser, kst_object, T_NAME, sizeof(struct ksga_Parser_s), -1, KS_IKV(
+    _ksinit(ksgat_Parser, kst_object, T_NAME, sizeof(struct ksga_Parser_s), -1, "Parses commandline arguments, similar to the 'getopt()' function in C", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, name, version, doc, authors)", "")},
+
+        {"flag",                 ksf_wrap(T_flag_, T_NAME ".flag(self, name, opts, doc, action=none)", "Create a new flag for the parser\n\n    'opts' should contain option arguments, which begin with '-'")},
+        {"opt",                  ksf_wrap(T_opt_, T_NAME ".opt(self, name, opts, doc, trans=str, defa=none)", "Create a new option argument for the parser\n\n    'opts' should contain option arguments, which begin with '-'")},
+        {"pos",                  ksf_wrap(T_pos_, T_NAME ".pos(self, name, doc, num=1, trans=str)", "Create a new positional argument for the parser")},
+
+        {"parse",                ksf_wrap(T_parse_, T_NAME ".parse(self, args=os.argv)", "Parse a list of arguments, returning a mapping which can be used to retrieve arguments")},
+
         {"on_help",              (action_help = ksf_wrap(T_on_help_, T_NAME ".on_help(self, name, opt)", "Handles when the builtin help option is passed"))},
         {"on_version",           (action_version = ksf_wrap(T_on_version_, T_NAME ".on_version(self, name, opt)", "Handles when the builtin version option is passed"))},
     ));

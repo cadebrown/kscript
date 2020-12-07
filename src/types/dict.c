@@ -541,7 +541,7 @@ static struct ks_type_s tp;
 ks_type kst_dict = &tp;
 
 void _ksi_dict() {
-    _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, KS_IKV(
+    _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, "Dictionaries, sometimes called associative arrays, are mappings between keys and values. The keys and values may be any objects, the only requirement is that keys are hashable. And, for keys which hash equally and compare equally, there is only one key stored\n\n    Entries are ordered by first insertion of the key, which is reset upon deletion\n\n    SEE: https://en.wikipedia.org/wiki/Associative_array", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     

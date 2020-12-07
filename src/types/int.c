@@ -254,7 +254,7 @@ static struct ks_type_s tp;
 ks_type kst_int = &tp;
 
 void _ksi_int() {
-    _ksinit(kst_int, kst_number, T_NAME, sizeof(struct ks_int_s), -1, KS_IKV(
+    _ksinit(kst_int, kst_number, T_NAME, sizeof(struct ks_int_s), -1, "Integer quanitity, which is a whole number. Can be any positive integer, negative integer, or 0\n\n    Unlike many programming languages, the 'int' type (and subtypes) are not limited to machine register limits, but are only limited to how much memory can be allocated", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(self, obj=none, base=10)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self, base=10)", "")},

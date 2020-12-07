@@ -209,8 +209,6 @@ static KS_TFUNC(T, add) {
 
 
 
-
-
 /** Iterator **/
 
 static KS_TFUNC(TI, free) {
@@ -249,12 +247,12 @@ ks_type kst_str_iter = &tp_iter;
 
 void _ksi_str() {
 
-    _ksinit(kst_str_iter, kst_object, TI_NAME, sizeof(struct ks_str_iter_s), -1, KS_IKV(
+    _ksinit(kst_str_iter, kst_object, TI_NAME, sizeof(struct ks_str_iter_s), -1, "", KS_IKV(
         {"__free",               ksf_wrap(TI_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(TI_new_, T_NAME ".__new(tp, of)", "")},
     ));
 
-    _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, KS_IKV(
+    _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, "String (i.e. a collection of Unicode characters)\n\n    Indicies, operations, and so forth take character positions, not byte positions", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(self)", "")},
 

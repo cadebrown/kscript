@@ -22,6 +22,9 @@ ksos_frame ksos_frame_new(kso func) {
     self->pc = NULL;
     self->closure = NULL;
 
+    self->n_handlers = 0;
+    self->handlers = NULL;
+
     return self;
 }
 
@@ -38,6 +41,14 @@ ksos_frame ksos_frame_copy(ksos_frame of) {
     self->closure = of->closure;
 
     self->pc = of->pc;
+
+    self->n_handlers = of->n_handlers;
+    self->handlers = ks_zmalloc(sizeof(*self->handlers), self->n_handlers);
+
+    ks_size_t i;
+    for (i = 0; i < self->n_handlers; ++i) {
+        self->handlers[i] = of->handlers[i];
+    }
 
     return self;
 }
@@ -102,6 +113,7 @@ static KS_TFUNC(T, free) {
 
     KS_DECREF(self->func);
     if (self->args) KS_DECREF(self->args);
+    ks_free(self->handlers);
 
     KSO_DEL(self);
 
@@ -116,7 +128,7 @@ ks_type ksost_frame = &tp;
 
 
 void _ksi_os_frame() {
-    _ksinit(ksost_frame, kst_object, T_NAME, sizeof(struct ksos_frame_s), -1, KS_IKV(
+    _ksinit(ksost_frame, kst_object, T_NAME, sizeof(struct ksos_frame_s), -1, "Frame of execution, which represents a certain thread state, as well as closures", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     

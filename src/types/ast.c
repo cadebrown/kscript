@@ -190,7 +190,7 @@ void _ksi_ast() {
     {"UOP_STAR", KS_AST_UOP_STAR}, 
     ));
 
-    _ksinit(kst_ast, kst_object, T_NAME, sizeof(struct ks_ast_s), -1, KS_IKV(
+    _ksinit(kst_ast, kst_object, T_NAME, sizeof(struct ks_ast_s), -1, "Abstract Syntax Tree (AST), which is a representation of a (kscript) program in abstract terms. It can be compiled, or inspected, and is cross-platform (unlike bytecode, which is an implementation detail)", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},

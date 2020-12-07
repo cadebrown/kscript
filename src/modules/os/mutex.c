@@ -109,7 +109,9 @@ ks_type ksost_mutex = &tp;
 ksos_mutex ksg_GIL = NULL;
 
 void _ksi_os_mutex() {
-    _ksinit(ksost_mutex, kst_object, T_NAME, sizeof(struct ksos_mutex_s), -1, NULL);
+    _ksinit(ksost_mutex, kst_object, T_NAME, sizeof(struct ksos_mutex_s), -1, "Mutual exclusion lock, which can be acquired and released to enforce data dependencies", KS_IKV(
+
+    ));
     
 
     /* Create GIL */

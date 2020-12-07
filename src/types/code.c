@@ -182,7 +182,7 @@ static struct ks_type_s tp;
 ks_type kst_code = &tp;
 
 void _ksi_code() {
-    _ksinit(kst_code, kst_object, T_NAME, sizeof(struct ks_code_s), -1, KS_IKV(
+    _ksinit(kst_code, kst_object, T_NAME, sizeof(struct ks_code_s), -1, "Bytecode object, which can be executed by the kscript virtual machine (vm)\n\n    This is an implementation detail, and the specifics of this type are dependent on the exact implementation and version", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},

@@ -38,19 +38,22 @@ void kso_outrepr() {
 
 
 bool kso_truthy(kso ob, bool* out) {
-    if (kso_issub(ob->type, kst_int)) {
+    if (kso_issub(ob->type, kst_int) && ob->type->i__bool == kst_int->i__bool) {
         ks_int obi = (ks_int)ob;
         #ifdef KS_INT_GMP
         *out = mpz_cmp_si(obi->val, 0) != 0;
         return true;
         #endif
-    } else if (kso_issub(ob->type, kst_float)) {
+    } else if (kso_issub(ob->type, kst_float) && ob->type->i__bool == kst_float->i__bool) {
         ks_float obf = (ks_float)ob;
         *out = obf->val != 0;
         return true;
-    } else if (kso_issub(ob->type, kst_complex)) {
+    } else if (kso_issub(ob->type, kst_complex) && ob->type->i__bool == kst_complex->i__bool) {
         ks_complex obf = (ks_complex)ob;
         *out = !KS_CC_EQRI(obf->val, 0, 0);
+        return true;
+    } else if (kso_issub(ob->type, kst_str) && ob->type->i__bool == kst_str->i__bool) {
+        *out = ((ks_str)ob)->len_b > 0;
         return true;
     } else if (ob->type->i__bool) {
         kso bo = kso_call(ob->type->i__bool, 1, &ob);
@@ -78,10 +81,40 @@ bool kso_eq(kso L, kso R, bool* out) {
             *out = mpz_cmp(((ks_int)L)->val, ((ks_int)R)->val) == 0;
         }
         return true;
+    } else if (L->type->i__eq == kst_object->i__eq) {
+        *out = L == R;
+        return true;
+    } else if (L->type->i__eq || R->type->i__eq) {
+        kso r = KSO_UNDEFINED;
+        if (L->type->i__eq) {
+            r = kso_call(L->type->i__eq, 2, (kso[]){ L, R });
+            if (!r) return NULL;
+        }
+
+        if (r == KSO_UNDEFINED) {
+            if (R->type->i__eq) {
+                r = kso_call(R->type->i__eq, 2, (kso[]){ L, R });
+                if (!r) return NULL;
+
+                if (r == KSO_UNDEFINED) {
+
+                } else {
+                    bool res = kso_truthy(r, out);
+                    KS_DECREF(r);
+                    return res;
+                }
+            }
+
+        } else {
+            bool res = kso_truthy(r, out);
+            KS_DECREF(r);
+            return res;
+        }
     }
 
-    assert(false);
-    return false;
+    //assert(false);
+    *out = L == R;
+    return true;
 }
 
 bool kso_hash(kso ob, ks_hash_t* val) {
@@ -454,7 +487,7 @@ bool kso_delelems(int n_keys, kso* keys) {
 kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
     ksos_thread th = ksos_thread_get();
     assert(th != NULL);
-    int i, j;
+    int i, j, k;
 
     kso res = NULL;
     if (kso_issub(func->type, kst_func) && func->type->i__call == kst_func->i__call) {
@@ -490,6 +523,29 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
 
         ks_list_popu(th->frames);
         KS_DECREF(frame);
+    } else if (kso_issub(func->type, kst_partial) && func->type->i__call == kst_partial->i__call) {
+        /* Fill in arguments to partial function */
+        ks_partial f = (ks_partial)func;
+
+        /* Create a new buffer with all the arguments */
+        int new_nargs = nargs + f->n_args;
+        kso* new_args = ks_zmalloc(sizeof(*new_args), new_nargs);
+
+        for (i = 0, j = 0, k = 0; i < new_nargs; ++i) {
+            if (j < f->n_args && f->args[j].idx == i) {
+                /* Take the next from the pre-filled-in ones */
+                new_args[i] = f->args[j++].val;
+            } else {
+                /* Take it from params */
+                new_args[i] = args[k++];
+            }
+        }
+        assert(i == new_nargs && j == f->n_args && k == nargs);
+
+        /* Call the thing being wrapped */
+        res = kso_call_ext(f->of, new_nargs, new_args, locals);
+
+        ks_free(new_args);
 
     } else if (kso_issub(func->type, kst_type) && func->type->i__call == kst_type->i__call) {
         /* We have a type that has not overriden '__call', so treat it like a constructor */
@@ -587,19 +643,26 @@ kso kso_next(kso ob) {
         ks_str res = ks_str_new(ct, it->of->data + it->pos);
         it->pos += ct;
         return (kso)res;
+    } else if (kso_issub(ob->type, kst_list_iter) && ob->type->i__next == kst_list_iter->i__next) {
+        ks_list_iter it = (ks_list_iter)ob;
+        if (it->pos >= it->of->len) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+
+        return KS_NEWREF(it->of->elems[it->pos++]);
 
     } else if (ob->type->i__next) {
         return kso_call(ob->type->i__ne, 1, &ob);
     } else {
         /* Default to 'next(iter(ob))' */
         kso it = kso_iter(ob);
+        if (!it) return NULL;
         kso res = kso_next(it);
-        KS_DECREF(res);
+        KS_DECREF(it);
         return res;
     }
 }
-
-
 
 void* kso_throw(ks_Exception exc) {
     ksos_thread th = ksos_thread_get();
@@ -678,11 +741,7 @@ bool kso_catch_ignore_print() {
         ksio_add((ksio_AnyIO)ksos_stderr, "In %R\n", ksos_thread_get());
 
         KS_DECREF(exc);
-        KS_DECREF(frames);
 
-        return true;
-
-        KS_DECREF(exc);
         return true;
     }
     return false;

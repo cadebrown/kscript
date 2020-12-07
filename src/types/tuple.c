@@ -33,11 +33,70 @@ ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems) {
 }
 
 
+ks_tuple ks_tuple_newit(ks_type tp, kso objs) {
+    ks_tuple res = KSO_NEW(ks_tuple, tp);
+
+    /* Build the tuple */
+    res->len = 0;
+    res->elems = NULL;
+    ks_ssize_t max_len = 0;
+
+    ks_cit it = ks_cit_make(objs);
+    kso ob;
+    while ((ob = ks_cit_next(&it)) != NULL) {
+        ks_ssize_t idx = res->len++;
+        if (res->len > max_len) {
+            max_len = ks_nextsize(res->len, max_len);
+            res->elems = ks_zrealloc(res->elems, sizeof(*res->elems), max_len);
+        }
+
+        /* Absorb reference */
+        res->elems[idx] = ob;
+    }
+
+    ks_cit_done(&it);
+    if (it.exc) {
+        KS_DECREF(res);
+        return NULL;
+    }
+
+    return res;
+}
+ks_tuple ks_tuple_newi(kso objs) {
+    if (kso_issub(objs->type, kst_tuple)) return (ks_tuple)KS_NEWREF(objs);
+
+    return ks_tuple_newit(kst_tuple, objs);
+}
+
+
+
+
+/* Type Functions */
+
+static KS_TFUNC(T, free) {
+    ks_tuple self;
+    KS_ARGS("self:*", &self, kst_tuple);
+
+    ks_size_t i;
+    for (i = 0; i < self->len; ++i) {
+        KS_DECREF(self->elems[i]);
+    }
+    ks_free(self->elems);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+
+
 /* Export */
 
 static struct ks_type_s tp;
 ks_type kst_tuple = &tp;
 
 void _ksi_tuple() {
-    _ksinit(kst_tuple, kst_object, T_NAME, sizeof(struct ks_tuple_s), -1, NULL);
+    _ksinit(kst_tuple, kst_object, T_NAME, sizeof(struct ks_tuple_s), -1, "Like 'list', but immutable", KS_IKV(
+        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+    ));
 }

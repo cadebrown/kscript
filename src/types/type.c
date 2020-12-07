@@ -12,7 +12,7 @@
 
 
 /* Initialize a type that has already been allocated or has memory */
-void type_init(ks_type self, ks_type base, const char* name, int sz, int attr, struct ks_ikv* ikv, bool is_new) {
+void type_init(ks_type self, ks_type base, const char* name, int sz, int attr, const char* doc, struct ks_ikv* ikv, bool is_new) {
     if (is_new) {
 
     } else {
@@ -40,6 +40,11 @@ void type_init(ks_type self, ks_type base, const char* name, int sz, int attr, s
     ks_type_set(self, _ksva__fullname, tmp);
     KS_DECREF(tmp);
 
+    tmp = (kso)ks_str_new(-1, doc);
+    ks_type_set(self, _ksva__doc, tmp);
+    KS_DECREF(tmp);
+
+
     /* Add to 'subs' */
     if (self != base) {
         int idx = base->n_subs++;
@@ -59,15 +64,15 @@ void type_init(ks_type self, ks_type base, const char* name, int sz, int attr, s
 
 }
 
-void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, struct ks_ikv* ikv) {
-    type_init(self, base, name, sz, attr, ikv, false);
+void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, const char* doc, struct ks_ikv* ikv) {
+    type_init(self, base, name, sz, attr, doc, ikv, false);
 }
 
 
-ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, struct ks_ikv* ikv) {
+ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, const char* doc, struct ks_ikv* ikv) {
     ks_type self = KSO_NEW(ks_type, kst_type);
 
-    type_init(self, base, name, sz, attr_pos, ikv, true);
+    type_init(self, base, name, sz, attr_pos, doc, ikv, true);
 
     return self;
 }
@@ -111,7 +116,7 @@ static struct ks_type_s tp;
 ks_type kst_type = &tp;
 
 void _ksi_type() {
-    _ksinit(kst_type, kst_object, T_NAME, sizeof(struct ks_type_s), offsetof(struct ks_type_s, attr), KS_IKV(
+    _ksinit(kst_type, kst_object, T_NAME, sizeof(struct ks_type_s), offsetof(struct ks_type_s, attr), "Represents a type, which is a descriptor of objects which are instances of the type", KS_IKV(
 
     ));
 }

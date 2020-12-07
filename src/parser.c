@@ -11,8 +11,10 @@
 
 /** Utilities **/
 
+/* Dictionary of keyword constants */
+static ks_dict kwconst = NULL;
 
-/* */
+/* Ast representing 'none' */
 static ks_ast ast_none = NULL;
 
 ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* fmt, ...) {
@@ -186,8 +188,10 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
 
 /* Parser flags, which affect how the parser treats certain constructs */
 enum {
-    PF_NONE = 0,
+    PF_NONE   = 0x00,
 
+    /* Do not consume any 'in' tokens at the highest level */
+    PF_NO_IN  = 0x01,
 
 };
 
@@ -426,11 +430,77 @@ RULE(STMT) {
             ks_ast_pushn(deep, other);
         }
 
-
         return res;
 
     } else if (k == KS_TOK_FOR) {
-        
+        EAT();
+
+        ks_ast to = SUBF(EXPR, PF_NO_IN);
+        if (!to) return NULL;
+
+        if (TOK.kind != KS_TOK_IN) {
+            KS_THROW_SYNTAX(fname, src, TOK, "Expected 'in' here for for-loop");
+            KS_DECREF(to);
+            return NULL;
+        }
+        EAT();
+
+        ks_ast it = SUB(EXPR);
+        if (!it) {
+            KS_DECREF(to);
+            return NULL;
+        }
+
+
+        ks_ast body = SUB(BORC);
+        if (!body) {
+            KS_DECREF(to);
+            KS_DECREF(it);
+            return NULL;
+        }
+
+        ks_ast res = ks_ast_newn(KS_AST_FOR, 3, (ks_ast[]){ to, it, body }, NULL, t);
+
+        /* Deepest node, which we should added clauses to */
+        ks_ast deep = res;
+
+        while (TOK.kind == KS_TOK_ELIF) {
+            t = EAT();
+            
+            ks_ast cond = SUB(EXPR);
+            if (!cond) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            body = SUB(BORC);
+            if (!body) {
+                KS_DECREF(cond);
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            /* Construct branch of the deepest tree */
+            ks_ast other = ks_ast_newn(KS_AST_IF, 2, (ks_ast[]){ cond, body }, NULL, t);
+            ks_ast_pushn(deep, other);
+            deep = other;
+
+        }
+
+        if (TOK.kind == KS_TOK_ELSE) {
+            EAT();
+
+            ks_ast other = SUB(BORS);
+            if (!other) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            ks_ast_pushn(deep, other);
+        }
+
+        return res;
+
     } else if (k == KS_TOK_SEMI) {
         /* Empty block */
         t = EAT();
@@ -591,7 +661,7 @@ RULE(E1) {
             KS_DECREF(res); \
             return NULL; \
         } \
-        res = ks_ast_new(k, 2, (ks_ast[]){ lhs, rhs }, NULL, t); \
+        res = ks_ast_newn(k, 2, (ks_ast[]){ lhs, rhs }, NULL, t); \
     } \
     return res; \
 }
@@ -642,11 +712,8 @@ RULE(E5) {
         }
 
         /* Add to results */
-        ks_list_push(res, (kso)rhs);
-        KS_DECREF(rhs);
-        ks_int cmp = ks_int_new(k);
-        ks_list_push(cmps, (kso)cmp);
-        KS_DECREF(cmp);
+        ks_list_pushu(res, (kso)rhs);
+        ks_list_pushu(cmps, (kso)ks_int_new(k));
     }
 
     if (res->len == 1) {
@@ -664,7 +731,7 @@ RULE(E5) {
             KS_DECREF(res);
             return NULL;
         }
-        ks_ast rr = ks_ast_new(k, res->len, (ks_ast*)res->elems, NULL, KS_TOK_MAKE_EMPTY());
+        ks_ast rr = ks_ast_new(k, res->len, (ks_ast*)res->elems, NULL, ((ks_ast)res->elems[0])->tok);
         KS_DECREF(res);
         KS_DECREF(cmps);
         return rr;
@@ -926,7 +993,16 @@ RULE(ATOM) {
     /* Check for single token expressions */
     if (TOK.kind == KS_TOK_NAME) {
         ks_tok t = EAT();
-        return ks_ast_newn(KS_AST_NAME, 0, NULL, (kso)ks_tok_str(src, t), t);
+        ks_str v = ks_tok_str(src, t);
+        kso r = ks_dict_get_ih(kwconst, (kso)v, v->v_hash);
+        ks_ast res = NULL;
+        if (r) {
+            KS_DECREF(v);
+            res = ks_ast_newn(KS_AST_CONST, 0, NULL, r, t);
+        } else {
+            res = ks_ast_newn(KS_AST_NAME, 0, NULL, (kso)v, t);
+        }
+        return res;
     } else if (TOK.kind == KS_TOK_INT) {
         ks_tok t = EAT();
         ks_int v = ks_int_news(t.epos - t.spos, src->data + t.spos, 0);
@@ -1139,5 +1215,13 @@ ks_ast ks_parse_expr(ks_str fname, ks_str src, ks_ssize_t n_toks, ks_tok* toks) 
 
 void _ksi_parser() {
     ast_none = ks_ast_new(KS_AST_CONST, 0, NULL, KSO_NONE, KS_TOK_MAKE_EMPTY());
+    kwconst = ks_dict_new(KS_IKV(
+        {"none",         KS_NEWREF(KSO_NONE)},
+        {"true",         KS_NEWREF(KSO_TRUE)},
+        {"false",        KS_NEWREF(KSO_FALSE)},
+        {"inf",         KS_NEWREF(KSO_INF)},
+        {"nan",         KS_NEWREF(KSO_NAN)},
+
+    ));
 }
 

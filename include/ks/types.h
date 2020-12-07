@@ -329,6 +329,18 @@ typedef struct ks_list_s {
 
 }* ks_list;
 
+/* 'list.__iter' iterator type */
+typedef struct ks_list_iter_s {
+    KSO_BASE
+
+    ks_list of;
+
+    /* Current position (in bytes) that the iterator is at */
+    ks_cint pos;
+
+}* ks_list_iter;
+
+
 /* 'tuple' - (immutable) collection of objects
  */
 typedef struct ks_tuple_s {

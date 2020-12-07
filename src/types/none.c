@@ -32,7 +32,7 @@ kso ksg_none = &i_none;
 
 void _ksi_none() {
     
-    _ksinit(kst_none, kst_object, T_NAME, 0, -1, KS_IKV(
+    _ksinit(kst_none, kst_object, T_NAME, 0, -1, "None/nil/null are all represented as this type\n\n    Technically, 'null' isn't the best description of the type, since 'none' is a valid object (it is a valid reference), so operations are still defined on 'none', but they are similar enough to consider", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     
