@@ -268,7 +268,7 @@ bool kso_is_iterable(kso obj) {
 }
 
 bool kso_is_callable(kso obj) {
-    return kso_issub(obj->type, kst_type) || obj->type->i__call;
+    return kso_issub(obj->type, kst_type) || kso_issub(obj->type, kst_func) || kso_issub(obj->type, kst_partial) || obj->type->i__call;
 }
 
 
