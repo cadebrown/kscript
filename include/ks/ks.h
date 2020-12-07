@@ -163,6 +163,7 @@
 /** Globals **/
 
 #define KSO_NONE ((kso)ksg_none)
+#define KSO_UNDEFINED ((kso)ksg_undefined)
 #define KSO_DOTDOTDOT ((kso)ksg_dotdotdot)
 
 #define KSO_TRUE ((kso)ksg_true)
@@ -175,6 +176,7 @@
 
 KS_API extern kso
     ksg_none,
+    ksg_undefined,
     ksg_dotdotdot
 ;
 KS_API extern ks_bool
@@ -197,13 +199,16 @@ KS_API extern ksos_thread
 ;
 
 KS_API extern ks_dict
-    ksg_globals
+    ksg_globals,
+    ksg_config,
+    ksg_inter_vars
 ;
 
 KS_API extern ks_type
 
     kst_object,
     kst_none,
+    kst_undefined,
     kst_dotdotdot,
     kst_number,
       kst_int,
@@ -225,6 +230,14 @@ KS_API extern ks_type
     kst_map,
     kst_filter,
     kst_enumerate,
+
+    kst_str_iter,
+    kst_bytes_iter,
+    kst_range_iter,
+    kst_list_iter,
+    kst_tuple_iter,
+    kst_set_iter,
+    kst_dict_iter,
 
     kst_type,
     kst_func,
@@ -267,6 +280,7 @@ KS_API extern ks_func
     ksf_min,
     ksf_max,
     ksf_sum,
+    ksf_pow,
 
     ksf_open,
     ksf_close,
@@ -565,8 +579,11 @@ KS_API void kso_exit_if_err();
  */
 KS_API ks_module ks_import(ks_str name);
 
-/*** Conversions ***/
+/* Run the interactive shell
+ */
+KS_API bool ks_inter();
 
+/*** Conversions ***/
 
 /* Attempt to convert 'ob' to the specified C-style value
  */
@@ -599,6 +616,28 @@ KS_API ks_str kso_repr(kso ob);
 KS_API ks_number kso_number(kso ob);
 KS_API ks_int kso_int(kso ob);
 
+
+/* Return whether an object is numeric */
+KS_API bool kso_is_num(kso obj);
+
+/* Return whether an object is integral */
+KS_API bool kso_is_int(kso obj);
+
+/* Return whether an object is floating-point (not including integral)*/
+KS_API bool kso_is_float(kso obj);
+
+/* Return whether an object is complex (not including reals) */
+KS_API bool kso_is_complex(kso obj);
+
+/* Return whether an object is considered iterable */
+KS_API bool kso_is_iterable(kso obj);
+
+/* Return whether an object is considered callable */
+KS_API bool kso_is_callable(kso obj);
+
+
+
+
 /* Apply C-style printf-like formatting, and return as a string
  *
  * Format specifiers:
@@ -627,6 +666,10 @@ KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
  */
 KS_API ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, struct ks_ikv* ikv);
 
+/* Return a type attribute
+ */
+KS_API kso ks_type_get(ks_type self, ks_str attr);
+
 /* Sets an attribute of the type
  */
 KS_API bool ks_type_set(ks_type self, ks_str attr, kso val);
@@ -636,6 +679,10 @@ KS_API bool ks_type_set_c(ks_type self, const char* attr, kso val);
  */
 KS_API ks_int ks_int_new(ks_cint val);
 KS_API ks_int ks_int_newu(ks_uint val);
+
+/* Create a new integer from flooring a C-style float
+ */
+KS_API ks_int ks_int_newf(ks_cfloat val);
 
 /* Create a new integer from a string representation
  * Give 'base==0' for default/detected
@@ -647,6 +694,14 @@ KS_API ks_int ks_int_news(ks_ssize_t sz, const char* src, int base);
 KS_API ks_int ks_int_newz(mpz_t val);
 KS_API ks_int ks_int_newzn(mpz_t val);
 
+
+/* Compare two kscript integers, returning a comparator
+ */
+KS_API int ks_int_cmp(ks_int L, ks_int R);
+
+/* Compare a kscript int to a C-style integer, return a sign indicating the comparison
+ */
+KS_API int ks_int_cmp_c(ks_int L, ks_cint r);
 
 
 /* Create a new float
@@ -691,6 +746,12 @@ KS_API bool ks_str_eq_c(ks_str L, const char* data, ks_ssize_t len_b);
 KS_API ks_str ks_str_chr(ks_ucp ord);
 KS_API ks_ucp ks_str_ord(ks_str chr);
 
+/* Split a string
+ */
+KS_API ks_list ks_str_split(ks_str self, ks_str by);
+KS_API ks_list ks_str_split_c(const char* self, const char* by);
+
+
 /* Create a new 'bytes'
  */
 KS_API ks_bytes ks_bytes_new(ks_ssize_t len_b, const char* data);
@@ -706,16 +767,24 @@ KS_API ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data);
 
 
 /* Create a new 'tuple' from elements
+ * 'newn' absorbs references
  */
-KS_API ks_list ks_list_new(ks_ssize_t len_b, kso* elems);
+KS_API ks_list ks_list_new(ks_ssize_t len, kso* elems);
+KS_API ks_list ks_list_newn(ks_ssize_t len, kso* elems);
+
+/* Clears a list
+ */
+KS_API void ks_list_clear(ks_list self);
 
 /* Add element to list
  */
 KS_API bool ks_list_push(ks_list self, kso ob);
-
-/* Push value and absorb reference
- */
 KS_API bool ks_list_pushu(ks_list self, kso ob);
+
+/* Inserts an object at a given position
+ */
+KS_API bool ks_list_insert(ks_list self, ks_cint idx, kso ob);
+KS_API bool ks_list_insertu(ks_list self, ks_cint idx, kso ob);
 
 /* Pop an item and return a reference
  */
@@ -726,14 +795,19 @@ KS_API kso ks_list_pop(ks_list self);
 KS_API void ks_list_popu(ks_list self);
 
 /* Create a new 'tuple' from elements
+ * newn absorbs references
  */
-KS_API ks_tuple ks_tuple_new(ks_ssize_t len_b, kso* elems);
+KS_API ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems);
+KS_API ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems);
 
 
 /* Create a new C-style function wrapper
  */
 KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
 
+/* Create a new partial function with index '0' filled in
+ */
+KS_API ks_partial ks_partial_new(kso of, kso arg0);
 
 /* Create a new dictionary
  * newn absorbs references to the values given
@@ -799,6 +873,20 @@ KS_API ks_list ks_dict_calc_buckets(ks_dict self);
 
 
 
+/* Add a node to a graph
+ */
+KS_API bool ks_graph_add_node(ks_graph self, kso val);
+
+/* Add an edge to a graph
+ */
+KS_API bool ks_graph_add_edge(ks_graph self, ks_cint from, ks_cint to, kso val);
+
+/* Clear a graph
+ */
+KS_API void ks_graph_clear(ks_graph self);
+
+
+
 /* Create an exception (for returning exceptions from C code)
  */
 KS_API ks_Exception ks_Exception_new_c(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, ...);
@@ -829,6 +917,12 @@ KS_API kso kso_iter(kso ob);
  */
 KS_API kso kso_next(kso ob);
 
+
+/* Attempt to get the '__attr__' dict from an object, returning NULL if it couldn't be determined
+ * NOTE: this does NOT throw an error if it wasn't found
+ */
+KS_API ks_dict kso_try_getattr_dict(kso obj);
+
 /* Get, set, or delete an attribute from an object
  */
 KS_API kso kso_getattr(kso ob, ks_str attr);
@@ -839,14 +933,14 @@ KS_API bool kso_delattr(kso ob, ks_str attr);
  *
  * Variations that take extra parameters are for supporting index operations that take
  *   multiple indices. For 'kso_setelems', the last object in 'keys' is assumed to be the value
- *   it is being set to
+ *   it is being set to, and the first is the item itself
  */
 KS_API kso kso_getelem(kso ob, kso key);
 KS_API bool kso_setelem(kso ob, kso key, kso val);
 KS_API bool kso_delelem(kso ob, kso key);
-KS_API kso kso_getelems(kso ob, int n_keys, kso* keys);
-KS_API bool kso_setelems(kso ob, int n_keys, kso* keys);
-KS_API bool kso_delelems(kso ob, int n_keys, kso* keys);
+KS_API kso kso_getelems(int n_keys, kso* keys);
+KS_API bool kso_setelems(int n_keys, kso* keys);
+KS_API bool kso_delelems(int n_keys, kso* keys);
 
 
 /* Declare that the object is in the 'repr' stack, and return whether it was already in the repr stack,

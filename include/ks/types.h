@@ -117,6 +117,8 @@ typedef ks_uint ks_size_t;
 #define KS_CC_PHASE(_A) (atan2((_A).im, (_A).re))
 #define KS_CC_NEG(_A) KS_CC_MAKE(-(_A).re, -(_A).im)
 #define KS_CC_CONJ(_A) KS_CC_MAKE((_A).re, -(_A).im)
+#define KS_CC_POLAR(_rad, _phase) KS_CC_MAKE((_rad) * cos(_phase), (_rad) * sin(_phase))
+
 
 /* abs(KS_CINT_MIN), but as a 'ks_uint', so that it does not mess up the value
  *   when using two's complement
@@ -262,6 +264,18 @@ struct ks_str_s {
 
 /* Tell whether a string contains ASCII-only data (i.e. bytes==characters) */
 #define KS_STR_IS_ASCII(_str) ((_str)->len_b == (_str)->len_c)
+
+/* String iterator type */
+typedef struct ks_str_iter_s {
+    KSO_BASE
+
+    ks_str of;
+
+    /* Current position (in bytes) that the iterator is at */
+    ks_cint pos;
+
+}* ks_str_iter;
+
 
 /* 'bytes' - (immutable) string of bytes
  * 
@@ -535,6 +549,9 @@ typedef struct ks_Exception_s {
      */
     struct ks_Exception_s* inner;
 
+    /* The frames when the exception was thrown */
+    ks_list frames;
+
     /* Arguments to the exception's constructor */
     ks_list args;
 
@@ -685,7 +702,12 @@ struct ks_type_s {
 
 /* 'module' - represents an imported or builtin module
  */
-typedef ks_names ks_module;
+typedef struct ks_module_s {
+    KSO_BASE
+
+    ks_dict attr;
+
+}* ks_module;
 
 
 /* C-style function wrapper */
@@ -695,7 +717,9 @@ typedef kso (*ks_cfunc)(int _nargs, kso* _args);
  *
  */
 typedef struct ks_func_s {
-    struct ks_names_s b;
+    KSO_BASE
+
+    ks_dict attr;
 
     /* If true, then a C-style function */
     bool is_cfunc;

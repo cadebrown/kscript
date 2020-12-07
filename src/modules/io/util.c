@@ -151,7 +151,8 @@ static bool add_uint(ksio_AnyIO self, ks_uint val, int base, struct sbfield sbf)
 static bool add_float(ksio_AnyIO self, ks_cfloat val, int base, struct sbfield sbf) {
     char tmp[256];
     int i = 0;
-    int req_sz = ks_cfloat_to_str(tmp, sizeof(tmp)-2, val, false, 6, base);
+    if (sbf.p < 0) sbf.p = 11;
+    int req_sz = ks_cfloat_to_str(tmp, sizeof(tmp)-2, val, false, sbf.p, base);
 
     /* TODO: reallocate */
     assert (req_sz < 256);
@@ -645,4 +646,44 @@ ks_str ksio_readall(ks_str fname) {
     return res;
 }
 
+/* Adapted from: https://gist.github.com/jstaursky/84cf1ddf91716d31558d6f0b5afc3feb */
+ks_ssize_t ksu_getline(char** lineptr, ks_ssize_t* n, FILE* fp) {
+    char *buffer_tmp, *position;
+    ks_ssize_t block, offset;
+    int c;
 
+    if (!fp || !lineptr || !n) {
+        return -1;
+
+    } else if (*lineptr == NULL || *n <= 1) {
+        // Minimum length for strings is 2 bytes
+        *n = 128;
+        if (!(*lineptr = ks_malloc(*n))) {
+            return -1;
+        }
+    }
+
+    block = *n;
+    position = *lineptr;
+
+    // keep reading characters until newline is hit
+    /* Read until newline (or EOF) */
+    while ((c = fgetc(fp)) != EOF && (*position++ = c) != '\n') {
+        offset = position - *lineptr;
+
+        if( offset >= *n ) {
+            buffer_tmp = ks_realloc(*lineptr, *n += block);
+            
+            /* Do not free. Return *lineptr. */
+            if (!buffer_tmp) {
+                return -1;
+            }
+
+            *lineptr = buffer_tmp;
+            position = *lineptr + offset;
+        }
+    }
+    /* Terminate */
+    *position = '\0';
+    return (position - *lineptr - 1);
+}

@@ -38,7 +38,11 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  * 
  * PROG    : STMT*
  * 
- * STMT    : 'import' NAME
+ * STMT    : 'import' NAME N
+ *         | 'ret' EXPR? N
+ *         | 'throw' EXPR? N
+ *         | 'break' INT? N
+ *         | 'cont' INT? N
  *         | 'if' EXPR BORC ('elif' BORC)* ('else' EXPR BORS)?
  *         | 'while' EXPR BORC ('else' EXPR BORS)?
  *         | 'for' EXPR BORC
@@ -247,6 +251,24 @@ RULE(E12);
 RULE(E13);
 RULE(E14);
 
+/* Take a break/newline and return success */
+static bool R_N(ks_str fname, ks_str src, ks_ssize_t n_toks, ks_tok* toks, int* tokip, int flags) {
+    int k = TOK.kind;
+    if (k == KS_TOK_N) {
+        EAT();
+        return true;
+    } else if (k == KS_TOK_SEMI) {
+        EAT();
+        return true;
+    } else if (k == KS_TOK_EOF || DONE) {
+        return true;
+    }
+
+    KS_THROW_SYNTAX(fname, src, TOK, "Unexpected token, expected ';', newline, or EOF after");
+    return false;
+}
+
+
 RULE(PROG) {
     ks_ast res = ks_ast_new(KS_AST_BLOCK, 0, NULL, KSO_NONE, KS_TOK_MAKE_EMPTY());
 
@@ -270,7 +292,35 @@ RULE(STMT) {
     int k = t.kind;
 
     /* Check lookahead and see if it is a special construct */
-    if (k == KS_TOK_IF) {
+    if (k == KS_TOK_RET) {
+        EAT();
+
+        if (TOK.kind == KS_TOK_SEMI || TOK.kind == KS_TOK_EOF || TOK.kind == KS_TOK_N) {
+            if (!SUB(N)) return NULL;
+            return ks_ast_new(KS_AST_RET, 1, &ast_none, NULL, t);
+        } else {
+            ks_ast sub = SUB(EXPR);
+            if (!sub) return NULL;
+
+            if (!SUB(N)) {
+                KS_DECREF(sub);
+                return NULL;
+            }
+
+            return ks_ast_newn(KS_AST_RET, 1, &sub, NULL, t);
+        }
+
+    } else if (k == KS_TOK_IMPORT) {
+        EAT();
+        if (TOK.kind != KS_TOK_NAME) {
+            KS_THROW_SYNTAX(fname, src, TOK, "Expected a valid module name for 'import' statement");
+            return NULL;
+        }
+        ks_tok tt = EAT();
+
+        return ks_ast_newn(KS_AST_IMPORT, 0, NULL, (kso)ks_tok_str(src, tt), ks_tok_combo(t, tt));
+        
+    } else if (k == KS_TOK_IF) {
         EAT();
 
         ks_ast cond = SUB(EXPR);
@@ -282,15 +332,126 @@ RULE(STMT) {
             return NULL;
         }
 
-        return ks_ast_newn(KS_AST_IF, 2, (ks_ast[]){ cond, body }, NULL, t);
+        ks_ast res = ks_ast_newn(KS_AST_IF, 2, (ks_ast[]){ cond, body }, NULL, t);
+
+        /* Deepest node, which we should added clauses to */
+        ks_ast deep = res;
+
+        while (TOK.kind == KS_TOK_ELIF) {
+            t = EAT();
+            
+            cond = SUB(EXPR);
+            if (!cond) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            body = SUB(BORC);
+            if (!body) {
+                KS_DECREF(cond);
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            /* Construct branch of the deepest tree */
+            ks_ast other = ks_ast_newn(KS_AST_IF, 2, (ks_ast[]){ cond, body }, NULL, t);
+            ks_ast_pushn(deep, other);
+            deep = other;
+
+        }
+
+        if (TOK.kind == KS_TOK_ELSE) {
+            EAT();
+
+            ks_ast other = SUB(BORS);
+            if (!other) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            ks_ast_pushn(deep, other);
+        }
+
+        return res;
 
     } else if (k == KS_TOK_WHILE) {
+        EAT();
+
+        ks_ast cond = SUB(EXPR);
+        if (!cond) return NULL;
+
+        ks_ast body = SUB(BORC);
+        if (!body) {
+            KS_DECREF(cond);
+            return NULL;
+        }
+
+        ks_ast res = ks_ast_newn(KS_AST_WHILE, 2, (ks_ast[]){ cond, body }, NULL, t);
+
+        /* Deepest node, which we should added clauses to */
+        ks_ast deep = res;
+
+        while (TOK.kind == KS_TOK_ELIF) {
+            t = EAT();
+            
+            cond = SUB(EXPR);
+            if (!cond) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            body = SUB(BORC);
+            if (!body) {
+                KS_DECREF(cond);
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            /* Construct branch of the deepest tree */
+            ks_ast other = ks_ast_newn(KS_AST_IF, 2, (ks_ast[]){ cond, body }, NULL, t);
+            ks_ast_pushn(deep, other);
+            deep = other;
+
+        }
+
+        if (TOK.kind == KS_TOK_ELSE) {
+            EAT();
+
+            ks_ast other = SUB(BORS);
+            if (!other) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            ks_ast_pushn(deep, other);
+        }
+
+
+        return res;
+
     } else if (k == KS_TOK_FOR) {
         
+    } else if (k == KS_TOK_SEMI) {
+        /* Empty block */
+        t = EAT();
+        return ks_ast_newn(KS_AST_BLOCK, 0, NULL, NULL, t);
+    } else {
+        /* Try expression */
+        ks_ast sub = SUB(EXPR);
+        if (!sub) return NULL;
+
+        if (!SUB(N)) {
+            KS_DECREF(sub);
+            return NULL;
+        }
+
+        return sub;
     }
 
-    return SUB(EXPR);
+    assert(false);
+    return NULL;
 }
+
 
 RULE(B) {
     ks_tok t = EAT();
@@ -557,12 +718,11 @@ RULE(E12) {
             return NULL;
         }
 
-        return ks_ast_new(k, 2, (ks_ast[]){ res, rhs }, NULL, t);
+        return ks_ast_newn(k, 2, (ks_ast[]){ res, rhs }, NULL, t);
     }
 
     return res;
 }
-
 
 
 RULE(E13) {
@@ -583,7 +743,7 @@ RULE(E13) {
         ks_ast sub = SUB(E13);
         if (!sub) return NULL;
 
-        return ks_ast_new(k, 1, (ks_ast[]){ sub }, NULL, t);
+        return ks_ast_newn(k, 1, (ks_ast[]){ sub }, NULL, t);
     } else {
         /* No prefix operator, so decay */
         return SUB(E14);
@@ -616,8 +776,54 @@ RULE(E14) {
             res = ks_ast_new(KS_AST_TUPLE, 0, NULL, NULL, ks_tok_combo(t, EAT()));
         } else {
             /* May be expression or tuple */
-            assert(false);
+            res = SUB(EXPR);
+            if (!res) return NULL;
+
+            if (TOK.kind != KS_TOK_RPAR) {
+                KS_THROW_SYNTAX(fname, src, TOK, "Expected ')' to end group here");
+                KS_DECREF(res);
+                return NULL;
+            }
+            res->tok = ks_tok_combo(res->tok, EAT());
+
         }
+
+    } else if (TOK.kind == KS_TOK_LBRK) {
+        /* List constructor */
+        res = ks_ast_new(KS_AST_LIST, 0, NULL, NULL, EAT());
+
+        SKIP_N();
+        while (TOK.kind != KS_TOK_RBRK) {
+            tt = TOK;
+            bool is_va = tt.kind == KS_TOK_MUL;
+            if (is_va) EAT();
+
+            ks_ast sub = SUB(EXPR);
+            if (!sub) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            if (is_va) sub = ks_ast_newn(KS_AST_UOP_STAR, 1, (ks_ast[]){ sub }, NULL, tt);
+            ks_ast_pushn(res, sub);
+
+            SKIP_N();
+            if (TOK.kind == KS_TOK_COM) {
+                EAT();
+                SKIP_N();
+            } else break;
+        }
+
+        if (TOK.kind != KS_TOK_RBRK) {
+            int ri = toki - 1;
+            while (ri > 0 && toks[ri].kind == KS_TOK_N) ri--;
+            KS_THROW_SYNTAX(fname, src, toks[ri], "Expected ']' to end list constructor here");
+            KS_DECREF(res);
+            return NULL;
+        }
+
+        res->tok = ks_tok_combo(res->tok, EAT());
+
     } else {
         res = SUB(ATOM);
         if (!res) return NULL;
@@ -668,6 +874,42 @@ RULE(E14) {
                 int ri = toki - 1;
                 while (ri > 0 && toks[ri].kind == KS_TOK_N) ri--;
                 KS_THROW_SYNTAX(fname, src, toks[ri], "Expected ')' to end function call after this");
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            res->tok = ks_tok_combo(res->tok, EAT());
+
+        } else if (TOK.kind == KS_TOK_LBRK) {
+            /* Function call */
+            res = ks_ast_newn(KS_AST_ELEM, 1, (ks_ast[]){ res }, NULL, EAT());
+
+            SKIP_N();
+            while (TOK.kind != KS_TOK_RBRK) {
+                tt = TOK;
+                bool is_va = tt.kind == KS_TOK_MUL;
+                if (is_va) EAT();
+
+                ks_ast sub = SUB(EXPR);
+                if (!sub) {
+                    KS_DECREF(res);
+                    return NULL;
+                }
+
+                if (is_va) sub = ks_ast_newn(KS_AST_UOP_STAR, 1, (ks_ast[]){ sub }, NULL, tt);
+                ks_ast_pushn(res, sub);
+
+                SKIP_N();
+                if (TOK.kind == KS_TOK_COM) {
+                    EAT();
+                    SKIP_N();
+                } else break;
+            }
+
+            if (TOK.kind != KS_TOK_RBRK) {
+                int ri = toki - 1;
+                while (ri > 0 && toks[ri].kind == KS_TOK_N) ri--;
+                KS_THROW_SYNTAX(fname, src, toks[ri], "Expected ']' to end element index after this");
                 KS_DECREF(res);
                 return NULL;
             }

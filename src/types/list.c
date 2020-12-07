@@ -27,6 +27,29 @@ ks_list ks_list_new(ks_ssize_t len, kso* elems) {
     return self;
 }
 
+ks_list ks_list_newn(ks_ssize_t len, kso* elems) {
+    ks_list self = KSO_NEW(ks_list, kst_list);
+
+    self->len = len;
+    self->_max_len = len;
+    self->elems = ks_zmalloc(sizeof(*self->elems), len);
+
+    ks_ssize_t i;
+    for (i = 0; i < len; ++i) {
+        self->elems[i] = elems[i];
+    }
+
+    return self;
+}
+
+
+void ks_list_clear(ks_list self) {
+    ks_size_t i;
+    for (i = 0; i < self->len; ++i) {
+        KS_DECREF(self->elems[i]);
+    }
+    self->len = 0;
+}
 
 bool ks_list_push(ks_list self, kso ob) {
     bool res = ks_list_pushu(self, ob);
@@ -43,6 +66,31 @@ bool ks_list_pushu(ks_list self, kso ob) {
     self->elems[i] = ob;
     return true;
 }
+
+
+bool ks_list_insert(ks_list self, ks_cint idx, kso ob) {
+    bool res = ks_list_insertu(self, idx, ob);
+    KS_INCREF(ob);
+    return res;
+}
+
+
+bool ks_list_insertu(ks_list self, ks_cint idx, kso ob) {
+    self->len++;
+    if (self->len > self->_max_len) {
+        self->_max_len = ks_nextsize(self->len, self->_max_len);
+        self->elems = ks_zrealloc(self->elems, sizeof(*self->elems), self->_max_len);
+    }
+
+    ks_ssize_t i;
+    for (i = self->len - 1; i > idx; --i) {
+        self->elems[i] = self->elems[i - 1];
+    }
+    self->elems[idx] = ob;
+    return true;
+}
+
+
 
 kso ks_list_pop(ks_list self) {
     return self->elems[--self->len];
@@ -66,7 +114,6 @@ static KS_TFUNC(T, free) {
         KS_DECREF(self->elems[i]);
     }
     ks_free(self->elems);
-
 
     KSO_DEL(self);
 

@@ -23,10 +23,11 @@ ks_Exception ks_Exception_new_cv(ks_type tp, const char* cfile, const char* cfun
 
     ks_Exception self = KSO_NEW(ks_Exception, tp);
 
+    self->inner = NULL;
+    self->frames = ks_list_new(0, NULL);
+
     self->args = ks_list_new(0, NULL);
     self->what = what;
-
-    self->inner = NULL;
 
     return self;
 }

@@ -85,5 +85,12 @@
 /* String for builtin modules to report as their source */
 #define KS_BIMOD_SRC "<builtin>"
 
+/* Symbol name expected for each C extension */
+#define _KS_CEXTINIT_SYMBOL _ks_cextinit_this
+
+/* Stringified version of the ext symbol */
+#define _KS_CEXTINIT_SYMBOL_STR "_ks_cextinit_this"
+
+
 
 #endif /* KS_CONST_H__ */

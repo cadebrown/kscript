@@ -247,27 +247,307 @@ ks_int kso_int(kso ob) {
     return NULL;
 }
 
+
+bool kso_is_num(kso obj) {
+    return kso_issub(obj->type, kst_number);
+}
+
+bool kso_is_int(kso obj) {
+    return kso_issub(obj->type, kst_int) || obj->type->i__integral;
+}
+
+bool kso_is_float(kso obj) {
+    return kso_issub(obj->type, kst_float) || obj->type->i__float;
+}
+
+bool kso_is_complex(kso obj) {
+    return kso_issub(obj->type, kst_complex) || obj->type->i__complex;
+}
+bool kso_is_iterable(kso obj) {
+    return obj->type->i__iter || obj->type->i__next;
+}
+
+bool kso_is_callable(kso obj) {
+    return kso_issub(obj->type, kst_type) || obj->type->i__call;
+}
+
+
+ks_dict kso_try_getattr_dict(kso obj) {
+    if (obj->type->ob_attr > 0) {
+        return *(ks_dict*)((ks_uint)obj + obj->type->ob_attr);
+    } else return NULL;
+}
+
+kso kso_getattr(kso ob, ks_str attr) {
+    ksos_thread th = ksos_thread_get();
+
+    if (ob->type->i__getattr != kst_object->i__getattr) {
+        /* Attempt to resolve it */
+        kso res = kso_call(ob->type->i__getattr, 2, (kso[]){ ob, (kso)attr });
+        if (res) {
+            return res;
+        } else if (kso_issub(th->exc->type, kst_AttrError)) {
+            kso_catch_ignore();
+        } else {
+            return NULL;
+        }
+    }
+
+    ks_dict attrdict = kso_try_getattr_dict(ob);
+    if (attrdict) {
+        if (ks_str_eq_c(attr, "__attr", 6)) {
+            return KS_NEWREF(attrdict);
+        }
+
+        /* Search for it */
+        kso res = ks_dict_get_ih(attrdict, (kso)attr, attr->v_hash);
+        if (res) {
+            return res;
+        }
+    }
+
+    /* Finally, search for a member function in the type's attribute */
+    kso t_func = ks_type_get(ob->type, attr);
+    if (t_func) {
+        /* Wrap and return */
+        ks_partial res = ks_partial_new(t_func, ob);
+        KS_DECREF(t_func);
+        return (kso)res;
+    } else {
+        kso_catch_ignore();
+    }
+
+    KS_THROW_ATTR(ob, attr);
+    return NULL;
+}
+
+bool kso_setattr(kso ob, ks_str attr);
+bool kso_delattr(kso ob, ks_str attr);
+
+
+
+kso kso_getelem(kso ob, kso key) {
+    return kso_getelems(2, (kso[]){ ob, key });
+}
+bool kso_setelem(kso ob, kso key, kso val) {
+    return kso_setelems(3, (kso[]){ ob, key, val });
+}
+bool kso_delelem(kso ob, kso key) {
+    return kso_delelems(2, (kso[]){ ob, key });
+}
+kso kso_getelems(int n_keys, kso* keys) {
+    assert(n_keys > 0);
+    kso ob = keys[0];
+
+    if (kso_issub(ob->type, kst_str) && ob->type->i__getelem == kst_str->i__getelem) {
+        if (n_keys != 2) {
+            KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");
+            return NULL;
+        }
+        ks_str lob = (ks_str)ob;
+
+        ks_cint idx;
+        if (!kso_get_ci(keys[1], &idx)) {
+            return NULL;
+        }
+        if (idx < 0) idx += lob->len_c;
+        if (idx < 0 || idx >= lob->len_c) {
+            KS_THROW_INDEX(ob, keys[1]);
+            return NULL;
+        }
+        if (KS_STR_IS_ASCII(lob)) {
+            return (kso)ks_str_new(1, lob->data + idx);
+        } else {
+            /* Seek to position */
+            int c = 0, b = 0, lb = 0;
+            while (c < idx) {
+                /* Parse single character */
+                lb = b;
+                do {
+                    b++;
+                } while (b < lob->len_b && (((unsigned char*)lob->data)[b] & 0x80) != 0);
+                c++;
+            }
+
+            return (kso)ks_str_new(b - lb, lob->data + lb);
+        }
+    } else if (kso_issub(ob->type, kst_bytes) && ob->type->i__getelem == kst_bytes->i__getelem) {
+        if (n_keys != 2) {
+            KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");
+            return NULL;
+        }
+        ks_bytes lob = (ks_bytes)ob;
+
+        ks_cint idx;
+        if (!kso_get_ci(keys[1], &idx)) {
+            return NULL;
+        }
+        if (idx < 0) idx += lob->len_b;
+        if (idx < 0 || idx >= lob->len_b) {
+            KS_THROW_INDEX(ob, keys[1]);
+            return NULL;
+        }
+        return (kso)ks_bytes_new(1, lob->data + idx);
+
+    } else if (kso_issub(ob->type, kst_list) && ob->type->i__getelem == kst_list->i__getelem) {
+        if (n_keys != 2) {
+            KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");
+            return NULL;
+        }
+        ks_list lob = (ks_list)ob;
+
+        ks_cint idx;
+        if (!kso_get_ci(keys[1], &idx)) {
+            return NULL;
+        }
+        if (idx < 0) idx += lob->len;
+        if (idx < 0 || idx >= lob->len) {
+            KS_THROW_INDEX(ob, keys[1]);
+            return NULL;
+        }
+
+        return KS_NEWREF(lob->elems[idx]);
+    } else if (kso_issub(ob->type, kst_tuple) && ob->type->i__getelem == kst_tuple->i__getelem) {
+        if (n_keys != 2) {
+            KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");
+            return NULL;
+        }
+        ks_tuple lob = (ks_tuple)ob;
+
+        ks_cint idx;
+        if (!kso_get_ci(keys[1], &idx)) {
+            return NULL;
+        }
+        if (idx < 0) idx += lob->len;
+        if (idx < 0 || idx >= lob->len) {
+            KS_THROW_INDEX(ob, keys[1]);
+            return NULL;
+        }
+
+        return KS_NEWREF(lob->elems[idx]);
+    } else if (kso_issub(ob->type, kst_dict) && ob->type->i__getelem == kst_dict->i__getelem) {
+        if (n_keys != 2) {
+            KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");
+            return NULL;
+        }
+        return ks_dict_get((ks_dict)ob, keys[1]);
+
+    } else if (ob->type->i__getelem) {
+        return kso_call(ob->type->i__getelem, n_keys, keys);
+    }
+
+    KS_THROW(kst_TypeError, "'%T' object did not support element indexing", ob);
+    return NULL;
+}
+bool kso_setelems(int n_keys, kso* keys) {
+    assert(n_keys > 0);
+    assert(false);
+}
+bool kso_delelems(int n_keys, kso* keys) {
+    assert(n_keys > 0);
+    assert(false);
+}
+
+
+
+
 kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
     ksos_thread th = ksos_thread_get();
     assert(th != NULL);
-    ksos_frame frame = ksos_frame_new(func);
-    assert(frame);
-
-    ks_list_push(th->frames, (kso)frame);
+    int i, j;
 
     kso res = NULL;
     if (kso_issub(func->type, kst_func) && func->type->i__call == kst_func->i__call) {
+        /* If given a standard function which is not a subtype that overrides the calling feature */
+        ksos_frame frame = ksos_frame_new(func);
+        ks_list_push(th->frames, (kso)frame);
+
         ks_func f = (ks_func)func;
         if (f->is_cfunc) {
+            /* Execute the C-style function directly */
             res = f->cfunc(nargs, args);
         } else {
+            /* Execute a bytecode directly */
 
         }
+
+        ks_list_popu(th->frames);
+        KS_DECREF(frame);
+
     } else if (kso_issub(func->type, kst_code) && func->type->i__call == kst_code->i__call) {
+        /* Calling a bytecode should just execute it */
+        ksos_frame frame = ksos_frame_new(func);
+        ks_list_push(th->frames, (kso)frame);
+
+        if (locals) {
+            KS_INCREF(locals);
+            frame->locals = locals;
+        } else {
+            /* TODO: possibly don't use dictionaries until they're needed? */
+            frame->locals = ks_dict_new(NULL);
+        }
         res = _ks_exec((ks_code)func);
+
+        ks_list_popu(th->frames);
+        KS_DECREF(frame);
+
+    } else if (kso_issub(func->type, kst_type) && func->type->i__call == kst_type->i__call) {
+        /* We have a type that has not overriden '__call', so treat it like a constructor */
+        /* Don't push a stack frame on for this */
+        ks_type tp = (ks_type)func;
+
+        /* Initialization scheme:
+         *
+         * By default, when a type doesn't override '__call', it means calling it should act
+         *   as a constructor for the type. It does this with the following steps:
+         * 
+         * # Allocates a new instance (default: 'KSO_NEW()', and '*args' are ignored)
+         * tmp = tp.__new(tp, *args)
+         * # Initializes the instance (default: none)
+         * tp.__init(tmp, *args)
+         * 
+         * Note that '*args' are passed to the new and init functions (which may ignore them)
+         * 
+         */
+        if (tp->i__new == kst_type->i__new) {
+            /* Default allocation */
+            res = KSO_NEW(kso, tp);
+        } else {
+            /* Actually call allocator */
+            int new_nargs = nargs + 1;
+            kso* new_args = ks_zmalloc(sizeof(*new_args), new_nargs);
+            new_args[0] = (kso)tp;
+            for (i = 0; i < nargs; ++i) new_args[i + 1] = args[i];
+            res = kso_call(tp->i__new, new_nargs, new_args);
+            ks_free(new_args);
+        }
+
+        if (res) {
+            /* Successfully allocated it */
+            if (tp->i__call == kst_type->i__init) {
+                /* Default initializer, which is nothing */
+            } else {
+                /* Custom initializer */
+                int new_nargs = nargs + 1;
+                kso* new_args = ks_zmalloc(sizeof(*new_args), new_nargs);
+                new_args[0] = (kso)tp;
+                for (i = 0; i < nargs; ++i) new_args[i + 1] = args[i];
+                kso t = kso_call(tp->i__init, new_nargs, new_args);
+                ks_free(new_args);
+                if (!t) {
+                    /* Failed to initialize */
+                    KS_DECREF(res);
+                    res = NULL;
+                } else {
+                    KS_DECREF(t);
+                }
+            }
+        }
+
+    } else {
+        KS_THROW(kst_TypeError, "'%T' object was not callable", func);
     }
 
-    ks_list_popu(th->frames);
     return res;
 }
 
@@ -275,6 +555,51 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
 kso kso_call(kso func, int nargs, kso* args) {
     return kso_call_ext(func, nargs, args, NULL);
 }
+
+
+kso kso_iter(kso ob) {
+    if (ob->type->i__iter) {
+        return kso_call(ob->type->i__iter, 1, &ob);
+    } else if (ob->type->i__next) {
+        /* Already is iterable */
+        return KS_NEWREF(ob);
+    }
+
+    KS_THROW(kst_Error, "'%T' object was not iterable", ob);
+    return NULL;
+}
+
+kso kso_next(kso ob) {
+    if (kso_issub(ob->type, kst_str_iter) && ob->type->i__next == kst_str_iter->i__next) {
+        /* String iteration */
+        ks_str_iter it = (ks_str_iter)ob;
+        if (it->pos >= it->of->len_b) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+
+        /* Otherwise, continue and skip UTF-8 continuations */
+        int ct = 0;
+        do {
+            ct++;
+        } while (ct < 4 && (((unsigned char*)it->of->data)[it->pos + ct] & 0x80) != 0);
+        assert(ct > 0);
+        ks_str res = ks_str_new(ct, it->of->data + it->pos);
+        it->pos += ct;
+        return (kso)res;
+
+    } else if (ob->type->i__next) {
+        return kso_call(ob->type->i__ne, 1, &ob);
+    } else {
+        /* Default to 'next(iter(ob))' */
+        kso it = kso_iter(ob);
+        kso res = kso_next(it);
+        KS_DECREF(res);
+        return res;
+    }
+}
+
+
 
 void* kso_throw(ks_Exception exc) {
     ksos_thread th = ksos_thread_get();
@@ -286,6 +611,15 @@ void* kso_throw(ks_Exception exc) {
     /* Set the thread's exception */
     th->exc = exc;
 
+    ks_list_clear(exc->frames);
+    ks_size_t i;
+    for (i = 0; i < th->frames->len; ++i) {
+        ksos_frame nf = ksos_frame_copy((ksos_frame)th->frames->elems[i]);
+        ks_list_pushu(exc->frames, (kso)nf);
+    }
+
+
+
     return NULL;
 }
 
@@ -296,7 +630,6 @@ void* kso_throw_c(ks_type tp, const char* cfile, const char* cfunc, int cline, c
     va_end(ap);
     return kso_throw(exc);
 }
-
 
 ks_Exception kso_catch() {
     ksos_thread th = ksos_thread_get();
@@ -320,7 +653,34 @@ bool kso_catch_ignore() {
 bool kso_catch_ignore_print() {
     ks_Exception exc = kso_catch();
     if (exc) {
-        ksio_add((ksio_AnyIO)ksos_stderr, "%T: %S\n", exc, exc->what);
+        ksio_add((ksio_AnyIO)ksos_stderr, KS_COL_RED KS_COL_BOLD "%T" KS_COL_RESET ": %S\n", exc, exc->what);
+        ks_list frames = exc->frames;
+        assert(frames != NULL);
+
+        ksio_add((ksio_AnyIO)ksos_stderr, "Call Stack:\n");
+
+        #define _PFRAME(_i) do { \
+            ksos_frame frame = (ksos_frame)frames->elems[_i]; \
+            ks_str tb = ksos_frame_get_tb(frame); \
+            ksio_add((ksio_AnyIO)ksos_stderr, "  #%i: %S\n", _i, tb); \
+            KS_DECREF(tb); \
+        } while (0)
+
+        int mxn = 10, i;
+        if (frames->len > mxn) {
+            for (i = 0; i < mxn/2; ++i) _PFRAME(i);
+            ksio_add((ksio_AnyIO)ksos_stderr, "  ... (%i more)\n", (int)(frames->len - mxn));
+            for (i = frames->len-mxn/2; i < frames->len; ++i) _PFRAME(i);
+        } else {
+            for (i = 0; i < frames->len; ++i) _PFRAME(i);
+        }
+
+        ksio_add((ksio_AnyIO)ksos_stderr, "In %R\n", ksos_thread_get());
+
+        KS_DECREF(exc);
+        KS_DECREF(frames);
+
+        return true;
 
         KS_DECREF(exc);
         return true;

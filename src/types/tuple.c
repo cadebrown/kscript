@@ -12,6 +12,13 @@
 /* C-API */
 
 ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems) {
+    ks_tuple res = ks_tuple_newn(len, elems);
+    ks_size_t i;
+    for (i = 0; i < len; ++i) KS_INCREF(elems[i]);
+
+    return res;
+}
+ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems) {
     ks_tuple self = KSO_NEW(ks_tuple, kst_tuple);
 
     self->len = len;
@@ -19,7 +26,6 @@ ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems) {
 
     ks_ssize_t i;
     for (i = 0; i < len; ++i) {
-        KS_INCREF(elems[i]);
         self->elems[i] = elems[i];
     }
 

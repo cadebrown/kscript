@@ -9,9 +9,14 @@ static bool has_init = false;
 ks_str
     _ksv_io,
     _ksv_os,
+    _ksv_getarg,
     _ksv_stdin,
     _ksv_stdout,
     _ksv_stderr,
+
+    _ksva__src,
+    _ksva__sig,
+    _ksva__doc,
 
 #define _KSACT(_attr) _ksva##_attr,
 _KS_DO_SPEC(_KSACT)
@@ -25,12 +30,19 @@ ks_tuple
 ;
 
 ks_dict
+    ksg_config,
+    ksg_inter_vars,
     ksg_globals
+;
+
+ks_int
+    _ksint_0, _ksint_1
 ;
 
 static ks_module
     G_io = NULL,
-    G_os = NULL
+    G_os = NULL,
+    G_getarg = NULL
 ;
 
 
@@ -39,6 +51,7 @@ bool ks_init() {
 
 
     kst_func->ob_sz = sizeof(struct ks_func_s);
+    kst_func->ob_attr = offsetof(struct ks_func_s, attr);
     kst_str->ob_sz = sizeof(struct ks_str_s);
 
     /* Initialize types */
@@ -52,10 +65,15 @@ _KS_DO_SPEC(_KSACT)
 
     _CONST(_ksv_io, "io");
     _CONST(_ksv_os, "os");
+    _CONST(_ksv_getarg, "getarg");
     _CONST(_ksv_r, "r");
     _CONST(_ksv_stdin, "stdin");
     _CONST(_ksv_stdout, "stdout");
     _CONST(_ksv_stderr, "stderr");
+
+    _CONST(_ksva__src, "__src");
+    _CONST(_ksva__sig, "__sig");
+    _CONST(_ksva__doc, "__doc");
 
     _ksi_object();
     _ksi_type();
@@ -68,11 +86,14 @@ _KS_DO_SPEC(_KSACT)
         _ksi_complex();
 
     _ksi_none();
+    _ksi_undefined();
 
     _ksi_str();
     _ksi_bytes();
 
+    _ksi_set();
     _ksi_dict();
+    _ksi_graph();
     _ksi_list();
     _ksi_tuple();
     _ksi_module();
@@ -89,12 +110,31 @@ _KS_DO_SPEC(_KSACT)
 
     _ksi_parser();
     _ksi_funcs();
+    _ksi_import();
+
+    _ksint_0 = ks_int_new(0);
+    _ksint_1 = ks_int_new(1);
 
     /* Initialize standard modules */
     G_io = ks_import(_ksv_io);
     assert(G_io != NULL);
     G_os = ks_import(_ksv_os);
     assert(G_os != NULL);
+    G_getarg = ks_import(_ksv_getarg);
+    assert(G_getarg != NULL);
+
+
+    ksg_config = ks_dict_new(KS_IKV(
+        {"prompt0",                (kso)ks_str_new(-1, ">>> ")},
+        {"prompt1",                (kso)ks_str_new(-1, "... ")},
+        {"prompt2",                (kso)ks_str_new(-1, "_")},
+    ));
+
+
+    ksg_inter_vars = ks_dict_new(KS_IKV(
+        {"_",                      KSO_NONE},
+    ));
+
 
     ksg_globals = ks_dict_new(KS_IKV(
         {"object",                 (kso)kst_object},
@@ -114,8 +154,9 @@ _KS_DO_SPEC(_KSACT)
 
         {"list",                   (kso)kst_list},
         {"tuple",                  (kso)kst_tuple},
-        {"set",                    (kso)kst_tuple},
-        {"dict",                   (kso)kst_tuple},
+        {"set",                    (kso)kst_set},
+        {"dict",                   (kso)kst_dict},
+        {"graph",                  (kso)kst_graph},
 
         /* Exception Types */
         {"Exception", (kso)kst_Exception},
@@ -144,6 +185,19 @@ _KS_DO_SPEC(_KSACT)
 
         /* Functions */
         {"print", (kso)ksf_print},
+        {"pow", (kso)ksf_pow},
+
+        {"hash", (kso)ksf_hash},
+        {"len", (kso)ksf_len},
+        {"repr", (kso)ksf_repr},
+
+        {"iter", (kso)ksf_iter},
+        {"next", (kso)ksf_next},
+    
+        {"chr", (kso)ksf_chr},
+        {"ord", (kso)ksf_ord},
+    
+
     ));
 
     return has_init = true;

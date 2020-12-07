@@ -218,6 +218,7 @@ check_header TIME_H "time.h" ""
 check_header LIMITS_H "limits.h" ""
 check_header FLOAT_H "float.h" ""
 
+check_header SIGNAL_H "signal.h" ""
 #check_header SYS_TIME_H "sys/time.h" ""
 #check_header DLFCN_H "dlfcn.h" ""
 
@@ -557,7 +558,7 @@ check_func_math2() {
 #check_func modfl "ld" "ld,&ld"
 #check_func modff128 "f128" "f128,&f128"
 #check_func sincosf "v" "f,&f,&f"
-#check_func sincos "v" "d,&d,&d"
+check_func sincos "v" "d,&d,&d"
 #check_func sincosl "v" "ld,&ld,&ld"
 #check_func sincosf128 "v" "f128,&f128,&f128"
 

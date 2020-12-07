@@ -8,6 +8,20 @@
 
 
 
+
+
+/* Type Functions */
+
+static KS_TFUNC(T, free) {
+    kso self;
+    KS_ARGS("self:*", &self, kst_none);
+
+    /* We shouldn't free 'none', since it is a global singleton */
+    self->refs = KS_REFS_INF;
+
+    return KSO_NONE;
+}
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -19,7 +33,7 @@ kso ksg_none = &i_none;
 void _ksi_none() {
     
     _ksinit(kst_none, kst_object, T_NAME, 0, -1, KS_IKV(
-
+        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     
     KS_INCREF(kst_none);

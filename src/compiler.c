@@ -19,13 +19,13 @@
 /** Internals **/
 
 
+/* Internal compiler state */
 struct compiler {
 
     /* Length of the stack */
     int len_stk;
 
 };
-
 
 /* Compile an AST recursively, yielding the success boolean */
 #define COMPILE(_node) compile(co, fname, src, code, (_node))
@@ -46,6 +46,9 @@ struct compiler {
 /* Emit a token as meta at the current position */
 #define META(_tok) ks_code_meta(code, (_tok))
 
+/* Current number of bytecode */
+#define BC_N (code->bc->len_b)
+
 /* Length of the stack */
 #define LEN (co->len_stk)
 
@@ -58,6 +61,30 @@ struct compiler {
         LEN -= 1; \
     } \
 } while (0)
+
+/* Macro to patch a jump in bytecode, takes the location it was added, and the location directly
+ *   after the instruction was added, and where it should jump to
+ */
+#define PATCH(_loc, _from, _to) do { \
+    ((ksba*)(code->bc->data + _loc))->arg = _to - _from; \
+} while (0)
+
+
+
+/* Computes assignment, from the TOS (which should alrea)
+ */
+static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, ks_ast lhs, ks_ast rhs, ks_ast par) {
+
+    if (lhs->kind == KS_AST_NAME) {
+        EMITO(KSB_STORE, lhs->val);
+    } else {
+        KS_THROW_SYNTAX(fname, src, par->tok, "Can't assign to the left hand side");
+        return false;
+    }
+
+    return true;
+}
+
 
 /* Main internal compilation method 
  */
@@ -78,6 +105,22 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         EMITO(KSB_LOAD, v->val);
         META(v->tok);
         LEN += 1;
+    } else if (k == KS_AST_ATTR) {
+        assert(NSUB == 1);
+        if (!COMPILE(SUB(0))) return false;
+        EMITO(KSB_GETATTR, v->val);
+        META(v->tok);
+        LEN += 1 - 1;
+    } else if (k == KS_AST_ELEM) {
+        assert(NSUB > 0);
+        for (i = 0; i < NSUB; ++i) {
+            if (!COMPILE(SUB(i))) return false;
+        }
+
+        EMITI(KSB_GETELEMS, NSUB);
+        META(v->tok);
+        LEN += 1 - NSUB;
+
     } else if (k == KS_AST_CALL) {
         for (i = 0; i < NSUB; ++i) {
             if (!COMPILE(SUB(i))) return false;
@@ -87,12 +130,156 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         LEN += 1 - NSUB;
         META(v->tok);
 
+    } else if (k == KS_AST_RET) {
+        assert(NSUB == 1);
+        if (!COMPILE(SUB(0))) return false;
+        assert((LEN - ssl) == 1);
+        EMIT(KSB_RET);
+        LEN -= 1;
+        META(v->tok);
+
+    } else if (k == KS_AST_THROW) {
+        assert(NSUB == 1);
+        if (!COMPILE(SUB(0))) return false;
+        assert((LEN - ssl) == 1);
+        EMIT(KSB_THROW);
+        LEN -= 1;
+        META(v->tok);
+
+    } else if (k == KS_AST_IMPORT) {
+        EMITO(KSB_IMPORT, v->val);
+        LEN += 1;
+        META(v->tok);
+ 
+        EMITO(KSB_STORE, v->val);
+        EMIT(KSB_POPU);
+        LEN -= 1;
+
     } else if (k == KS_AST_BLOCK) {
         for (i = 0; i < NSUB; ++i) {
             if (!COMPILE(SUB(i))) return false;
             CLEAR(ssl);
         }
+    } else if (k == KS_AST_LIST) {
+        for (i = 0; i < NSUB; ++i) {
+            if (!COMPILE(SUB(i))) return false;
+        }
+        assert(LEN == ssl + NSUB);
+        EMITI(KSB_LIST, NSUB);
         META(v->tok);
+        LEN += 1 - NSUB;
+
+    } else if (k == KS_AST_IF) {
+        /* Emit conditional */
+        assert((NSUB == 2 || NSUB == 3) && "'if' AST requires either 2 or 3 children");
+        if (!COMPILE(SUB(0))) return false;
+
+        /* CFG:
+         * 
+         * +---+  +---+
+         * | B |--| T |--+--
+         * +---+  +---+  |
+         *   |    +---+  |
+         *   +----| F |--+
+         *        +---+
+         */
+
+        int jb_l = BC_N;
+        EMITI(KSB_JMPF, -1);
+        int jb_f = BC_N;
+        LEN -= 1;
+
+        if (!COMPILE(SUB(1))) return false;
+        CLEAR(ssl);
+
+        if (NSUB == 3) {
+            /* Have an 'else' clause */
+            int jt_l = BC_N;
+            EMITI(KSB_JMP, -1);
+            int jt_f = BC_N;
+
+            /* False branch should jump to here */
+            PATCH(jb_l, jb_f, BC_N);
+
+            if (!COMPILE(SUB(2))) return false;
+            CLEAR(ssl);
+
+            /* Patch true branch to jump to after the 'else' */
+            PATCH(jt_l, jt_f, BC_N);
+
+        } else {
+            /* No 'else' clause */
+            PATCH(jb_l, jb_f, BC_N);
+        }
+
+    } else if (k == KS_AST_WHILE) {
+        /* Emit conditional */
+        assert((NSUB == 2 || NSUB == 3) && "'while' AST requires either 2 or 3 children");
+        int cond_l = BC_N;
+        if (!COMPILE(SUB(0))) return false;
+
+        /* CFG:
+         *       +------+
+         *       |      |
+         * +---+  +---+ |
+         * | B |--| T |--+--
+         * +---+  +---+  |
+         *   |    +---+  |
+         *   +----| F |--+
+         *        +---+
+         * 
+         */
+
+        int jc_l = BC_N;
+        EMITI(KSB_JMPF, -1);
+        int jc_f = BC_N;
+        LEN -= 1;
+
+        int body_l = BC_N;
+
+        if (!COMPILE(SUB(1))) return false;
+        CLEAR(ssl);
+
+        if (!COMPILE(SUB(0))) return false;
+
+        int jc2_l = BC_N;
+        EMITI(KSB_JMPT, -1);
+        int jc2_f = BC_N;
+        LEN -= 1;
+
+        PATCH(jc2_l, jc2_f, body_l);
+
+        if (NSUB == 3) {
+
+            /* We need to jump past the else clause by default */
+            int je_l = BC_N;
+            EMITI(KSB_JMP, -1);
+            int je_f = BC_N;
+
+            PATCH(jc_l, jc_f, BC_N);
+
+            if (!COMPILE(SUB(2))) return false;
+            CLEAR(ssl);
+
+            /* Patch true branch to jump to after the 'else' */
+            PATCH(je_l, je_f, BC_N);
+
+        } else {
+            /* No 'else' clause, just fall through */
+            PATCH(jc_l, jc_f, BC_N);
+
+        }
+
+        LEN = ssl;
+
+
+    /** Handle Special Operators **/
+
+    } else if (k == KS_AST_BOP_ASSIGN) {
+        assert(NSUB == 2 && "binary operator requires 2 children");
+        if (!COMPILE(SUB(1))) return false;
+
+        if (!assign(co, fname, src, code, SUB(0), SUB(1), v)) return false;
 
     } else if (KS_AST_BOP__FIRST <= k && k <= KS_AST_BOP__LAST) {
         assert(NSUB == 2 && "binary operator requires 2 children");
@@ -105,6 +292,18 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         EMIT(k);
         META(v->tok);
         LEN += 1 - 2;
+
+    } else if (KS_AST_UOP__FIRST <= k && k <= KS_AST_UOP__LAST) {
+        assert(NSUB == 1 && "unary operator requires 1 children");
+        /* Binary operator */
+        if (!COMPILE(SUB(0))) return false;
+
+        /* The enumerations are set up so that the AST types match directly to the bytecode 
+         *   index, so we can just emit it
+         */
+        EMIT(k);
+        META(v->tok);
+        LEN += 1 - 1;
 
     } else {
         /* unknown */

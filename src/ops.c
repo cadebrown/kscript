@@ -11,11 +11,13 @@
     kso res = NULL; \
     if (L->type->_attr) { \
         res = kso_call(L->type->_attr, 2, (kso[]){ L, R }); \
-        return res; \
+        if (res == KSO_UNDEFINED) {} \
+        else return res; \
     } \
     if (R->type->_attr) { \
         res = kso_call(R->type->_attr, 2, (kso[]){ L, R }); \
-        return res; \
+        if (res == KSO_UNDEFINED) {} \
+        else return res; \
     } \
     KS_THROW(kst_Error, "Binary operator '%s' undefined for '%T' and '%T'", _str, L, R); \
     return NULL; \
@@ -45,9 +47,11 @@ T_BOP(">=", ge, i__ge)
     kso res = NULL; \
     if (V->type->_attr) { \
         res = kso_call(V->type->_attr, 1, (kso[]){ V }); \
-        if (res) return res; \
+        if (res == KSO_UNDEFINED) {} \
+        else return res; \
     } \
     KS_THROW(kst_Error, "Unary operator '%s' undefined for '%T'", _str, V); \
+    return NULL; \
 }
 
 /* Instantiate */

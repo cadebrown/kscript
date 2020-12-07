@@ -402,6 +402,9 @@ enum {
 #define KS_AST_BOP__FIRST KS_AST_BOP_ASSIGN
 #define KS_AST_BOP__LAST KS_AST_BOP_POW
 
+#define KS_AST_UOP__FIRST KS_AST_UOP_POS
+#define KS_AST_UOP__LAST KS_AST_UOP_STAR
+
 /* 'ast' - Abstract Syntax Tree, representing a program in abstract terms
  *
  */
@@ -436,7 +439,6 @@ typedef struct ks_ast_s {
  * 
  * 
  */
-
 enum {
     /* NOOP
      *
@@ -469,6 +471,34 @@ enum {
      */
     KSB_STORE,
 
+    /* GETATTR idx
+     *
+     * Replaces the top of 'stk' with 'top(stk).(vc[idx])', i.e. the attribute
+     */
+    KSB_GETATTR,
+
+    /* SETATTR idx
+     *
+     * Sets 'stk[-2].(vc[idx]) = stk[-1]', then deletes 'stk[-2]', with 'stk[-1]' taking its place
+     */
+    KSB_SETATTR,
+
+
+    /* GETELEMS num
+     *
+     * Pops off the top 'num' elements, and retrieves '(objs[0])[*(objs[1:])]', pushing the result on the
+     *   stack
+     */
+    KSB_GETELEMS,
+
+    /* SETELEMS num
+     *
+     * Pops off the last 'num' elements (the last of which should be the value used for the assignment),
+     *   and sets that element
+     */
+    KSB_SETELEMS,
+
+
     /* CALL num
      *
      * Takes the top 'num' elements, and performs a function call, the bottom-most element
@@ -478,13 +508,55 @@ enum {
     KSB_CALL,
 
 
+    /** Constructors **/
+
+
+    /* LIST num
+     *
+     * Creates a new list out of the last 'num' items on the stack (popping them off) and then pushes
+     *   the list back on
+     */
+    KSB_LIST,
+
+
+
     /** Control Flow **/
+
+    /* JMP amt
+     *
+     * Unconditional jump 'amt' (in bytes) in the bytecode
+     */
+    KSB_JMP,
+
+    /* JMPT/JMPF amt
+     *
+     * Pops off the top of 'stk', and conditionally jumps 'amt' bytes in the bytecode if it is 
+     *   truthy/falsy depending on which opcode it is
+     */
+    KSB_JMPT,
+    KSB_JMPF,
 
     /* RET
      *
      * Pop off the last item on 'stk', and return it from the function
      */
     KSB_RET,
+
+    /* THROW
+     *
+     * Pop off the last item on 'stk' and throw it up the call stack (must be an 'Exception' or subtype)
+     */
+    KSB_THROW,
+
+
+    /** Meta **/
+
+    /* IMPORT idx
+     *
+     * Imports 'vc[idx]', which depends on the type:
+     *   str: Imports a single name, and sets the name to the module that was imported
+     */
+    KSB_IMPORT,
 
 
     /** Binary Operators **/
@@ -649,6 +721,11 @@ KS_API ks_ast ks_ast_new(int kind, int n_args, ks_ast* args, kso val, ks_tok tok
 /* Create a new AST, but absorb the references to 'args[]' and 'val' (i.e. you transfer the references) */
 KS_API ks_ast ks_ast_newn(int kind, int n_args, ks_ast* args, kso val, ks_tok tok);
 
+/* Whether or not a given AST kind is an expression
+ */
+KS_API bool ks_ast_is_expr(int kind);
+
+
 
 /* Create a new (empty) code object with the given metadata
  */
@@ -677,6 +754,9 @@ KS_API void ks_code_emito(ks_code self, ksb op, kso arg);
  */
 KS_API void ks_code_meta(ks_code self, ks_tok tok);
 
+/* Attempt to get meta for a given byte offset, and store in 'meta'
+ */
+KS_API bool ks_code_get_meta(ks_code self, int offset, struct ks_code_meta* meta);
 
 /* Pushes an AST onto the 'args' list, and merges the tokens
  */

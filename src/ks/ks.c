@@ -4,6 +4,7 @@
  */
 #include <ks/impl.h>
 #include <ks/compiler.h>
+#include <ks/getarg.h>
 
 
 /* Compile and run generically */
@@ -65,17 +66,68 @@ static bool do_f(ks_str fname) {
 }
 
 
-
 int main(int argc, char** argv) {
     if (!ks_init()) return 1;
+    int i;
 
-    ks_str src = ks_str_new(-1, "print ('abc', 'def')");
-    
-    bool res = do_e(src);
+    /* Initialize 'os.argv' */
+    ks_list_clear(ksos_argv);
+    for (i = 0; i < argc; ++i) {
+        ks_list_pushu(ksos_argv, (kso)ks_str_new(-1, argv[i]));
+    }
+
+    ksga_Parser p = ksga_Parser_new("ks", "kscript interpreter, commandline interface", "0.0.1", "Cade Brown <cade@kscript.org>");
+
+    ksga_opt(p, "expr", "Compiles and runs an expression", "-e,--expr", NULL, KSO_NONE);
+    ksga_opt(p, "code", "Compiles and runs code", "-c,--code", NULL, KSO_NONE);
+    ksga_pos(p, "args", "File to run and arguments given to it", NULL, -1);
+
+    ks_dict args = ksga_parse(p, ksos_argv);
     kso_exit_if_err();
 
+    /* Get arguments */
+    kso expr = ks_dict_get_c(args, "expr"), code = ks_dict_get_c(args, "code");
+    ks_list newargv = (ks_list)ks_dict_get_c(args, "args");
+    kso_exit_if_err();
 
-    KS_DECREF(src);
+    /* Reclaim 'os.argv' */
+    ks_list_clear(ksos_argv);
+    for (i = 0; i < newargv->len; ++i) {
+        ks_list_pushu(ksos_argv, newargv->elems[i]);
+    }
+    if (ksos_argv->len == 0) {
+        ks_list_pushu(ksos_argv, (kso)ks_str_new(-1, "-"));
+    }
+
+    KS_DECREF(p);
+    bool res = false;
+
+    if (expr == KSO_NONE && code == KSO_NONE) {
+        /* Run file */
+        ks_str fname = (ks_str)ksos_argv->elems[0];
+        if (fname->data[0] == '-') {
+            /* Interactive session */
+            res = ks_inter();
+        } else {
+            /* Execute file */
+            res = do_f(fname);
+        }
+    } else if (expr != KSO_NONE && code == KSO_NONE) {
+        ks_list_insertu(ksos_argv, 0, (kso)ks_str_new(-1, "<expr>"));
+        res = do_e((ks_str)expr);
+    } else if (expr == KSO_NONE && code != KSO_NONE) {
+        ks_list_insertu(ksos_argv, 0, (kso)ks_str_new(-1, "<code>"));
+        res = do_e((ks_str)code);
+    } else {
+        KS_THROW(kst_Error, "Given both '-e' and '-c'");
+    }
+
+
+    KS_DECREF(expr);
+    KS_DECREF(code);
+    KS_DECREF(newargv);
+    KS_DECREF(args);
+    kso_exit_if_err();
 
     return 0;
 }

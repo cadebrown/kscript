@@ -12,6 +12,17 @@
 #include <ks/ks.h>
 #endif
 
+#ifdef KS_HAVE_SIGNAL_H
+ #include <signal.h>
+#endif
+
+/*
+#include <dirent.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+*/
+
 /** Constants **/
 
 
@@ -181,7 +192,15 @@ KS_API ksos_frame ksos_frame_new(kso func);
  */
 KS_API ksos_frame ksos_frame_copy(ksos_frame of);
 
+/* Return a string representing the traceback of a frame's execution
+ */
+KS_API ks_str ksos_frame_get_tb(ksos_frame self);
 
+
+/* Linearize the linked-list structure of the frames, returning a list of frames with 
+ *   'self' at the beginning
+ */
+KS_API ks_list ksos_frame_expand(ksos_frame self);
 
 /* Create a new mutex (which will be unlocked)
  */
@@ -205,12 +224,16 @@ KS_API extern ks_type
     ksost_mutex
 ;
 
+
+
 /* Globals */
 KS_API extern ksio_FileIO
     ksos_stdin,
     ksos_stdout,
     ksos_stderr
 ;
-
+KS_API extern ks_list
+    ksos_argv
+;
 
 #endif /* KSOS_H__ */

@@ -120,19 +120,19 @@ typedef struct ksio_BytesIO_s {
         _to = _c; \
         _n = 1;   \
     } else if ((_c & 0xE0) == 0xC0) { \
-        _to = ((ks_unich)(_c & 0x1F) << 6) \
-            | ((ks_unich)((_src)[1] & 0x3F) << 0); \
+        _to = ((ks_ucp)(_c & 0x1F) << 6) \
+            | ((ks_ucp)((_src)[1] & 0x3F) << 0); \
         _n = 2; \
     } else if ((_c & 0xF0) == 0xE0) { \
-        _to = ((ks_unich)(_c & 0x0F) << 12) \
-            | ((ks_unich)((_src)[1] & 0x3F) << 6) \
-            | ((ks_unich)((_src)[2] & 0x3F) << 0); \
+        _to = ((ks_ucp)(_c & 0x0F) << 12) \
+            | ((ks_ucp)((_src)[1] & 0x3F) << 6) \
+            | ((ks_ucp)((_src)[2] & 0x3F) << 0); \
         _n = 3; \
     } else if ((_c & 0xF8) == 0xF0 && (_c <= 0xF4)) { \
-        _to = ((ks_unich)(_c & 0x07) << 18) \
-            | ((ks_unich)((_src)[1] & 0x3F) << 12) \
-            | ((ks_unich)((_src)[2] & 0x3F) << 6) \
-            | ((ks_unich)((_src)[3] & 0x3F) << 0); \
+        _to = ((ks_ucp)(_c & 0x07) << 18) \
+            | ((ks_ucp)((_src)[1] & 0x3F) << 12) \
+            | ((ks_ucp)((_src)[2] & 0x3F) << 6) \
+            | ((ks_ucp)((_src)[3] & 0x3F) << 0); \
         _n = 4; \
     } else { \
         _to = 0; \
@@ -238,6 +238,18 @@ KS_API bool ksio_addbuf(ksio_AnyIO self, ks_ssize_t sz, const char* data);
 /* Read entire file and return as a string. Returns NULL and throws an error if there was a problem
  */
 KS_API ks_str ksio_readall(ks_str fname);
+
+/* Portable implementation of the 'getline()' function, which reads an entire line from a FILE* pointer
+ *
+ * Example:
+ * char* line = NULL;
+ * ks_ssize_t sz = 0;
+ * sz = ksu_getline(&line, &n, stdin);
+ * ks_free(line);
+ *
+ */
+KS_API ks_ssize_t ksu_getline(char** lineptr, ks_ssize_t* n, FILE* fp);
+
 
 
 /* Types */

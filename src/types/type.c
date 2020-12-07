@@ -71,6 +71,16 @@ ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, struct
 
     return self;
 }
+kso ks_type_get(ks_type self, ks_str attr) {
+    kso res = ks_dict_get_ih(self->attr, (kso)attr, attr->v_hash);
+    if (res) return res;
+
+    if (self->i__base != self) return ks_type_get(self->i__base, attr);
+    else {
+        KS_THROW_ATTR(self, attr);
+        return NULL;
+    }
+}
 
 bool ks_type_set(ks_type self, ks_str attr, kso val) {
     if (attr->len_b > 2 && attr->data[0] == '_' && attr->data[1] == '_') {

@@ -52,6 +52,7 @@ static void* init_thread_pthreads(void* _self) {
 ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
     ksos_thread self = KSO_NEW(ksos_thread, tp);
 
+    static int cc = 1;
     if (name) {
         KS_INCREF(name);
     } else {
@@ -145,6 +146,12 @@ bool ksos_thread_join(ksos_thread self) {
 
 /* Type Functions */
 
+static KS_TFUNC(T, str) {
+    ksos_thread self;
+    KS_ARGS("self:*", &self, ksost_thread);
+    return (kso)ks_fmt("<thread %R>", self->name);
+}
+
 
 /* Export */
 
@@ -152,7 +159,33 @@ static struct ks_type_s tp;
 ks_type ksost_thread = &tp;
 
 void _ksi_os_thread() {
-    _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, NULL);
+    _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, KS_IKV(
+        {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
+    ));
 
-    ksg_main_thread = ksos_thread_new(ksost_thread, NULL, NULL, _ksv_emptytuple);
+    ks_str tmp = ks_str_new(-1, "main");
+    ksg_main_thread = ksos_thread_new(ksost_thread, tmp, NULL, _ksv_emptytuple);
+    KS_DECREF(tmp);
+
+    #ifdef KS_HAVE_PTHREADS
+
+    /* Create a per-thread keyed variable */
+    int stat = pthread_key_create(&this_thread_key, NULL);
+    if (stat != 0) {
+        KS_THROW(kst_Error, "Failed to create pthread key: %s", strerror(stat));
+        kso_exit_if_err();
+    }
+
+    /* Set the variable for this thread */
+    pthread_setspecific(this_thread_key, (void*)ksg_main_thread);
+
+    #endif /* KS_HAVE_PTHREADS */
+
+
+
 }
+
+
+
+

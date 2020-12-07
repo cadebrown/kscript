@@ -68,8 +68,12 @@ void _ksi_os_thread();
 void _ksi_os_path();
 void _ksi_os_frame();
 
-ks_module _ksi_getarg();
 ks_module _ksi_m();
+
+ks_module _ksi_getarg();
+void _ksi_getarg_Parser();
+
+
 ks_module _ksi_time();
 ks_module _ksi_net();
 ks_module _ksi_net_http();
@@ -80,6 +84,7 @@ ks_module _ksi_ucd();
 
 void _ksi_parser();
 void _ksi_funcs();
+void _ksi_import();
 
 /* Initialize type */
 void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, struct ks_ikv* ikv);
@@ -89,6 +94,7 @@ void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, str
 KS_API extern ks_str
     _ksv_io,
     _ksv_os,
+    _ksv_getarg,
 
     _ksv_stdin,
     _ksv_stdout,
@@ -98,6 +104,11 @@ KS_API extern ks_str
 _KS_DO_SPEC(_KSACT)
 #undef _KSACT
 
+    _ksva__src,
+    _ksva__sig,
+    _ksva__doc,
+
+
     _ksv_r
 ;
 
@@ -105,7 +116,6 @@ _KS_DO_SPEC(_KSACT)
 KS_API extern ks_tuple
     _ksv_emptytuple
 ;
-
 
 /* Integer constants */
 KS_API extern ks_int

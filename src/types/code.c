@@ -116,6 +116,36 @@ void ks_code_meta(ks_code self, ks_tok tok) {
     }
 }
 
+
+bool ks_code_get_meta(ks_code self, int offset, struct ks_code_meta* meta) {
+    if (offset < 0 || offset > self->bc->len_b) {
+        KS_THROW(kst_Error, "Code meta requested for invalid offset %i", offset);
+        return false;
+    }
+    if (self->n_meta < 1) {
+        KS_THROW(kst_Error, "Code meta requested for code which had no meta", offset);
+        return false;
+    }
+
+    /* TODO: binary search here */
+    int fi = -1, i;
+    for (i = 0; i < self->n_meta; ++i) {
+        if (offset <= self->meta[i].bc_n) {
+            fi = i;
+            break;
+        }
+    }
+
+    if (fi >= 0) {
+        *meta = self->meta[fi];
+        return true;
+    } else {
+        KS_THROW(kst_Error, "Code meta not found for offset %i", offset);
+        return false;
+    }
+}
+
+
 /* Type Functions */
 
 static KS_TFUNC(T, free) {
@@ -141,12 +171,9 @@ static KS_TFUNC(T, str) {
     ks_code self;
     KS_ARGS("self:*", &self, kst_code);
 
-    ks_bytes bc = ksio_BytesIO_get(self->bc);
-    if (!bc) return NULL;
-    ks_str res = ks_fmt("<%R>", bc);
-    KS_DECREF(bc);
-    return (kso)res;
+    return (kso)ks_fmt("<'%T' (%R) @ %p>", self, self->fname, self);    
 }
+
 
 
 /* Export */

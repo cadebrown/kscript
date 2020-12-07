@@ -51,14 +51,16 @@ static bool is_name_m(ks_ucp c) {
 
 
 ks_tok ks_tok_combo(ks_tok a, ks_tok b) {
-    if (a.sline < 0) return a;
-    else if (b.sline < 0) return b;
-    if (a.sline > b.sline) return ks_tok_combo(b, a);
+    if (a.spos < 0) return a;
+    else if (b.spos < 0) return b;
+    if (a.spos > b.spos) return ks_tok_combo(b, a);
 
     /* Now, merge them together */
     ks_tok r;
+    r.kind = KS_TOK_MANY;
+
     r.sline = a.sline;
-    r.ecol = a.scol;
+    r.scol = a.scol;
     r.spos = a.spos;
 
     r.eline = b.eline;

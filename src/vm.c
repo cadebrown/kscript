@@ -66,12 +66,12 @@
 #define VMD_START while (true) switch (*pc)
 
 /* Catches unknown instruction */
-#define VMD_CATCH_REST default: fprintf(stderr, "[VM]: Unknown instruction encountered in <bytecode @ %p>: %i (offset: %i)\n", bc, *pc, (int)(pc - bc->bc->data)); assert(false); break;
+#define VMD_CATCH_REST default: fprintf(stderr, "[VM]: Unknown instruction encountered in <code @ %p>: %i (offset: %i)\n", bc, *pc, (int)(pc - bc->bc->data)); assert(false); break;
 
 /* Consume the next instruction 
  * TODO: switch based on instructions or time
  */
-#define VMD_NEXT() VM_ALLOW_GIL(); continue;
+#define VMD_NEXT() VM_ALLOW_GIL(); goto disp;
 
 /* Declare code for a given operator */
 #define VMD_OP(_op) case _op: pc += sizeof(ksb);
@@ -81,6 +81,7 @@
 
 /* End the section for an operator */
 #define VMD_OP_END  VMD_NEXT(); break;
+                
 
 
 /* Execute on the current thread and return the result returned, or NULL if
@@ -93,6 +94,7 @@ kso _ks_exec(ks_code bc) {
     /* Thread we are executing on */
     ksos_thread th = ksos_thread_get();
     assert(th && th->frames->len > 0);
+    assert(ksos_thread_get() == ksg_main_thread);
 
     /* Frame being executed on */
     ksos_frame frame = (ksos_frame)th->frames->elems[th->frames->len - 1];
@@ -111,6 +113,9 @@ kso _ks_exec(ks_code bc) {
     /* Temporaries */
     ks_str name;
     kso L, R, V;
+    bool truthy;
+    ksos_frame fit;
+
 
     /* Argument, if the instruction gave one */
     int arg;
@@ -149,6 +154,9 @@ kso _ks_exec(ks_code bc) {
         } \
     } while (0)
 
+
+    /* Dispatch */
+    disp:;
     VMD_START {
         VMD_OP(KSB_NOOP)
         VMD_OP_END
@@ -162,15 +170,61 @@ kso _ks_exec(ks_code bc) {
         VMD_OP_END
         
         VMD_OPA(KSB_LOAD)
-            ks_str name = (ks_str)VC(arg);
+            name = (ks_str)VC(arg);
             assert(name->type == kst_str);
-            V = ks_dict_get_h(ksg_globals, (kso)name, name->v_hash);
-            if (!V) goto thrown;
-            ks_list_push(stk, V);
-            KS_DECREF(V);
+
+            /* Check frame (and closures) */
+            fit = frame;
+            do {
+                if (fit->locals) {
+                    V = ks_dict_get_ih(fit->locals, (kso)name, name->v_hash);
+                    if (V) {
+                        /* Found in this scope, so push it and execute the next */
+                        ks_list_pushu(stk, V);
+                        VMD_NEXT();
+                    }
+                }
+ 
+                fit = fit->closure;
+            } while (fit != NULL);
+
+            /* Now, check globals */
+            V = ks_dict_get_ih(ksg_globals, (kso)name, name->v_hash);
+
+            if (!V) {
+                KS_THROW(kst_NameError, "Unknown name: %R", name);
+                goto thrown;
+            }
+            ks_list_pushu(stk, V);
+        VMD_OP_END
+        
+        VMD_OPA(KSB_STORE)
+            name = (ks_str)VC(arg);
+            assert(name->type == kst_str);
+            V = stk->elems[stk->len - 1];
+            if (!ks_dict_set_h(frame->locals, (kso)name, name->v_hash, V)) goto thrown;
         VMD_OP_END
 
-        
+        VMD_OPA(KSB_GETATTR)
+            V = stk->elems[--stk->len];
+            name = (ks_str)VC(arg);
+            R = kso_getattr(V, name);
+            KS_DECREF(V);
+            if (!R) goto thrown;
+            ks_list_pushu(stk, R);
+        VMD_OP_END
+
+        VMD_OPA(KSB_GETELEMS)
+            ARGS_FROM_STK(arg);
+            V = kso_getelems(arg, args);
+            DECREF_ARGS(arg);
+            if (!V) goto thrown;
+
+            ks_list_pushu(stk, V);
+        VMD_OP_END
+
+
+
         VMD_OPA(KSB_CALL)
             assert(arg >= 1);
             ARGS_FROM_STK(arg);
@@ -181,11 +235,66 @@ kso _ks_exec(ks_code bc) {
 
         VMD_OP_END
 
-        
+        /** Constructors **/
+
+        VMD_OPA(KSB_LIST)
+            stk->len -= arg;
+            ks_list_pushu(stk, (kso)ks_list_newn(arg, stk->elems + stk->len));
+        VMD_OP_END
+
+
+        /** Control Flow **/
+
+        VMD_OPA(KSB_JMP)
+            pc += arg;
+        VMD_OP_END
+
+        VMD_OPA(KSB_JMPT)
+            V = stk->elems[--stk->len];
+            if (!kso_truthy(V, &truthy)) {
+                KS_DECREF(V);
+                goto thrown;
+            }
+            KS_DECREF(V);
+            if (truthy) {
+                pc += arg;
+            }
+        VMD_OP_END
+
+        VMD_OPA(KSB_JMPF)
+            V = stk->elems[--stk->len];
+            if (!kso_truthy(V, &truthy)) {
+                KS_DECREF(V);
+                goto thrown;
+            }
+            KS_DECREF(V);
+            if (!truthy) {
+                pc += arg;
+            }
+        VMD_OP_END
+
         VMD_OP(KSB_RET)
             res = ks_list_pop(stk);
             goto done;
         VMD_OP_END
+
+        VMD_OP(KSB_THROW)
+            res = ks_list_pop(stk);
+            kso_throw((ks_Exception)res);
+            goto thrown;
+        VMD_OP_END
+
+        VMD_OPA(KSB_IMPORT)
+            name = (ks_str)VC(arg);
+            assert(name->type == kst_str);
+
+            V = (kso)ks_import(name);
+            if (!V) goto thrown;
+            ks_list_pushu(stk, V);
+
+        VMD_OP_END
+
+
 
         /* Template for binary operators */
         #define T_BOP(_b, _name) VMD_OP(_b) \

@@ -276,6 +276,8 @@ bool ks_dict_merge(ks_dict self, ks_dict from) {
     return true;
 }
 bool ks_dict_merge_ikv(ks_dict self, struct ks_ikv* ikv) {
+    assert(kso_issub(self->type, kst_dict));
+    
     bool res = true;
     /* Iterate until given 'NULL' as a key */
     struct ks_ikv* it = ikv;
@@ -284,7 +286,9 @@ bool ks_dict_merge_ikv(ks_dict self, struct ks_ikv* ikv) {
         /* If there was a valid dictionary to modify. Otherwise, keep going */
         if (res) {
             ks_str key = ks_str_new(-1, it->key);
+            assert(key != NULL);
             kso val = it->val;
+            assert(val != NULL);
             bool had_err = !ks_dict_set_h(self, (kso)key, key->v_hash, val);
 
             /* This function works by taking the references from the list of elements */
@@ -504,12 +508,41 @@ ks_list ks_dict_calc_buckets(ks_dict self) {
     return res;
 }
 
+
+
+
+/* Type Functions */
+
+static KS_TFUNC(T, free) {
+    ks_dict self;
+    KS_ARGS("self:*", &self, kst_dict);
+
+    ks_size_t i;
+    for (i = 0; i < self->len_ents; ++i) {
+        if (self->ents[i].key != NULL) {
+            KS_DECREF(self->ents[i].key);
+            KS_DECREF(self->ents[i].val);
+        }
+    }
+
+    ks_free(self->ents);
+    ks_free(self->buckets_s8);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+
+
 /* Export */
 
 static struct ks_type_s tp;
 ks_type kst_dict = &tp;
 
 void _ksi_dict() {
-    _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, NULL);
+    _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, KS_IKV(
+        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+    ));
     
 }

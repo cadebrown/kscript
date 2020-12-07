@@ -26,13 +26,16 @@ static void my_mpz_set_ui(mpz_t self, ks_uint v) {
 
 /* C-API */
 
-ks_int ks_int_new(ks_cint val) {
-    ks_int self = KSO_NEW(ks_int, kst_int);
+ks_int ks_int_newt(ks_type tp, ks_cint val) {
+    ks_int self = KSO_NEW(ks_int, tp);
 
     mpz_init(self->val);
     my_mpz_set_ci(self->val, val);
 
     return self;
+}
+ks_int ks_int_new(ks_cint val) {
+    return ks_int_newt(kst_int, val);
 }
 
 ks_int ks_int_newu(ks_uint val) {
@@ -44,7 +47,22 @@ ks_int ks_int_newu(ks_uint val) {
     return self;
 }
 
-ks_int ks_int_news(ks_ssize_t sz, const char* src, int base) {
+
+ks_int ks_int_newf(ks_cfloat val) {
+    val = floor(val);
+    if ((ks_cint)val == val) {
+        return ks_int_new((ks_cint)val);
+    } else {
+        /* use GMP */
+        mpz_t res;
+        mpz_init(res);
+        mpz_set_d(res, val);
+        return ks_int_newzn(res);
+    }
+}
+
+
+ks_int ks_int_newst(ks_type tp, ks_ssize_t sz, const char* src, int base) {
     bool nt = sz < 0;
     if (nt) sz = strlen(src);
 
@@ -79,6 +97,7 @@ ks_int ks_int_news(ks_ssize_t sz, const char* src, int base) {
             base = new_base;
         }
     }
+    if (base == 0) base = 10;
 
     /* Ask GMP to parse it */
     mpz_t r;
@@ -108,6 +127,10 @@ ks_int ks_int_news(ks_ssize_t sz, const char* src, int base) {
     return ks_int_newzn(r);
 }
 
+ks_int ks_int_news(ks_ssize_t sz, const char* src, int base) {
+    return ks_int_newst(kst_int, sz, src, base);
+}
+
 ks_int ks_int_newz(mpz_t val) {
     ks_int self = KSO_NEW(ks_int, kst_int);
 
@@ -117,16 +140,31 @@ ks_int ks_int_newz(mpz_t val) {
     return self;
 }
 
-ks_int ks_int_newzn(mpz_t val) {
-    ks_int self = KSO_NEW(ks_int, kst_int);
+ks_int ks_int_newznt(ks_type tp, mpz_t val) {
+    ks_int self = KSO_NEW(ks_int, tp);
 
     *self->val = *val;
 
     return self;
 }
 
+ks_int ks_int_newzn(mpz_t val) {
+    return ks_int_newznt(kst_int, val);
+}
+
+int ks_int_cmp(ks_int L, ks_int R) {
+    return mpz_cmp(L->val, R->val);
+}
+
+int ks_int_cmp_c(ks_int L, ks_cint r) {
+    return mpz_cmp_si(L->val, r);
+}
+
+
+
 
 /* Type Functions */
+
 
 static KS_TFUNC(T, free) {
     ks_int self;
@@ -139,6 +177,76 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso obj = KSO_NONE;
+    ks_cint base = 0;
+    KS_ARGS("tp:* ?obj ?base:cint", &tp, kst_type, &obj, &base);
+
+    if (kso_issub(obj->type, kst_str)) {
+        /* String conversion */
+        return (kso)ks_int_newst(tp, -1, ((ks_str)obj)->data, base);
+    }
+    if (_nargs > 2) {
+        KS_THROW(kst_ArgError, "'base' can only be given when 'obj' is a 'str' object, but it was a '%T' object", obj);
+        return NULL;
+    }
+    if (obj == KSO_NONE) {
+        return (kso)ks_int_newt(0, -1);
+    } else if (kso_issub(obj->type, tp)) {
+        return KS_NEWREF(obj);
+    }
+
+    KS_THROW_CONV(obj->type, tp);
+    return NULL;
+}
+
+static KS_TFUNC(T, str) {
+    ks_int self;
+    ks_cint base = 10;
+    KS_ARGS("self:* ?base:cint", &self, kst_int, &base);
+
+    /* Allocate a temporary buffer according to GMP */
+    ks_size_t mlb = 16 + mpz_sizeinbase(self->val, base);
+    char* out = ks_malloc(mlb);
+    int i = 0;
+    bool is_neg = mpz_cmp_si(self->val, 0) < 0;
+    
+    if (is_neg) {
+        out[i++] = '-';
+    }
+
+    if (base == 2) {
+        out[i++] = '0';
+        out[i++] = 'b';
+    } else if (base == 8) {
+        out[i++] = '0';
+        out[i++] = 'o';
+    } else if (base == 16) {
+        out[i++] = '0';
+        out[i++] = 'x';
+    }
+    /* For the sign, we need to just replace it afterwards */
+    char t = out[i - (is_neg?1:0)];
+    mpz_get_str(&out[i - (is_neg?1:0)], base, self->val);
+    if (is_neg) out[i - (is_neg?1:0)] = t;
+
+    /* Replace with upper-case letters */
+    while (out[i]) {
+        if ('a' <= out[i] && out[i] <= 'z') {
+            out[i] += 'A' - 'a';
+        }
+        i++;
+    }
+
+    /* Convert to object */
+    ks_str res = ks_str_new(-1, out);
+    ks_free(out);
+    return (kso)res;
+}
+
+
+
 
 /* Export */
 
@@ -148,5 +256,9 @@ ks_type kst_int = &tp;
 void _ksi_int() {
     _ksinit(kst_int, kst_number, T_NAME, sizeof(struct ks_int_s), -1, KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(self, obj=none, base=10)", "")},
+        {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self, base=10)", "")},
+
+        {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self, base=10)", "")},
     ));
 }
