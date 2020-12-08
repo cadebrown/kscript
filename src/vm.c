@@ -81,7 +81,30 @@
 
 /* End the section for an operator */
 #define VMD_OP_END  VMD_NEXT(); break;
-                
+
+
+/* Check whether a type fits typeinfo */
+static bool is_typeinfo(ks_type tp, kso info, bool* out) {
+
+    if (kso_issub(info->type, kst_type)) {
+        *out = kso_issub(tp, (ks_type)info);
+        return true;
+    } else if (kso_issub(info->type, kst_tuple)) {
+        int i;
+        ks_tuple tps = (ks_tuple)info;
+        for (i = 0; i < tps->len; ++i) {
+            if (!is_typeinfo(tp, tps->elems[i], out)) {
+                return false;
+            }
+            if (*out) return true;
+        }
+        *out = false;
+        return true;
+    }
+
+    KS_THROW(kst_TypeError, "Unexpected typeinfo: %R, should either be a type, or tuple of types");
+    return false;
+}
 
 
 /* Execute on the current thread and return the result returned, or NULL if
@@ -289,6 +312,11 @@ kso _ks_exec(ks_code bc) {
             goto thrown;
         VMD_OP_END
 
+        VMD_OP(KSB_FINALLY_END)
+            if (th->exc) goto thrown;
+        VMD_OP_END
+
+
         VMD_OP(KSB_FOR_START)
             res = ks_list_pop(stk);
             V = kso_iter(res);
@@ -331,6 +359,29 @@ kso _ks_exec(ks_code bc) {
             i = frame->n_handlers++;
             frame->handlers = ks_zrealloc(frame->handlers, sizeof(*frame->handlers), frame->n_handlers);
             frame->handlers[i] = pc + arg;
+        VMD_OP_END
+
+        VMD_OPA(KSB_TRY_CATCH)
+            assert(th->exc);
+            assert(stk->len >= 1);
+            V = ks_list_pop(stk);
+            if (!is_typeinfo(th->exc->type, V, &truthy)) {
+                KS_DECREF(V);
+                goto thrown;
+            }
+
+            KS_DECREF(V);
+            if (truthy) {
+                ks_list_pushu(stk, (kso)kso_catch());
+            } else {
+                pc += arg;
+            }
+
+        VMD_OP_END
+
+        VMD_OPA(KSB_TRY_CATCH_ALL)
+            ks_list_pushu(stk, (kso)kso_catch());
+            pc += arg;
         VMD_OP_END
 
         VMD_OPA(KSB_TRY_END)
@@ -441,9 +492,6 @@ kso _ks_exec(ks_code bc) {
     /* Exception was thrown */
     if (frame->n_handlers > 0) {
         /* Execute handler */
-        ks_Exception exc = kso_catch();
-        assert(exc != NULL);
-        ks_list_pushu(stk, (kso)exc);
         pc = frame->handlers[--frame->n_handlers];
         VMD_NEXT();
     }

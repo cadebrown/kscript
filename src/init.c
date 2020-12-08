@@ -67,9 +67,9 @@ _KS_DO_SPEC(_KSACT)
     _CONST(_ksv_os, "os");
     _CONST(_ksv_getarg, "getarg");
     _CONST(_ksv_r, "r");
-    _CONST(_ksv_stdin, "stdin");
-    _CONST(_ksv_stdout, "stdout");
-    _CONST(_ksv_stderr, "stderr");
+    _CONST(_ksv_stdin, "<stdin>");
+    _CONST(_ksv_stdout, "<stdout>");
+    _CONST(_ksv_stderr, "<stderr>");
 
     _CONST(_ksva__src, "__src");
     _CONST(_ksva__sig, "__sig");

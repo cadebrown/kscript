@@ -1,0 +1,1192 @@
+\input texinfo
+@set VERSION 0.2.2-rc1
+@set UPDATED 2020-11-12
+@settitle kscript
+
+@copying
+Copyright @copyright{} 2020 ChemicalDevelopment.
+
+Permission is granted to copy, distribute and/or modify this document under the terms of the GNU Free Documentation License, Version 1.3 or any later version published by the Free Software Foundation.
+
+@end copying
+
+
+@documentdescription
+Formal documentation of the kscript programming language and runtime
+@end documentdescription
+
+@finalout
+@setchapternewpage on
+
+@node kscript
+@ifnottex
+@top kscript
+@end ifnottex
+
+@titlepage
+@title kscript
+@subtitle Dynamic, objected-oriented, and system-independent
+@subtitle Version: @value{VERSION}
+@subtitle Updated: @value{UPDATED}
+@author Cade Brown @email{cade@@kscript.org}
+@c @author Other Name @email{a@@b.c}
+
+@page
+@vskip 0pt plus 1filll
+@insertcopying
+@end titlepage
+
+@ifnothtml
+@contents
+@end ifnothtml
+
+@menu
+* Introduction::       Rationale, goals, and target audience.
+* Getting Started::    Installation, ``hello, world'', and notes about platforms.
+* Syntax::             Defining the elements of the language.
+* Index::              Complete index.
+@end menu
+
+@node Introduction
+@chapter Introduction
+
+@node What is kscript?
+@section What is kscript?
+
+kscript is a programming language meant primarily to allow developers to write portable, re-usable, and platform independent software. kscript features a rich standard library of builtin types, functions, and modules, so reinventing the wheel is almost never neccessary. kscript is a dynamic, duck-typed, object-oriented language, and strives to provide abstract/general interfaces which can be re-used in many applications/libraries/programs, as well as short one-liners or utilities to help developers and power-users expediate their tasks.
+
+The main design principles of kscript are:
+
+@itemize
+@item Minimal and expressive syntax. Most of the time, I would write examples in the way that was most natural to me, and then add that rule to the kscript grammar
+@item Easy-to-use and comprehensive standard library (and types). kscript's philosophy is that if it's worth doing, it's worth including for all programmers. kscript comes with common graph algorithms (Dijkstra's, traversal, etc), numerical algorithms (FFT, linear algebra, tensor math), string and text operations, and so many more features built right in to the standard library. For most tasks, you should never need to install an external package
+@item Easily bind to existing software in C/C++/C-linked languages. kscript's reference implementation is in C, and it has C++ helper methods to make binding generation easy for other software.
+@item Complete cross-platform support. Including the standard library types and modules, kscript strives to be able to be ran just as easily on Linux, MacOS, Windows, Web platforms, and more.
+@end itemize
+
+The reference implementation (available at @url{https://github.com/ChemicalDevelopment/kscript}) is implemented in C, and provides @samp{libks}, a C library which can be embedded in other applications. So, you can use it to allow your program to have a scripting language for your users, at relatively little cost. It's quite easy to embed (TODO: link to tutorial), so consider it over some other languages (like @samp{tcl}, etc)
+
+kscript also includes a lot of builtin modules, some of which are listed below:
+
+@table @samp
+@item import nx
+@samp{nx} is the NumeriX library, which includes specifically sized datatypes (@samp{nx.dtype}) that are efficiently stored in memory and processed by the computer. The module provides storage of multi-dimensional arrays (@samp{nx.array}, @samp{nx.view}) which vectorize operations. For example, you may have arrays of millions of numbers, and @samp{nx} can efficiently carry out computations, all while maintaining a clean interface to your programs (i.e. no manual memory management required)
+
+Many routines (arithmetic, conversion, sorting, linear algebra, FFTs) are implemented for a variety of data types, which means you don't have to look for external libraries and add those dependencies to your program (it's all in the standard library!)
+
+@item import net
+@samp{net} is the networking library, which supports socket programming (@samp{net.Socket}), as well as higher level networking operations like Hyper-Text-Transer-Protocol (HTTP) routines (@samp{net.http}).
+
+@item import os
+@samp{os} is the operating system library, which is defined very abstractly -- code to move files, @samp{stat} files, iterate through directories, and more all look the same no matter what OS it runs on. The OS-agnostic type @samp{os.path} is extremely useful for path processing that isn't just strings
+
+@samp{os} also handles file I/O (@samp{os.FileStream})
+
+@item import time
+@samp{time} is a module dealing with both real times, as well as human date/calendar systems. There are routines to get the current ISO timestamp (@samp{time.iso_utc()}) as well as parse textual input in a given format into a datetime structure (@samp{time.format()}).
+
+@end table
+
+The syntax, modules, and ecosystem of kscript are collectively referred to as kscript -- and they're what make it so powerful as both a scripting language as well as a language for larger projects.
+
+
+@node What is this document?
+@section What is this document?
+
+This documentation is meant to be a technical manual for kscript -- it covers more of the formal aspects of the standard, implementation, and library. It has a few short examples, but it's not meant to teach you how to program kscript. It's supposed to be a reference so you know what code will do, even in odd cases. (TODO: link to tutorial site)
+
+
+@node Getting Started
+@chapter Getting Started
+
+@node From Package Managers
+@section From Package Managers
+
+Right now, we aren't aware of any official packages. So, you're going to have to build from source at this point.
+
+@section From Source
+
+To build and compile from source, you may follow this section. This is only advised for experienced programmers; most of the time you should install a release from a package manager.
+
+Building from source requires a C compiler (C99 compliance is recommended). kscript can build with @code{tcc} (@url{https://bellard.org/tcc/}), which allows for extremely fast compilation and re-compilation.
+
+To start, get a copy of the source code. It can be cloned by @code{git}, like so:
+
+@example
+$ git clone https://github.com/ChemicalDevelopment/kscript.git
+@end example
+
+You may also view the @url{https://github.com/ChemicalDevelopment/kscript/releases} and download an archived file.
+
+Ensure that your environment has a valid C compiler, by running @code{cc}. If your C compiler is something else, or you want to use a compiler other than the default, just replace @code{cc} with your compiler before the configuration script.
+
+@node Configuration
+@subsection Configuration
+
+Now, run the configration step, which will detect features about the platform it is being ran on. It should generate the files @samp{makefile} and @samp{include/ks/config.h}. 
+
+@example
+$ CC=cc ./configure
+ -- Headers -- 
+
+...
+
+ -- Libraries -- 
+
+Searching for 'pthreads' ...
+  :: Succeeded
+Searching for 'gmp' ...
+  :: Succeeded
+Searching for 'readline' ...
+  :: Succeeded
+
+...
+
+Generating 'include/ks/config.h' ...
+  Done!
+Generating 'makefile' ...
+  Done!
+
+Configuration was successful, run 'make' to build kscript
+
+Any problems, questions, concerns, etc. can be sent to:
+Cade Brown <brown.cade@@gmail.com>
+
+@end example
+
+
+It's important to note the @code{Libraries} section, which prints out available information about dependencies. kscript has no required dependencies -- it will build with nothing but a C compiler and the C standard library. However, it is recommended to build with all the optional dependencies. They are listed below, along with what information they have.
+
+To require a given package, you can give @code{--with-NAME on} option to the configuration step. For example, to cause an error if @code{GMP} is not found, run @code{./configure --with-gmp on}. If it throws an error, that means that @code{GMP} was not found (perhaps you should install it, or alter your environment flags (such as @code{CFLAGS} and @code{LDFLAGS}) to point to the location it is installed in).
+
+
+The following lists optional dependencies, what they do, and other information
+
+@table @samp
+@item GMP
+
+GMP (@url{https://gmplib.org/}) is a library which implements multi-precision arithmetic for integer, floating point, and rational numbers.
+
+If enabled, kscript uses GMP's @code{mpz_t} as the internal implementation for integer arithmetic, conversion, and other operations.
+
+If disabled, then a small bundled version (called @code{mini-gmp}) included in the kscript source code is used. All the same operations are supported in kscript (i.e. no features are lost), but the performance may be slower for very large numbers. Although, for most real-world use cases (i.e. <=64 bit numbers), the difference between mini GMP and the full GMP is negligible.
+
+Configuration option: @code{--with-gmp on/off/auto}
+
+@item Readline
+GNU Readline (@url{https://tiswww.case.edu/php/chet/readline/rltop.html}) is a library which implements line editing within a terminal. It allows for left/right cursor movement, recalling history, and even tab completion within the shell.
+
+If enabled, kscript's interactive interpreter (@samp{ks -}) will use GNU Readline to provide all those features present in an interactive interpreter
+
+If disabled, then if the platform is supported, kscript may use a bundled line editing library (although this is experimental) which provides some of those features. Otherwise, it may fall back to not using any line editing software, in which case the interactive interpreter may be difficult to use
+
+Configuration option: @code{--with-readline on/off/auto}
+
+
+@item pthreads
+pthreads (@url{https://en.wikipedia.org/wiki/POSIX_Threads}) is a standard that allows threaded execution within a program. This allows for multiple threads to run concurrently, theoretically speeding up work
+
+If enabled, kscript's threading library (@samp{os.thread}) will use pthreads under the hood
+
+If disabled, threading support is emulated, and many things will not work as expected. Some multi-threaded programs may have bugs, and others that do work probably won't get the speedup that is expected.
+
+In reality, even with pthreads, many programs will not fully utilize all cores, due to the Global Interpreter Lock (GIL).
+
+Configuration option: @code{--with-pthreads on/off/auto}
+
+
+@end table
+
+@node Building
+@subsection Building
+
+Building kscript, once configured, is simple. You can run @samp{make} (equivalent to @samp{make default}), which will build the main kscript interpreter executable (located in @samp{bin/}, either @samp{bin/ks} or @samp{bin/ks.exe}, or possibly something else if you are on a very exotic system) as well as static and shared libraries.
+
+So, here are some valid things to run:
+
+@example
+$ make
+$ make default
+$ make lib
+@end example
+
+Additionally, you may export compiler variables to modify the build process. For example:
+
+@example
+$ CC="tcc" CFLAGS="-g" make lib
+@end example
+
+Although these sorts of ad-hoc modifications are not recommended -- you should just re-run @samp{./configure} with those options, and it should generate the @samp{makefile} accordingly
+
+After this step, you should be able to run:
+
+@example
+$ ./bin/ks -h
+usage: ks [opts] FILE [args...]
+       ks [opts] -e 'EXPR' [args...]
+       ks [opts] - [args...]
+       ks [opts]
+
+opts:
+    -h,--help               Prints this help/usage message and exits
+    -e,--expr               Runs an expression and displays the result
+    -V,--version            Prints the version information and exits
+    -v                      Increases verbosity of output
+
+ks v0.2.2 (Nov 12 2020 22:57:04)
+Cade Brown <cade@@kscript.org>
+@end example
+
+(on Windows, or platforms with executable suffixes, replace the @samp{./bin/ks} with @samp{./bin/ks.exe} or similar)
+
+(the output may be different, depending on the version and time you built it)
+
+@subsection Checking
+
+This step is optional, but recommended. It is especially recommended if you are building for an exotic platform which has odd characteristics.
+
+You can perform a check of basic checks/tests (located in @samp{tests/}) by running @samp{make check}. This should print @samp{PASSED: ...} for every test that is passed, and @samp{FAILED: ...} for any tests which fail. If any tests fail, it will quit with a non-zero exit status.
+
+For example:
+
+@example
+$ make check
+PASSED: tests/t_basic.ks
+PASSED: tests/t_inher.ks
+Success
+@end example
+
+You can use this (in most shells) to chain together a complete installation:
+
+@example
+$ ./configure && make default && make check && sudo make install
+@end example
+
+@node Installation
+@subsection Installation
+
+This step is optional, and only recommended if you understand the consequences. You can use kscript from the build directory just fine.
+
+The default installation directory (@samp{/usr/local} on Linux/MacOS/Unix-like OSes) can be overidden by the @samp{PREFIX} environment variable (for example, run with @samp{PREFIX=/my/install/path ./configure} during configration).
+
+To install, you'll probably have to run these with @samp{sudo} or otherwise with root permissions. Running @samp{make install} will install:
+
+@itemize @bullet
+@item
+@samp{./bin/ks} or @samp{./bin/ks.exe} to @samp{$PREFIX/bin}
+
+@itemize @minus
+@item
+example: @samp{/usr/local/bin/ks}
+@item
+example: @samp{/my/install/path/bin/ks}
+@end itemize
+
+
+@item
+@samp{./lib/libks.so} or @samp{./lib/libks.dll} to @samp{$PREFIX/lib}
+
+@itemize @minus
+@item
+example: @samp{/usr/local/lib/libks.so}
+@item
+example: @samp{/my/install/path/lib/libks.so}
+@end itemize
+
+@item
+@samp{./include/ks/*.h} and @samp{./include/ks/*.hh} to @samp{$PREFIX/include}
+
+@itemize @minus
+@item
+example: @samp{/usr/local/include/ks/ks.h}
+@item
+example: @samp{/my/install/path/include/ks/ks.h}
+@end itemize
+
+@end itemize
+
+You shouldn't have to change @samp{PREFIX}, but you can if you want at this stage. Be warned: the file @samp{include/ks/config.h} will be generated with the value used when @samp{./configure} was ran, so the search paths for installed modules will be that original directory, while the installation will be in your newer directory
+
+At this point, it should be installed and available from any location. So, you can run @samp{ks} or @samp{ks.exe} to test it out
+
+@node Hello World
+@subsection Hello World
+
+The ``hello, world'' program is simply:
+
+@example
+print ("hello, world")
+@end example
+
+You can run this via:
+
+@example
+$ ks -e '"hello, world"'
+$ ks -e 'print("hello, world")'
+$ echo 'print("hello, world")' | ./bin/ks
+$ echo 'print("hello, world")' > prog.ks && ./bin/ks prog.ks
+@end example
+
+The first example only works with the @samp{-e} switch -- which prints the expression by default. However, you can also include a call to @samp{print} for the same effect. The third example shows piping to standard input (which runs as an interpreter), as well as running a file with the code as its contents.
+
+
+@node Syntax
+@chapter Syntax
+
+This section deals with the formal syntax of kscript, including tokenization (also called lexical analysis or lexing), parsing, expressions, statements, and entire programs. 
+
+The kscript grammar was designed primarily by thinking of common tasks (iteration, type definitions, function definitions, arithmetic operations, lambda expressions) and writing examples with the most natural form that I could personally think of. Then, I codified those into a formal grammar. I've moved some things (function definitions, type definitions) that are normally statements (i.e. do not yield a value) in other languages into their own expression classes, which means they can be embedded in other expressions. This makes it easier to deal with callbacks, asynchronous operations, and dynamically created types.
+
+The syntax is not too complicated, and most of the time you shouldn't even need the formal grammar to deduce what some statement means -- it should be obvious. If it's not, then I think that's probably a fault with the kscript grammar and not the developer. However, I don't think the average user will have trouble understanding most kscript programs.
+
+
+@node Characters
+@section Characters
+
+kscript accepts all of the UCS (@url{https://en.wikipedia.org/wiki/Universal_Coded_Character_Set}), which includes ASCII. The encoding of source files is (hopefully) inferred correctly, and should be UTF-8 encoded by default. Some OSes, such as Windows, have historically had encodings such as UTF-16 in common use in both system calls (i.e. file opening) and actual text encoding. It is recommended (by Microsoft as well) to immediately switch to UTF-8 as soon as possible, if you still have non-UTF-8 data. 
+
+The kscript interpreter itself may have issues parsing non-UTF-8 sources and files which have non-UTF-8 names, but opening other files via the @samp{open()} function, which accepts a third parameter to specify the encoding, allows the developer to handle encoding manually in those cases.
+
+@node Tokens
+@section Tokens
+
+Tokens (@url{https://en.wikipedia.org/wiki/Lexical_analysis#Token}) are the basic unit of the kscript parser, not characters. So, as soon as characters are decoded, they are grouped into tokens. There are many different kinds of tokens. 
+
+During tokenization, comments are ignored. Single-line comments are created via @samp{#}, and cause the rest of the line to be ignored by the lexer. There are no multi-line comments. Instead, it is recommended to use a multline string literal (see below in the table), which will have no effect on the result of the program
+
+
+@table @samp
+
+@item ,
+@item :
+@item ;
+@item +
+Most grammatical elements are their own token, which are recognized by the character(s) that make them up. For example, @samp{++} maps to a token that is internally called @samp{POSPOS}, and @samp{+} maps to a token internally called @samp{ADD}. These aren't very significant, but essentially all of the punctuation symbols make up their own tokens. But, it is confusing to use the full internal name, so for this section, they will be referred to as their string constant.
+
+Sometimes, multiple character sequences map to the same token. For example, the two characters @samp{->} and the Unicode arrow symbol @samp{→}. Here is a list of substitutions for Unicode tokens and their equivalent in ASCII characters:
+
+@table @code
+
+@item ∈
+Equivalent to @samp{in}
+
+@item ∀
+Equivalent to @samp{for}
+
+@item →
+Equivalent to @samp{->}
+
+@end table
+
+
+@item NAME
+
+These are valid identifiers, which may contain Unicode characters. They must begin with a non-digit identifier character. Then, it may be followed by any number of either digit or non-digit identifier characters.
+
+For ASCII-only, it can be described by the regex: @samp{[_a-zA-Z][_a-zA-Z0-9]*}
+
+@item INT
+
+These are integral numeric constants, which can be specified as decimal (base 10, (optional) prefix @samp{0d}/@samp{0D}), hexadecimal (base 16, prefix @samp{0x}/@samp{0X}, @samp{10-15} are @samp{a-f} or @samp{A-F}), octal (base 8, prefix @samp{0o}/@samp{0O}), or binary (base 2, prefix @samp{0b}/@samp{0B}).
+
+These tokens can be described by any of the regex patterns below:
+
+@example
+(0[dD])?[0-9]+
+(0[xX])[0-9a-fA-F]+
+(0[oO])[0-7]+ 
+(0[bB])[0-1]+
+@end example
+
+@item FLOAT
+
+These are real number constants, which can be specified in all the bases that @samp{INT} tokens can. However, they are followed by a @samp{.} and then possibly more digits in that base. 
+
+Decimal float constants may have an @samp{e} (case insensitive) followed by an optional sign (@samp{+} or @samp{-}) and then one-or-more base-10 digits describing the exponent of the scientific notation (the base of the exponentiation is 10). 
+
+Hexadecimal, octal, and binary float constants may have a @samp{p} (case insensitive) followed by an optional sign (@samp{+} or @samp{-}), and then one-or-more base-10 digits describing the exponent. However, unlike scientific notation of base 10, the exponentiation is base 2 (not 10).
+
+A floating point constant can be followed by a (case-insensitive) @samp{i}, which converts it into an imaginary floating point number
+
+These tokens can be described by any of the regex patterns below:
+
+@example
+(0[dD])?([0-9]+\.[0-9]*|\.[0-9]+)([eE](+|-)?[0-9]+)?[iI]?
+(0[xX])([0-9a-fA-F]+\.[0-9a-fA-F]*|\.[0-9a-fA-F]+)([pP](+|-)?[0-9]+)?[iI]?
+(0[oO])?([0-7]+\.[0-7]*|\.[0-7]+)([pP](+|-)?[0-9]+)?[iI]?
+(0[bB])([0-1]+\.[0-1]*|\.[0-1]+)([pP](+|-)?[0-9]+)?[iI]?
+@end example
+
+
+@item STR
+
+These are string constants, which must begin with a quote character (@samp{"} or @samp{'}) and end with that same quote character. String constants may contain escape codes, as shown in the table below this description.
+
+If a string begins with 3 quote characters (i.e. @samp{"""} or @samp{'''}) then the token may span multiple lines, in which case any line breaks are included in the string itself.
+
+
+@table @samp
+@item \\
+Literal @samp{\}
+
+@item \'
+Literal @samp{'}
+
+@item \"
+Literal @samp{"}
+
+@item \a
+ASCII @code{BEL} character
+
+@item \b
+ASCII @code{BS} character, also called backspace
+
+@item \f
+ASCII @code{FF} character, also called formfeed
+
+@item \n
+ASCII @code{LF} character, also called linefeed or newline
+
+@item \r
+ASCII @code{CR} character, also called carriage return
+
+@item \t
+ASCII @code{HT} character, also called tab or horizontal tab
+
+@item \v
+ASCII @code{VT} character, also called vertical tab
+
+@item \xXX
+Single byte, where @samp{XX} are two hex digits (insert leading zeros if required)
+
+@item \uXXXX
+Unicode codepoint, where @samp{XXXX} are four hex digits specifiying the codepoint (insert leading zeros if required)
+
+The character's UTF-8 representation is added to the string, not the exact bytes given here
+
+@item \UXXXXXXXX
+Unicode codepoint, where @samp{XXXXXXXX} are eight hex digits specifiying the codepoint (insert leading zeros if required)
+
+The character's UTF-8 representation is added to the string, not the exact bytes given here
+
+@item \N[XX...X]
+
+Unicode codepoint, by name, where @samp{XX...X} is the ASCII-only name of the character.
+
+Some examples:
+
+@example
+'\N[LATIN CAPITAL LETTER A]' == 'A'
+@end example
+
+@end table
+
+
+
+@item REGEX
+
+Regex, or regular expressions (@url{https://en.wikipedia.org/wiki/Regular_expression}) can be specified as literals in kscript. To do this, you can use @samp{`} to delimit the start and end of a pattern.
+
+Below is a table of components allowed in regex literals:
+
+@table @samp
+@item \\
+Matches @samp{\}
+
+@item \'
+Matches @samp{'}
+
+@item \"
+Matches @samp{"}
+
+@item \`
+Matches @samp{`}
+
+@item \xXX
+Matches a single byte, where @samp{XX} are two hex digits (insert leading zeros if required)
+
+@item \uXXXX
+Matches a Unicode codepoint, where @samp{XXXX} are four hex digits specifiying the codepoint (insert leading zeros if required)
+
+@item \UXXXXXXXX
+Matches a Unicode codepoint, where @samp{XXXXXXXX} are eight hex digits specifiying the codepoint (insert leading zeros if required)
+
+@item \N[XX...X]
+
+Matches a Unicode codepoint, by name, where @samp{XX...X} is the ASCII-only name of the character.
+
+Some examples:
+
+@example
+`\N[LATIN CAPITAL LETTER A]` == `A`
+@end example
+
+@item [...]
+
+Matches any of the characters (or ranges) in @samp{...}. They can be escape codes (as are listed in this table), characters, or ranges (which are in the form of @samp{A-B} where @samp{A} and @samp{B} are the start and end (inclusive) of the range to be matched)
+
+@item X?
+
+Matches 0 or 1 of @samp{X}
+
+@item X+
+
+Matches 1 or more of @samp{X}
+
+@item X*
+
+Matches 0 or more of @samp{X}
+
+
+@item X|Y
+
+Matches @samp{X} or @samp{Y}
+
+@item (X)
+
+Matches @samp{X} (atomically) and creates a capturing group
+
+
+
+@end table
+
+@end table
+
+@node Expressions
+@section Expressions
+
+Expressions are grammatical elements which yield a value, as opposed to statements, which do not yield a value. Expressions can be combined with other expressions to create more complicated expressions, which use the values of their constituent expressions to calculate a value.
+
+Expressions may be enclosed within @samp{(} and @samp{)} to create a parenthetical expression. The entirety of the expression within the parentheses is evaluated before any operations it belongs to, and we say that it overrides any other precedence between the contents and operators outside of the parentheses.
+
+@node Atomic Expressions
+@subsection Atomic Expressions
+
+Atomic expressions (@samp{ATOM}) are expressions which are made up of a single token. These may be of the tokens @samp{INT}, @samp{FLOAT}, @samp{STR}, or @samp{NAME}, and they yield either a numeric constant, a string constant, or a reference to a variable. 
+
+Variable references are unqualified within expressions, which means that a @samp{NAME} token could refer to a local variable, a global variable, or no variable at all (in which case it would cause an error to be thrown at runtime). 
+
+@node Tuple Expressions
+@subsection Tuple Expressions
+
+A tuple is an immutable collection of other objects, which can be created with @samp{()} surrounding other expressions which are the objects it contains.
+
+The empty tuple is created via: @samp{()} or @samp{(,)}
+
+A tuple with 1 element is created via: @samp{(EXPR,)}. The trailing comma is important to differentiate it from a parenthetical expression.
+
+A tuple with more than one element is created via: @samp{(EXPR, EXPR, ..., EXPR)}. It may have a trailing comma after the last expression, but it is not required.
+
+Within a tuple, there may be line breaks between successive elements. 
+
+An expression beginning with a @samp{*} means that that element is expanded (i.e. must be an iterable), and all of the elements generated by the iterable are added to the tuple instead of the iterable itself.
+
+Here are some (equivalent) examples:
+
+@example
+(1, 2, 3)
+(1, 2, 1 + 2)
+(
+    1,
+    2,
+    3,
+)
+(1, *(2, 3))
+(*range(1, 4),)
+@end example
+
+
+@node List Expressions
+@subsection List Expressions
+
+A list is a mutable collection of other objects, which can be created with @samp{[]} surrounding other expressions which are the objects it contains initially.
+
+An empty list is created via: @samp{[]} or @samp{[,]}
+
+A list with 1 element is created via: @samp{[EXPR]} or @samp{[EXPR,]}
+
+A list with more than one element is created via: @samp{[EXPR, EXPR, ..., EXPR]}. It may have a trailing comma after the last expression, but it is not required.
+
+Within a list, there may be line breaks between successive elements. 
+
+An expression beginning with a @samp{*} means that that element is expanded (i.e. must be an iterable), and all of the elements generated by the iterable are added to the list instead of the iterable itself.
+
+Here are some (equivalent) examples:
+
+@example
+[1, 2, 3]
+[1, 2, 1 + 2]
+[
+    1,
+    2,
+    3,
+]
+[1, *(2, 3)]
+[1, *[2, 3]]
+[*range(1, 4),]
+@end example
+
+
+@node Function Expressions
+@subsection Function Expressions
+
+In kscript, function definitions are actually expressions, although their use within other expressions is uncommon. 
+
+Function definition expressions begin with a token specifying that it is a function (token: @samp{func}). 
+
+Then, may optionally be followed by a @samp{NAME} token which is the name of the function being created. (if this is left off, the function is considered anonymous)
+
+Then, may optionally be followed by a tuple (@pxref{Tuple Expressions}), which is a list of parameters to the function (if this is left off, the function takes no parameters)
+
+
+Then, it must be followed by @samp{@{}, followed by a body of statements defining the function, and ended with a @samp{@}}
+
+
+Here are some examples:
+
+@example
+func @{
+    ...
+@}
+
+func my_func @{
+    ...
+@}
+
+func my_func() @{
+    ...
+@}
+
+func my_func(x, y, z) @{
+    ...
+@}
+
+@end example
+
+Since function definitions are expressions, they can be used to return a thunk or closure to a function scope, which can be executed later
+
+@example
+func get() @{
+    ...
+    ret func @{
+      ...
+    @}
+@}
+@end example
+
+
+@node Function Parameters
+@subsubsection Function Parameters
+
+Functions created with an empty tuple or no tuple at all in the definition take no arguments. The name of the function and tuple of arguments of the function can be called the function's signature. For example:
+
+@example
+func f(x, y) @{
+    ...
+@}
+@end example
+
+Has the signature: @samp{f(x, y)}
+
+Functions that do have a non-empty tuple as their parameters specify the names of local variables that are created upon the function being called.
+
+The tuple should contain names, which may be assigned to. If a parameter name has an assignment within the signature, then that parameter is optional, which means if fewer arguments are given than formal parameters, those with assignments will take the right hand side as a default. These parameters are called ``default parameters''.
+
+For example:
+
+@example
+func f(x, y=2, z=3) @{
+    ret x + y + z
+@}
+
+f()
+# Error: not enough arguments
+
+f(1)
+@hashchar{} 6
+
+f(1, 2)
+@hashchar{} 6
+
+f(1, 10)
+@hashchar{} 14
+
+f(100, 100, 100)
+@hashchar{} 300
+@end example
+
+As can be seen by the result, the missing arguments are ``filled in'' with the defaults given in the function definition.
+
+In addition to default parameters, some functions may also accept variadic amounts of arguments (called ``variadic parameters''). These are specified by a @samp{*} before the parameter name. Any one function may have default parameters or variadic parameters, but not both because that would make the arguments passed ambiguous. For similar reasons, there may only be one variadic parameter per function. Variadic parameters allow a (theoretically) unlimited number of arguments to be passed to a function, and stored in that parameter as an iterable.
+
+Unlike in other languages that support variadic parameters (for example, Python), kscript allows variadic parameters anywhere in the signature of the function, provided there are no default parameters within that same signature. 
+
+Take this definition of a similar function to above, which returns the summation of its arguments:
+
+@example
+func g(x, *y) @{
+    if y, ret x + g(*y)
+    else ret x
+@}
+
+g()
+# Error: not enough arguments
+
+g(1)
+@hashchar{} 1
+
+g(1, 2)
+@hashchar{} 3
+
+g(1, 10)
+@hashchar{} 11
+
+g(100, 100, 100)
+@hashchar{} 300
+@end example
+
+
+So, the parameter @samp{x} is given the first argument to the function, and causes the function to require at least one argument. Then, @samp{y} takes all of the rest of the arguments given. This means @samp{y} can be empty, if only one argument was given to the function.
+
+
+Variadic parameters don't have to be the right-most, however, as mentioned earlier. You could just as easily write:
+
+@example
+func h(*x, y) @{
+    if x, ret g(*x) + y
+    else ret y
+@}
+
+h()
+# Error: not enough arguments
+
+h(1)
+@hashchar{} 1
+
+h(1, 2)
+@hashchar{} 3
+
+h(1, 10)
+@hashchar{} 11
+
+h(100, 100, 100)
+@hashchar{} 300
+@end example
+
+These are, indeed, equivalent function definitions. Except, internally, the rightmost parameter (@samp{y}) gets the rightmost argument passed to it (and gives the function a requirement of a minimum number of 1 arguments). Then, the remaining arguments are given to the local @samp{x} parameter.
+
+Finally, to demonstrate an odd, yet still interesting example that calculates the middle element of its arguments, recursively:
+
+@example
+func m(first, *middle, last) @{
+    if len(middle) >= 2, ret m(*middle)
+    elif len(middle) == 1, ret middle[0]
+@}
+
+m()
+# Error: not enough arguments
+
+m(1)
+# Error: not enough arguments
+
+m(1, 2)
+# [] (no middle)
+
+m(1, 2, 3)
+@hashchar{} 2
+
+h(1, 2, 10, 5, 6)
+@hashchar{} 10
+
+@end example
+
+Since there are 2 non-variadic parameters, there is a minimum of 2 arguments required for calling this function. When the function is called, the leftmost argument is forwarded to the @samp{first} parameter, the rightmost is forwarded to the @samp{last} parameter, and the rest are forwarded as a list to @samp{middle}
+
+
+@node Type Expressions
+@subsection Type Expressions
+
+In kscript, type definitions are actually expressions, although their use within other expressions is uncommon. 
+
+Type definition expressions begin with a token specifying that it is a type (token: @samp{type}). 
+
+Then, may optionally be followed by a @samp{NAME} token which is the name of the type being created. (if this is left off, the type is considered anonymous)
+
+Then, may optionally be followed by a literal @samp{extends} token, with an expression expressing the type which it extends. (if this is left off, the type extends @samp{object})
+
+Then, it must be followed by @samp{@{}, followed by a body of statements defining the type, and ended with a @samp{@}}
+
+
+Here are some examples:
+
+@example
+type @{
+    ...
+@}
+
+type MyType @{
+    ...
+@}
+
+type extends OtherType @{
+    ...
+@}
+
+type MyType extends OtherType @{
+    ...
+@}
+
+@end example
+
+Since type definitions are expressions, they can be used as singleton constructors:
+
+@example
+func get() @{
+    ...
+    ret type @{
+      ...
+    @}()
+@}
+@end example
+
+
+@node Operator Expressions
+@subsection Operator Expressions
+
+Operator expressions are created by other expressions joined by operators. There are two categories of operators, binary (@pxref{Binary Operator Expressions}) and unary (@pxref{Unary Operator Expressions}).
+
+Operators with higher precedence bind tighter, which means that operands will group to them first as opposed to operands with lower precedence. You can see the full precedence in the formal grammar specification (@pxref{EBNF}, where the @samp{E*} rules are organized by precedence). 
+
+
+@node Binary Operator Expressions
+@subsubsection Binary Operator Expressions
+
+
+Binary operator expressions have left and right sides with the binary operator in the middle. 
+
+Let's use @samp{OP} as an example of a binary operator (it might be @samp{+}, @samp{-}, or something else, but it applies for all of them)
+
+A binary operator is said to be left-associative if the text @samp{a OP b OP c} has the same semantics as @samp{(a OP b) OP c}. Otherwise, if it is equivalent to @samp{a OP (b OP c)} the operator is said to be right-associative.
+
+The assignment (@samp{=}) operator, augmented assignment (@samp{+=}, @samp{-=}, etc.) operators, and the exponentiation (@samp{**}) operator are right associative, and all other binary operators are left associative.
+
+Here's a list (by category) of the different binary operators in kscript:
+
+@table @asis
+@item Control Flow
+@samp{??}, @samp{&&}, @samp{||}
+@item Assignment And Augmented Assignment
+@samp{=}, @samp{+=}, @samp{-=}, etc...
+@item Comparison
+@samp{<}, @samp{<=}, @samp{>}, @samp{>=}, @samp{==}, @samp{!=}, @samp{==}, @samp{in}
+@item Bitwise
+@samp{<<}, @samp{>>}, @samp{&}, @samp{^}, @samp{|}
+@item Arithmetic
+@samp{+}, @samp{-}, @samp{*}, @samp{/}, @samp{//}, @samp{%}, @samp{**}
+@end table
+
+These categories (except for Control Flow) are just convention; libraries and types may overload operators for custom types in which case they can take on a different semantic meaning.
+
+Control Flow operators (@samp{??}, @samp{&&}, @samp{||}) actually alter the control Flow, and do not always evaluate both of their arguments. Specifically, here are their semantics:
+
+@table @samp
+@item L ?? R
+@samp{L} is attempted to be evaluated. If it is successfully evaluated, its value is the result of the @samp{??} expression and @samp{R} is never evaluated.
+
+If an exception was thrown during the evaluation of @samp{L}, then the exception is ignored and instead @samp{R} is evaluated and the result of @samp{R} is used as the result of the @samp{??} expression.
+
+However, if an exception was thrown during the @samp{R} expression, then that exception is not handled. If you want to, you can continue to chain @samp{??} operators, like: @samp{L ?? R ?? other}, which evaluates from left to right and returns the first expression that did not throw an exception.
+
+@item L && R
+
+@samp{L} is evaluated. If it gave a truthy result, then @samp{R} is evaluated and the result of @samp{R} is the result of the @samp{&&} expression.
+
+Otherwise, if @samp{L} evaluated to a falsy result, then its result is used as the result of the @samp{&&} expression.
+
+@strong{Note:} unlike most languages, the @samp{&&} expression yields the object result of either @samp{L} or @samp{R}, which may or may not be a boolean, whereas typically they are always converted to a boolean.
+
+@item L || R
+
+@samp{L} is evaluated. If it gave a truthy result, then its result is used as the result of the @samp{||} expression.
+
+Otherwise, if @samp{L} evaluated to a falsy result, then @samp{R} is evaluated and the result of @samp{R} is the result of the @samp{||} expression.
+
+@strong{Note:} that unlike most languages, the @samp{||} expression yields the object result of either @samp{L} or @samp{R}, which may or may not be a boolean, whereas typically they are always converted to a boolean.
+
+@end table
+
+
+Additionally, Comparison operators are richly chained, meaning that @samp{a < b < c} is not the same as @samp{(a < b) < c} -- instead, it is equivalent to @samp{a < b && b < c}, except that @samp{b} is only evaluated once.
+
+@node Unary Operator Expressions
+@subsubsection Unary Operator Expressions
+
+Unary operators are either prefix (before the operand) or postfix (after the operand). Most unary operators in kcript are prefix operators, and prefix operators are (almost all) higher precedence than binary operators. The one exception is that attribute references (the @samp{.} operator, like @samp{a.b}) are higher precedence. However, the @samp{.} operator cannot have arbitrary expressions on the right side, so it is a special case.
+
+Unary postfix operators bind more tightly than unary prefix operators. So, for example, @samp{++a++} is equivalent to @samp{++(a++)}
+
+
+@node Statements
+@section Statements
+
+Statements are grammatical elements which do not yield a value; examples are @samp{if}, @samp{while}, and @samp{for}.
+
+@strong{Note:} In many languages, type definitions and function definitions are statements. In kscript, they are actually expressions. @xref{Type Expressions} @xref{Function Expressions}
+
+
+@node Expression Statements
+@subsection Expression Statements
+
+A statement can be made of an expression and then a break, where a break is either a newline, or a semicolon (@samp{;}). 
+
+Although it contains an expression, an expression statement does not yield a value, since it is a statement.
+
+@example
+a
+a;
+a;b # two statement expressions on one line
+a+b*c
+a + b * c;
+f(a, b, c)
+(x, y, z)
+@end example
+
+
+@node If Statements
+@subsection If Statements
+
+An if statement begins with the token @samp{if}, followed by an expression (called the ``conditional'' expression). Then, it is followed by a comma (@samp{,}) and an expression, or a block @samp{@{ ... @}} containing other statements.
+
+After that, it may be followed by any number of @samp{elif} clauses, and, optionally, a @samp{else} clause. @samp{elif} are like @samp{if} except for the first keyword. The @samp{else} clause doesn't take an expression, but can take either an expression statement (@pxref{Expression Statements}), or a block @samp{@{ ... @}} statement.
+
+@strong{Note:} kscript does not require parentheses around a conditional expression, unlike most languages, which do
+
+@strong{Note:} when using @samp{,} and expressions after a clause (instead of a @samp{@{ ... @}} block), it is recommended to keep it on the same line, and not start a new line
+
+@example
+if a, b
+
+if a @{
+    b
+@}
+
+if a + b > 3, print (c)
+
+if a + b > 3 @{
+    print (c)
+@}
+
+if a @{
+    ...
+@} elif b @{
+    ...
+@} elif c @{
+    ...
+@} else @{
+    ...
+@}
+
+if a, ...
+elif b, ...
+elif c, ...
+else ...
+
+@end example
+
+
+@node While Statements
+@subsection While Statements
+
+A while statement begins with the token @samp{while}, followed by an expression (called the ``conditional'' expression). Then, it is followed by a comma (@samp{,}) and an expression, or a block @samp{@{ ... @}} containing other statements.
+
+After that, it may be followed by an @samp{else} clause, followed by a comma and an expression or a block. The @samp{else} clause is only ran if the conditional expression is falsy on the first run. Otherwise, it is skipped.
+
+@strong{Note:} kscript does not require parentheses around a conditional expression, unlike most languages, which do
+
+@strong{Note:} when using @samp{,} and expressions after a clause (instead of a @samp{@{ ... @}} block), it is recommended to keep it on the same line, and not start a new line
+
+@example
+while a, b
+
+while a @{
+    b
+@}
+
+while a @{
+    ...
+@} else @{
+    ...
+@}
+@end example
+
+
+@node For Statements
+@subsection For Statements
+
+A for statement begins with the token @samp{for}, followed by an expression, followed by an @samp{in} token. Then, it is followed by a comma (@samp{,}) and an expression, or a block @samp{@{ ... @}} containing other statements.
+
+@strong{Note:} 
+
+@example
+for a in b, c
+
+for a in b @{
+    ...
+@}
+@end example
+
+
+@node EBNF
+@section EBNF
+
+This section describes the formal grammar (in a modified format of @url{https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form}), with different grammatical elements described by different rules.
+
+@verbatim
+PROGRAM  : STMT*
+
+STMT     : EXPR? B
+         | 'if' EXPR BORC ('else' BORS)?
+         | 'while' EXPR BORC ('else' BORS)?
+         | 'for' EXPR 'in' EXPR BORC ('else' BORS)?
+         | 'try' BORS ('catch' EXPR ('as' | '->') EXPR BORC)* ('finally' BORS)?
+
+(* block statment or comma and statement *)
+BORC     : '{' STMT* '}'
+         | ',' EXPR B
+
+BORS     : '{' STMT* '}'
+         | EXPR B
+
+B        : '\n'
+         | ';'
+
+EXPR     : E0
+
+E0       : E1 '=' E0
+         | E1 '+=' E0
+         | E1 '-=' E0
+         | E1 '*=' E0
+         | E1 '**=' E0
+         | E1 '/=' E0
+         | E1 '%=' E0
+         | E1 '<<=' E0
+         | E1 '>>=' E0
+         | E1 '|=' E0
+         | E1 '^=' E0
+         | E1 '&=' E0
+         | E1
+
+E1       : E2 'if' E2 ('else' E1)?
+         | E2
+
+E2       : E2 '??' E3
+         | E3
+
+E3       : E3 '||' E4
+         | E4
+
+E4       : E4 '&&' E5
+         | E5
+
+E5       : E5 '<' E6
+         | E5 '<=' E6
+         | E5 '>' E6
+         | E5 '>=' E6
+         | E5 '==' E6
+         | E5 '!=' E6
+         | E6
+
+E6       : E6 'in' E7
+         | E7
+
+E7       : E7 '|' E8
+         | E8
+
+E8       : E8 '^' E9
+         | E9
+
+E9       : E9 '&' E10
+         | E10
+
+E10      : E10 '<<' E11
+         | E10 '>>' E11
+         | E11
+
+E11      : E11 '+' E12
+         | E11 '-' E12
+         | E12
+
+E12      : E12 '*' E13
+         | E12 '/' E13
+         | E12 '//' E13
+         | E12 '%' E13
+         | E13
+
+E13      : E14 '**' E13
+         | E14
+
+E14      : '++' E14
+         | '--' E14
+         | '+' E14
+         | '-' E14
+         | '~' E14
+         | '!' E14
+         | '?' E14
+         | E15
+
+E15      : ATOM
+         | '(' EXPR ')'
+         | '(' EXPR (',' EXPR)* ','? ')'
+         | '[' EXPR (',' EXPR)* ','? ']'
+         | '{' EXPR (',' EXPR)* '}'
+         | '{' EXPR ':' EXPR (',' EXPR ':' EXPR)* '}'
+         | '(' EXPR (',' EXPR)* ','? ')' '->' EXPR
+         | 'func' NAME? ('(' (_FPAR (',' FPAR)*)? ')')? '{' STMT* '}'
+         | 'type' NAME? ('extends' EXPR)? '{' STMT* '}'
+         | 'graph' '{' (EXPR '->' EXPR (':' EXPR)?)* '}'
+         | E15 '.' NAME
+         | E15 '++'
+         | E15 '--'
+         | E15 '(' CARGS ')'
+         | E15 '[' IARGS ']'
+         | E15 E14
+
+ATOM     : NAME
+         | INT
+         | FLOAT
+         | STR
+         | REGEX
+         | '...'
+
+(* utilities to reduce verbosity *)
+
+_FPAR    : '*' NAME ('=' EXPR)? 
+
+_CARG    :
+         | '*' EXPR
+         | EXPR
+
+_IARG    :
+         | '*' EXPR
+         | EXPR? ':' (EXPR? ':' EXPR? | EXPR)?
+         | EXPR
+
+CARGS    :
+         | _CARG (',' _CARG)*
+
+IARGS    :
+         | _IARG (',' _IARG)*
+@end verbatim
+
+
+@example
+@end example
+
+
+
+@node Index
+@unnumbered Index
+
+@printindex cp
+
+@bye

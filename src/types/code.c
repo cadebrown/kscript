@@ -174,6 +174,117 @@ static KS_TFUNC(T, str) {
     return (kso)ks_fmt("<'%T' (%R) @ %p>", self, self->fname, self);    
 }
 
+static KS_TFUNC(T, dis) {
+    ks_code self;
+    KS_ARGS("self:*", &self, kst_code);
+
+    ksio_StringIO sio = ksio_StringIO_new();
+
+    ksio_add((ksio_AnyIO)sio, "# code \n# vc: %R\n", self->vc);
+
+    int i = 0, sz = self->bc->len_b;
+    ksb* bc = self->bc->data;
+    while (i < sz) {
+        ksba op;
+        int p = i;
+        if (sz - i >= sizeof(ksba)) {
+            op = *(ksba*)(bc + i);
+        } else {
+            op.op = *(bc + i);
+        }
+        int o = op.op;
+        int v = op.arg;
+
+        #define OP(_o) else if (o == _o) { \
+            i += sizeof(op.op); \
+            ksio_add((ksio_AnyIO)sio, "%04i: %s\n", p, #_o + 4); \
+        }
+        #define OPI(_o) else if (o == _o) { \
+            i += sizeof(op); \
+            ksio_add((ksio_AnyIO)sio, "%04i: %s %i\n", p, #_o + 4, v); \
+        }
+        #define OPT(_o) else if (o == _o) { \
+            i += sizeof(op); \
+            ksio_add((ksio_AnyIO)sio, "%04i: %s %i # to %i\n", p, #_o + 4, v, i + v); \
+        }
+        #define OPV(_o) else if (o == _o) { \
+            i += sizeof(op); \
+            ksio_add((ksio_AnyIO)sio, "%04i: %s %i # %R\n", p, #_o + 4, v, self->vc->elems[v]); \
+        }
+
+
+        if (false) {} 
+
+        OP(KSB_NOOP)
+        OPV(KSB_PUSH)
+        OP(KSB_POPU)
+        OP(KSB_DUP)
+        
+        OPV(KSB_LOAD)
+        OPV(KSB_STORE)
+        
+        OP(KSB_GETATTR)
+        OP(KSB_SETATTR)
+        OPI(KSB_GETELEMS)
+        OPI(KSB_SETELEMS)
+        OPI(KSB_CALL)
+
+        OPI(KSB_LIST)
+
+        OPT(KSB_JMP)
+        OPT(KSB_JMPT)
+        OPT(KSB_JMPF)
+
+        OP(KSB_RET)
+        OP(KSB_THROW)
+
+        OP(KSB_FOR_START)
+        OPT(KSB_FOR_NEXTT)
+        OPT(KSB_FOR_NEXTF)
+        OPT(KSB_TRY_START)
+        OPT(KSB_TRY_CATCH)
+        OPT(KSB_TRY_CATCH_ALL)
+        OPT(KSB_TRY_END)
+        OP(KSB_FINALLY_END)
+
+        OP(KSB_BOP_IN)
+
+        OP(KSB_BOP_EEQ)
+        OP(KSB_BOP_EQ)
+        OP(KSB_BOP_NE)
+        OP(KSB_BOP_LT)
+        OP(KSB_BOP_LE)
+        OP(KSB_BOP_GT)
+        OP(KSB_BOP_GE)
+
+        OP(KSB_BOP_IOR)
+        OP(KSB_BOP_XOR)
+        OP(KSB_BOP_AND)
+        OP(KSB_BOP_LSH)
+        OP(KSB_BOP_RSH)
+        OP(KSB_BOP_ADD)
+        OP(KSB_BOP_SUB)
+        OP(KSB_BOP_MUL)
+        OP(KSB_BOP_DIV)
+        OP(KSB_BOP_FLOORDIV)
+        OP(KSB_BOP_MOD)
+        OP(KSB_BOP_POW)
+
+        OP(KSB_UOP_POS) 
+        OP(KSB_UOP_NEG)
+        OP(KSB_UOP_SQIG)
+        OP(KSB_UOP_NOT)
+            
+        else {
+            ksio_add((ksio_AnyIO)sio, "%4i: <err>\n", i);
+            i += sizeof(op.op);
+        }
+
+    }
+
+    return (kso)ksio_StringIO_getf(sio);
+}
+
 
 
 /* Export */
@@ -186,5 +297,7 @@ void _ksi_code() {
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
+
+        {"dis",                  ksf_wrap(T_dis_, T_NAME ".dis(self)", "Return a dis-assembled string")},
     ));
 }

@@ -18,7 +18,7 @@ ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, boo
     self->is_w = is_w;
     self->is_bin = is_bin;
     KS_INCREF(src_name);
-    self->src_name = src_name;
+    self->fname = src_name;
     self->fp = fp;
     self->sz_r = self->sz_w = 0;
     self->is_open = true;
@@ -205,7 +205,7 @@ static KS_TFUNC(T, init) {
     }
 
     KS_INCREF(src);
-    self->src_name = src;
+    self->fname = src;
     self->is_r = is_r;
     self->is_w = is_w;
     self->is_bin = is_bin;
@@ -221,7 +221,7 @@ static KS_TFUNC(T, free) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
 
-    KS_NDECREF(self->src_name);
+    KS_NDECREF(self->fname);
     if (self->do_close && self->is_open && self->fp) {
         fclose(self->fp);
     }
@@ -237,12 +237,12 @@ static KS_TFUNC(T, bool) {
     return KSO_BOOL(!feof(self->fp));
 }
 
-static KS_TFUNC(T, repr) {
+static KS_TFUNC(T, str) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
 
     bool both = self->is_r && self->is_w;
-    return (kso)ks_fmt("<'%T' @ %p (src=%R, mode='%s%s')>", self, self, self->src_name, both ? "r+" : self->is_r ? "r" : "w", self->is_bin ? "b" : "");
+    return (kso)ks_fmt("<%T (src=%R, mode='%s%s')>", self, self->fname, both ? "r+" : self->is_r ? "r" : "w", self->is_bin ? "b" : "");
 }
 
 static KS_TFUNC(T, close) {
@@ -412,6 +412,9 @@ ks_type ksiot_FileIO = &tp;
 
 void _ksi_io_FileIO() {
     _ksinit(ksiot_FileIO, kst_object, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\n\n    Internally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
+        {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
+        {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
 
     ));
 }

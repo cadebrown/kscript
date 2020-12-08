@@ -259,6 +259,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
             }
             if (false) {}
             CASE_KW(KS_TOK_IN, "in")
+            CASE_KW(KS_TOK_AS, "as")
             
             CASE_KW(KS_TOK_IMPORT, "import")
             CASE_KW(KS_TOK_ASSERT, "assert")
@@ -273,6 +274,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
             CASE_KW(KS_TOK_FOR, "for")
             CASE_KW(KS_TOK_TRY, "try")
             CASE_KW(KS_TOK_CATCH, "catch")
+            CASE_KW(KS_TOK_FINALLY, "finally")
 
             else {
                 EMIT(MAKE(KS_TOK_NAME));

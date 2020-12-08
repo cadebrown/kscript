@@ -108,6 +108,7 @@ enum {
     KS_TOK_FOR,
     KS_TOK_TRY,
     KS_TOK_CATCH,
+    KS_TOK_FINALLY,
 
     /** Literal Characters **/
 
@@ -148,6 +149,7 @@ enum {
     KS_TOK_ANDAND, /* && */
 
     KS_TOK_IN, /* in */
+    KS_TOK_AS, /* as */
 
     KS_TOK_EEQ, /* === */
     KS_TOK_EQ,  /* == */
@@ -584,13 +586,31 @@ enum {
      */
     KSB_TRY_START,
 
+    /* TRY_CATCH amt
+     *
+     * Pops the top of the stack (which should be typeinfo - either a type, or a tuple of typeinfos, meaning the type can be any one of them), and
+     *   if the exception (which should be under that on the stack) matches it, continue executing. Otherwise, jump 'amt' in the bytecode
+     */
+    KSB_TRY_CATCH,
+
+    /* TRY_CATCH_ALL amt
+     *
+     * Catches any exception, whereas 'TRY_CATCH' requires a specific typeinfo to be on the stack. Also adds 'amt' to the program counter
+     */
+    KSB_TRY_CATCH_ALL,
+
     /* TRY_END amt
      *
      * Ends a 'try' statement, and jumps 'amt' in the bytecode
      */
     KSB_TRY_END,
 
-
+    /* FINALLY_END
+     *
+     * Ends a 'try' statement, checks whether there is still an exception. If no handler has caught it, it is rethrown. Otherwise,
+     *   it just falls through
+     */
+    KSB_FINALLY_END,
 
 
     /** Meta **/

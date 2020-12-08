@@ -132,21 +132,34 @@ typedef struct kstime_struct_s {
 /* Return the time since epoch, in seconds
  */
 KS_API ks_cfloat kstime_time();
-KS_API ks_cint kstime_timei();
 
 
 /** Time Structure Conversions **/
 
+
+/* Wrap a C-style time structure
+ */
+KS_API kstime_struct kstime_wrap(struct tm tc);
+
+/* Unwrap and get back a C-style time structure
+ */
+KS_API struct tm kstime_unwrap(kstime_struct ts);
+
 /* Convert a time-since-epoch value into a UTC time-struct using 'gmtime()'
  */
-KS_API kstime_struct kstime_utc(ks_cint tse);
+KS_API kstime_struct kstime_struct_new_utc(ks_cfloat tse);
 
 /* Convert a time-since-epoch value into a localtime time-struct using 'localtime()'
  */
-KS_API kstime_struct kstime_local(ks_cint tse);
+KS_API kstime_struct kstime_struct_new_local(ks_cfloat tse);
+
+
 
 
 /** String <-> Time **/
+
+/** Specific format strings **/
+#define KSTIME_FMT_ISO8601 "%FT%T%z"
 
 /* Apply string formatting to a time-struct, using similar semantics to 'strftime()'
  * Format Codes:
@@ -172,6 +185,7 @@ KS_API kstime_struct kstime_local(ks_cint tse);
  *   %z: Zone UTC offset in '(+|-)HHMM[SS.[ffffff]]'
  *   %Z: Zone name (or empty if there was none)
  *   %p: Locale's equiv of AM/PM
+ * 
  *   %c: Locale's full default date/time representation
  *   %x: Locale's default date representation
  *   %X: Locale's default time representation
@@ -179,28 +193,21 @@ KS_API kstime_struct kstime_local(ks_cint tse);
  */
 KS_API ks_str kstime_fmt(const char* fmt, kstime_struct ts);
 
+/* Fallback formatting. Most of the time, the same time as '%c', but '%c' is more generic.
+ * This function is generally not recommended
+ */
+KS_API ks_str kstime_asc(kstime_struct ts);
+
 /* Parse a string, according to a format string (see 'kstime_fmt()' for format)
  */
 KS_API kstime_struct kstime_parse(const char* fmt, const char* str);
-
-
-/* Convert a time-since-epoch into a text representation
- * The result will be in the local time configuration
- */
-KS_API ks_str kstime_asc(ks_cint tse);
-
-/* Convert a time-since-epoch to ISO8601 format, in UTC timezone
- * SEE: https://en.wikipedia.org/wiki/ISO_8601
- */
-KS_API ks_str kstime_iso_utc(ks_cint tse);
 
 
 /* Exported */
 
 KS_API extern ks_type
 
-    kstime_T_struct,
-    kstime_T_delta
+    kstimet_struct
 
 ;
 

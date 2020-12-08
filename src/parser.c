@@ -266,6 +266,8 @@ static bool R_N(ks_str fname, ks_str src, ks_ssize_t n_toks, ks_tok* toks, int* 
         return true;
     } else if (k == KS_TOK_EOF || DONE) {
         return true;
+    } else if (k == KS_TOK_RBRC || k == KS_TOK_RBRK || k == KS_TOK_RPAR) {
+        return true;
     }
 
     KS_THROW_SYNTAX(fname, src, TOK, "Unexpected token, expected ';', newline, or EOF after");
@@ -497,6 +499,73 @@ RULE(STMT) {
             }
 
             ks_ast_pushn(deep, other);
+        }
+
+        return res;
+
+
+    } else if (k == KS_TOK_TRY) {
+        EAT();
+
+        ks_ast body = SUB(BORS);
+        if (!body) return NULL;
+
+
+        ks_ast res = ks_ast_newn(KS_AST_TRY, 1, &body, NULL, t);
+
+        /* Parse 'catch' clauses */
+        while (TOK.kind == KS_TOK_CATCH) {
+            ks_tok t = EAT();
+        
+            ks_ast tp = SUB(EXPR);
+            if (!tp) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            ks_ast assign = NULL;
+            
+            if (TOK.kind == KS_TOK_AS) {
+                /* If given 'as' we should assign it to an expression */
+                EAT();
+                assign = SUB(EXPR);
+            }  else {
+                /* Otherwise, don't assign to anything */
+                assign = (ks_ast)KS_NEWREF(ast_none);
+            }
+
+            if (!assign) {
+                KS_DECREF(res);
+                KS_DECREF(tp);
+                return NULL;
+            }
+
+            /* Parse body */
+            body = SUB(BORC);
+            if (!body) {
+                KS_DECREF(res);
+                KS_DECREF(tp);
+                KS_DECREF(assign);
+                return NULL;
+            }
+
+            /* Now, append  the 'else' clause to the result */
+            ks_ast_pushn(res, tp);
+            ks_ast_pushn(res, assign);
+            ks_ast_pushn(res, body);
+        }
+
+        if (TOK.kind == KS_TOK_FINALLY) {
+            /* Push finally clause */
+            ks_tok t = EAT();
+
+            body = SUB(BORS);
+            if (!body) {
+                KS_DECREF(res);
+                return NULL;
+            }
+
+            ks_ast_pushn(res, body);
         }
 
         return res;

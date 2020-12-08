@@ -282,6 +282,24 @@ static bool add_O_dict(ksio_AnyIO self, ks_dict val) {
     return true;
 }
 
+static bool add_O_path(ksio_AnyIO self, ksos_path val) {
+    if (val->str_) return add_str(self, (kso)val->str_);
+
+    if (val->root == KSO_NONE && val->parts->len == 0) {
+        if (!ksio_add(self, ".")) return false;
+    } else {
+        if (val->root != KSO_NONE) if (!ksio_add(self, "%S", val->root)) return false;
+
+        ks_size_t i;
+        for (i = 0; i < val->parts->len; ++i) {
+            if (i > 0) ksio_add(self, "%s", KS_PLATFORM_PATHSEP);
+            if (!ksio_add(self, "%S", val->parts->elems[i])) return false;
+        }
+
+
+    }
+    return true;
+}
 
 /* Add 'str(obj)' */
 static bool add_str(ksio_AnyIO self, kso obj) {
@@ -308,6 +326,10 @@ static bool add_str(ksio_AnyIO self, kso obj) {
         return add_O_set(self, (ks_set)obj);
     } else if (kso_isinst(obj, kst_dict) && obj->type->i__str == kst_dict->i__str) {
         return add_O_dict(self, (ks_dict)obj);
+
+    } else if (kso_isinst(obj, ksost_path) && obj->type->i__str == ksost_path->i__str) {
+        return add_O_path(self, (ksos_path)obj);
+    
     } else if (obj->type->i__str != kst_object->i__str) {
         ks_str sobj = (ks_str)kso_call(obj->type->i__str, 1, &obj);
         if (!sobj) return false;
@@ -387,6 +409,7 @@ static bool add_repr(ksio_AnyIO self, kso obj) {
         return add_O_set(self, (ks_set)obj);
     } else if (kso_isinst(obj, kst_dict) && obj->type->i__str == kst_dict->i__str) {
         return add_O_dict(self, (ks_dict)obj);
+
 
     } else if (obj->type->i__repr != kst_object->i__repr) {
         ks_str sobj = (ks_str)kso_call(obj->type->i__repr, 1, &obj);

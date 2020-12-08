@@ -25,39 +25,25 @@
 /* Constants */
 
 /* PI, circle constant */
-#ifndef KS_M_PI
 #define KS_M_PI                    3.14159265358979323846264338327950288419716939937510
-#endif
 
 /* TAU, REAL circle constant (2*PI) */
-#ifndef KS_M_TAU
 #define KS_M_TAU                   6.28318530717958647692528676655900576839433879875021
-#endif
 
 /* E, Euler's number, (sum(1/n!)) */
-#ifndef KS_M_E
 #define KS_M_E                     2.71828182845904523536028747135266249775724709369995
-#endif
 
 /* PHI, golden ratio, (1+sqrt(5))/2 */
-#ifndef KS_M_PHI
 #define KS_M_PHI                   1.61803398874989484820458683436563811772030917980576
-#endif
 
 /* GAMMA, the Euler-Mascheroni constant (lim H_N - sum(1 / i for i in range(1, N+1))) */
-#ifndef KS_M_MASCHERONI 
 #define KS_M_MASCHERONI            0.57721566490153286060651209008240243104215933593992
-#endif
 
 /* Multiplier to convert degrees to radians */
-#ifndef KS_M_DEG2RAD
 #define KS_M_DEG2RAD               (KS_M_PI / 180.0)
-#endif
 
 /* Multiplier to convert radians to degrees */
-#ifndef KS_M_RAD2DEG
 #define KS_M_RAD2DEG               (180.0 / KS_M_PI)
-#endif
 
 
 /* log(pi) */
@@ -71,7 +57,6 @@
 
 
 /** All Functions **/
-
 
 KS_API ks_cfloat ksm_gamma(ks_cfloat x);
 KS_API ks_cfloat ksm_zeta(ks_cfloat x);

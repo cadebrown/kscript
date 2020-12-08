@@ -50,7 +50,7 @@ typedef struct ksio_FileIO_s {
     bool do_close;
 
     /* The name of the source */
-    ks_str src_name;
+    ks_str fname;
 
     /* File descriptor from 'fopen()' */
     FILE* fp;

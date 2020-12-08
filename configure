@@ -229,16 +229,16 @@ check_header LIMITS_H "limits.h" ""
 check_header FLOAT_H "float.h" ""
 
 check_header SIGNAL_H "signal.h" ""
-#check_header SYS_TIME_H "sys/time.h" ""
-#check_header DLFCN_H "dlfcn.h" ""
+check_header SYS_TIME_H "sys/time.h" ""
+check_header DLFCN_H "dlfcn.h" ""
 
-#check_header SYS_SOCKET_H "sys/socket.h" ""
-#check_header ARPA_INET_H "arpa/inet.h" ""
-#check_header NETDB_H "netdb.h" ""
-#check_header NETINET_IN_H "netinet/in.h" ""
+check_header SYS_SOCKET_H "sys/socket.h" ""
+check_header ARPA_INET_H "arpa/inet.h" ""
+check_header NETDB_H "netdb.h" ""
+check_header NETINET_IN_H "netinet/in.h" ""
 
-#check_header WINSOCK2_H "winsock2.h" ""
-#check_header WS2TCPIP_H "Ws2tcpip.h" ""
+check_header WINSOCK2_H "winsock2.h" ""
+check_header WS2TCPIP_H "Ws2tcpip.h" ""
 
 
 echo ""
@@ -386,10 +386,10 @@ int main(int argc, char** argv) {
 
 check_struct "long_double" "long double"
 check_struct "float128" "_Float128"
-#check_struct "struct_tm" "struct tm"
-#check_struct "time_t" "time_t"
-#check_struct "clock_t" "clock_t"
-#check_struct "struct_timespec" "struct timespec"
+check_struct "struct_tm" "struct tm"
+check_struct "time_t" "time_t"
+check_struct "clock_t" "clock_t"
+check_struct "struct_timespec" "struct timespec"
 
 echo ""
 echo " -- Members -- "
@@ -437,8 +437,8 @@ int main(int argc, char** argv) {
     fi
 }
 
-#check_member "struct_tm_tm_gmtoff" "struct tm" "tm_gmtoff"
-#check_member "struct_tm_tm_zone" "struct tm" "tm_zone"
+check_member "struct_tm_tm_gmtoff" "struct tm" "tm_gmtoff"
+check_member "struct_tm_tm_zone" "struct tm" "tm_zone"
 
 echo ""
 echo " -- Functions -- "
@@ -841,13 +841,6 @@ echo "Generating '$T' ..."
 echo "# Makefile (GENERATED) - auto-generated build script" > $T
 echo "" >> $T
 echo "# -*- Paths -*-" >> $T
-echo "PREFIX           ?= $PREFIX" >> $T
-echo "DESTDIR          ?= $DESTDIR" >> $T
-echo "TODIR            := \$(DESTDIR)\$(PREFIX)" >> $T
-echo "" >> $T
-echo "# -*- Variables -*-" >> $T
-echo "MAKEINFO       ?= makeinfo" >> $T
-echo "CC               := $CC" >> $T
 echo "CFLAGS           := $CFLAGS" >> $T
 echo "LDFLAGS          := $LDFLAGS" >> $T
 echo "" >> $T
@@ -869,15 +862,16 @@ echo "all_H            := \$(wildcard include/ks/*.h include/ks/*.hh)" >> $T
 echo "" >> $T
 echo "tests_KS         := \$(wildcard tests/*.ks)" >> $T
 echo "" >> $T
-echo "docs_TEXI        := docs/texi/kscript.texi" >> $T
-echo "docs_PDF         := docs/texi/kscript.pdf" >> $T
-echo "docs_HTML_MONO   := docs/texi/kscript.html" >> $T
-echo "docs_HTML_DIR    := docs/texi/kscript" >> $T
+echo "docs_TEXI        := docs/kscript.texi" >> $T
+echo "docs_CSS         := docs/kscript.css" >> $T
+echo "docs_PDF         := docs/kscript.pdf" >> $T
+echo "docs_HTML_MONO   := docs/kscript.html" >> $T
+echo "docs_HTML_DIR    := docs/kscript" >> $T
 echo "" >> $T
 echo "" >> $T
 echo "# -*- Rules -*-" >> $T
 echo "" >> $T
-echo ".PHONY: default lib bin check install uninstall clean FORCE" >> $T
+echo ".PHONY: default lib bin check install uninstall clean docs FORCE" >> $T
 echo "" >> $T
 echo "# meta-rules that just are shorthands for other ones" >> $T
 echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN)" >> $T
@@ -886,13 +880,11 @@ echo "bin: \$(ks_BIN)" >> $T
 echo "clean: FORCE" >> $T
 echo "	rm -rf \$(wildcard .tmp debian/usr build lib bin *.deb)" >> $T
 echo "	rm -rf \$(wildcard *.aux *.cp *.cps *.index *.log *.toc *.info)" >> $T
+echo "	rm -rf \$(wildcard \$(docs_PDF) \$(docs_HTML_MONO) \$(docs_HTML_DIR))" >> $T
 echo "" >> $T
 echo "install: \$(ks_BIN) \$(libks_SHARED) \$(all_H) FORCE" >> $T
 echo "	install -d \$(TODIR)/bin" >> $T
 echo "	install -d \$(TODIR)/include/ks" >> $T
-#echo "	install -d \$(TODIR)/lib/ksm" >> $T
-#echo "	install -d \$(TODIR)/share/man/man1" >> $T
-#echo "	install -d \$(TODIR)/share/doc/kscript" >> $T
 echo "	install -m 755 \$(ks_BIN) \$(TODIR)/bin" >> $T
 echo "	install -m 644 \$(libks_SHARED) \$(TODIR)/lib" >> $T
 echo "	install -m 644 \$(all_H) \$(TODIR)/include/ks" >> $T
@@ -931,14 +923,15 @@ echo "	\$(CC) -L./lib -Wl,-rpath,'\$\$ORIGIN' -Wl,-rpath,'\$\$ORIGIN/../lib' \\"
 echo "		\$(ks_O) \\" >> $T
 echo "		-lks \$(LDFLAGS) -o \$@" >> $T
 echo "" >> $T
+echo "docs: \$(docs_HTML_MONO) \$(docs_HTML_DIR) \$(docs_PDF)" >> $T
 echo "\$(docs_PDF): \$(docs_TEXI)" >> $T
 echo "	\$(MAKEINFO) --pdf $^ -o \$@" >> $T
 echo "" >> $T
 echo "\$(docs_HTML_MONO): \$(docs_TEXI)" >> $T
-echo "	\$(MAKEINFO) --no-split --html --css-include=docs/texi/kscript.css $^ -o \$@" >> $T
+echo "	\$(MAKEINFO) --no-split --html --css-include=\$(docs_CSS) $^ -o \$@" >> $T
 echo "" >> $T
 echo "\$(docs_HTML_DIR): \$(docs_TEXI)" >> $T
-echo "	\$(MAKEINFO) --html --css-include=docs/texi/kscript.css $^ -o \$@" >> $T
+echo "	\$(MAKEINFO) --html --css-include=\$(docs_CSS) $^ -o \$@" >> $T
 echo "" >> $T
 echo "" >> $T
 

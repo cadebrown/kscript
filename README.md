@@ -1,38 +1,23 @@
 # kscript (ks)
 
-kscript is a dynamic, duck typed, easy-to-use language with a comprehensive standard library, including maths, numerical tools, GUI toolkits, networking packages, and more! Learn more here: [https://kscript.org](https://kscript.org)
+kscript ([https://kscript.org](https://kscript.org)) is an easy to use, general purpose, multi-paradigm programming language meant to provide cross-platform APIs. The standard library of kscript includes most features required for development tasks, including maths (`m`, `nx`), networking (`net`, `net.http`), GUI programming, and more.
 
-kscript is a work-in-progress, but most of the important functionality is at least partially complete
-
-Current Efforts:
-
-  * Standard library (functions, types, modules)
-  * Module and Package system
-  * Online 
-
-## About
-
-kscript is a programming language meant to help developers solve problems quickly, efficiently, and in a reusable fashion. It includes a large standard library, with many functions, modules, types, and algorithms to perform common programming tasks quickly and without the headache of searching for third party libraries (including: graphs, networking, servers, GUI toolkits, media, math libraries, and more).
+Documentation is available in a few different forms:
+  * [kscript.org](https://kscript.org): Examples, tutorials, and extensive coverage of the standard library
+  * This repository contains technical references (`make docs`), and the files `docs/kscript.pdf` and `docs/kscript.html` will be generated.
 
 
-## Current TODO
+## Current Status
 
-The largest needs for kscript at the moment are:
+kscript is currently a work-in-progress, and has gone through a few rewrites. 
 
-  * `Path`, `Stream`, `FileStream`, etc. types for dealing with wrapping OS- and FS-specific details (including operations)
-  * Standard modules:
-    * `nx`, `net`, `getarg`, `libc`, `m` (extended methods past C's `libm`), `media`
-  * Importing modules and other source files
-  * C-extension dynamically loaded support (mostly done -- test edge cases)
-  * Packaging, installing packages (i.e. similar to `pip`)
-  * Documentation site
 
 
 ## Running
 
 To run kscript, you should have either installed or built kscript. These examples will use `ks` as the binary (if it is only built locally, you may have to replace that with `./bin.ks` or `./bin/ks.exe` on Windows)
 
-```bash
+```shell
 $ ks -h
 Usage: ks [options] FILE [args...]
        ks [options] -e 'EXPR' [args...]
@@ -51,9 +36,18 @@ Cade Brown <brown.cade@gmail.com>
 
 To execute and display an expression, run:
 
-```bash
+```shell
 $ ks -e '1 + 2**4'
 17
+```
+
+You can also run the interactive interpreter by running with no arguments (`ks`), or with `-` as the filename (`ks -`):
+
+```shell
+$ ks
+>>> 1 + 2 ** 4
+17
+>>>
 ```
 
 ## Installing
@@ -79,29 +73,30 @@ Requirements:
 Optional Dependencies:
 
   1. The Posix threading library (`pthread`)
-    * If this is not present, then threading support is emulated
+    * If this is not present, then threading support is emulated and some problems may arise with multi-threaded code
   2. The GNU Multiple Precision library (`gmp`)
     * If this is not present, then kscript will use an implementation of a subset of GMP routines. This means operations with large integers will be slower
-  3. The Fastest Fourier Transform in the West (`fftw`)
+  3. The GNU Readline library (`readline`)
+    * If this is not present, then the kscript interpreter will not have auto-completion and advanced line-editing features
+  4. The Fastest Fourier Transform in the West (`fftw`)
     * If this is not present, then the implementation of FFT plans may be slower
 
 
 For example, you can install these on various platforms:
 
-Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libfftw3-dev`
+Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libreadline-dev libfftw3-dev`
 
 Now, once you have installed the dependencies you want, you can build the library via:
 
-```bash
-./configure # give it '--help' to display options
-make
-make check # runs the standard tests
+```shell
+$ ./configure # give it '--help' to display options
+$ make
+$ make check # runs the standard tests
 ```
-
 
 ### On Windows
 
-TODO: I've gotten it to build on Windows, but I need to make it more complete
+TODO: I've gotten it to build on Windows, but I need to make it more complete so others can reproduce it
 
 
 ## Examples
@@ -110,9 +105,12 @@ See the `examples/` folder for examples
 
 ### Hello World
 
-This is the classic Hello World example
+This is the classic Hello World example:
 
-```kscript
+```ks
 print ("Hello World")
 ```
+
+### FizzBuzz
+
 

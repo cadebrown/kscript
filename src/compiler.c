@@ -338,6 +338,104 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         }
 
         LEN = ssl;
+    } else if (k == KS_AST_TRY) {
+        /* Try/catch block */
+
+        /* Begin by creating a try block */
+        int sj_l = BC_N;
+        EMITI(KSB_TRY_START, -1);
+        int sj_f = BC_N;
+
+        /* Try to execute the main body */
+        if (!COMPILE(SUB(0))) return false;
+
+        /* End the try block */
+        int ej_l = BC_N;
+        EMITI(KSB_TRY_END, -1);
+        int ej_f = BC_N;
+
+        /* Start the error handler */
+        PATCH(sj_l, sj_f, BC_N);
+
+
+        /* Number of catch clauses */
+        int n_catches = (NSUB - 1) / 3;
+        bool has_finally = NSUB % 3 == 2;
+
+        int *js_l = ks_zmalloc(sizeof(*js_l), n_catches);
+        int *js_f = ks_zmalloc(sizeof(*js_f), n_catches);
+
+        /* Iterate over error handlers, and generate the code */
+        int lj_l = -1, lj_f = -1;
+        for (i = 0; i < n_catches; ++i) {
+            ks_ast tp = SUB(3*i+1), to = SUB(3*i+2), body = SUB(3*i+3);
+
+            int cp = BC_N;
+
+            if (!COMPILE(tp)) {
+                ks_free(js_l);
+                ks_free(js_f);
+                return false;
+            }
+
+            int tj_l = BC_N;
+            EMITI(KSB_TRY_CATCH, -1);
+            LEN -= 1;
+            int tj_f = BC_N;
+            
+            
+            if (to->kind != KS_AST_CONST) {
+                /* Assign TOS to the capture variable */
+                if (!assign(co, fname, src, code, to, tp, v)) {
+                    ks_free(js_l);
+                    ks_free(js_f);
+                    return false;
+                }
+            }
+
+            CLEAR(ssl);
+
+            if (!COMPILE(body)) {
+                ks_free(js_l);
+                ks_free(js_f);
+                return false;
+            }
+
+            js_l[i] = BC_N;
+            EMITI(KSB_JMP, -1);
+            js_f[i] = BC_N;
+
+            /* Have the previous case jump to the case we just generated */
+            if (lj_f >= 0) {
+                PATCH(lj_l, lj_f, cp);
+            }
+
+            /* Now, set the next jumps */
+            lj_l = tj_l;
+            lj_f = tj_f;
+        }
+
+        if (lj_f >= 0) {
+            PATCH(lj_l, lj_f, BC_N);
+        }
+
+        /* Jump to here for the end */
+        PATCH(ej_l, ej_f, BC_N);
+        for (i = 0; i < n_catches; ++i) {
+            PATCH(js_l[i], js_f[i], BC_N);
+        }
+
+        ks_free(js_l);
+        ks_free(js_f);
+
+        /* Now, add the 'finally' block */
+        if (has_finally) {
+            if (!COMPILE(SUB(NSUB - 1))) return false;
+        }
+
+        EMIT(KSB_FINALLY_END);
+
+        LEN = ssl;
 
     /** Handle Special Operators **/
 
@@ -360,6 +458,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         /* If there was an exception, it will jump to here and use the other child */
         int cl_l = BC_N;
+        EMITI(KSB_TRY_CATCH_ALL, 0);
         EMIT(KSB_POPU);
         LEN = ssl;
         
@@ -468,7 +567,7 @@ ks_code ks_compile(ks_str fname, ks_str src, ks_ast prog, ks_code from) {
 
     /* Default of 'ret none' */
     ks_code_emito(res, KSB_PUSH, KSO_NONE);
-    ks_code_emito(res, KSB_RET, KSO_NONE);
+    ks_code_emit(res, KSB_RET);
     return res;
 }
 

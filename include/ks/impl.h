@@ -73,8 +73,9 @@ ks_module _ksi_m();
 ks_module _ksi_getarg();
 void _ksi_getarg_Parser();
 
-
 ks_module _ksi_time();
+void _ksi_time_struct();
+
 ks_module _ksi_net();
 ks_module _ksi_net_http();
 ks_module _ksi_nx();

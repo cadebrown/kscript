@@ -102,6 +102,10 @@ ks_module _ksi_os() {
 
         /* Variables */
         {"argv",                   KS_NEWREF(ksos_argv)},
+
+        {"stdin",                  KS_NEWREF(ksos_stdin)},
+        {"stdout",                 KS_NEWREF(ksos_stdout)},
+        {"stderr",                 KS_NEWREF(ksos_stderr)},
     
         /* Functions */
         {"getenv",                 ksf_wrap(M_getenv_, M_NAME ".getenv(key, defa=none)", "Retrieves the environment entry indicated by 'key', or a default if it was not found\n\n    If 'defa' was not given, then an error is thrown")},

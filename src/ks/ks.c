@@ -31,6 +31,22 @@ static kso do_gen(ks_str fname, ks_str src) {
         return NULL;
     }
 
+    /*
+
+    ks_str t = ks_str_new(-1, "dis");
+    kso x = kso_getattr((kso)code, t);
+    KS_DECREF(t);
+    if (x) {
+        kso y = kso_call(x, 0, NULL);
+        KS_DECREF(x);
+        ks_printf("DIS: \n%S\n", y);
+        KS_DECREF(y);
+    } else {
+        kso_catch_ignore_print();
+    }
+
+    */
+
     /* Execute the program, which should return the value */
     kso res = kso_call((kso)code, 0, NULL);
     KS_DECREF(code);
