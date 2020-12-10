@@ -10,6 +10,80 @@
 /* C-API */
 
 
+/* Turn path/string into string */
+static ks_str get_spath(kso path) {
+    ks_str s = NULL;
+    if (kso_issub(path->type, kst_str)) {
+        KS_INCREF(path);
+        s = (ks_str)path;
+    } else if (kso_issub(path->type, ksost_path)) {
+        s = ks_fmt("%S", path);
+    } else {
+        KS_THROW(kst_TypeError, "'%T' object cannot be treated as path", path);
+        return NULL;
+    }
+
+    return s;
+}
+
+bool ksos_stat(kso path, struct ksos_cstat* out) {
+    ks_str s = get_spath(path);
+    if (!s) return NULL;
+
+    #ifdef KS_HAVE_stat
+    int rs = stat(s->data, &out->v_stat);
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to stat %R: %s", s, strerror(errno));
+        KS_DECREF(s);
+        return NULL;
+    }
+    #else
+    KS_THROW(kst_PlatformWarning, "Failed to stat %R: The platform had no 'stat()' function");
+    KS_DECREF(s);
+    return NULL;
+    #endif
+
+    KS_DECREF(s);
+    return true;
+}
+
+bool ksos_fstat(int fd, struct ksos_cstat* out) {
+
+    #ifdef KS_HAVE_fstat
+    int rs = fstat(fd, &out->v_stat);
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to fstat %i: %s", fd, strerror(errno));
+        return NULL;
+    }
+    #else
+    KS_THROW(kst_PlatformWarning, "Failed to fstat %R: The platform had no 'fstat()' function");
+    KS_DECREF(s);
+    return NULL;
+    #endif
+
+    return true;
+}
+bool ksos_lstat(kso path, struct ksos_cstat* out) {
+    ks_str s = get_spath(path);
+    if (!s) return NULL;
+
+    #ifdef KS_HAVE_lstat
+    int rs = lstat(s->data, &out->v_stat);
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to lstat %R: %s", s, strerror(errno));
+        KS_DECREF(s);
+        return NULL;
+    }
+    #else
+    KS_THROW(kst_PlatformWarning, "Failed to lstat %R: The platform had no 'lstat()' function");
+    KS_DECREF(s);
+    return NULL;
+    #endif
+
+    KS_DECREF(s);
+    return true;
+}
+
 
 kso ksos_getenv(ks_str name, kso defa) {
     /* TODO: detect getenv */

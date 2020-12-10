@@ -16,18 +16,38 @@
  #include <signal.h>
 #endif
 
-/*
+
 #include <dirent.h>
 
 #include <sys/types.h>
 #include <sys/stat.h>
-*/
+
+
 
 /** Constants **/
 
 
 /** Types **/
 
+
+/* Internal stat type, meant for the C-API only (this should be wrapped by another type, or just used internally) 
+ * Use KSOS_CSTAT_* macros
+ */
+struct ksos_cstat {
+
+    /* Linux/Unix/BSD/MacOS */
+    struct stat v_stat;
+
+};
+
+/* Yield whether a cstat is a regular file */
+#define KSOS_CSTAT_ISFILE(_stat) (S_ISREG((_stat).v_stat.st_mode))
+
+/* Yield whether a cstat is a directory */
+#define KSOS_CSTAT_ISDIR(_stat)  (S_ISDIR((_stat).v_stat.st_mode))
+
+/* Yield whether a cstat is a symlink */
+#define KSOS_CSTAT_ISLINK(_stat) (S_ISLNK((_stat).v_stat.st_mode))
 
 /* 'os.path' - Resource locator for a file/directory/symlink on disk
  *
@@ -52,6 +72,51 @@ typedef struct ksos_path_s {
     ks_str str_;
 
 }* ksos_path;
+
+/* 'os.path.walk' - Iterator over OS paths
+ *
+ */
+typedef struct ksos_path_walk_s {
+    KSO_BASE
+
+    /* If 'true', then generate directories, files, and then yield subdirectories recursively 
+     * If 'false', then generate subdirectories recursively, directories, and then files
+     */
+    bool is_topdown;
+
+    /* If 'true', then only yield directories
+     */
+    bool is_dirs_only;
+
+    /* Internal flag */
+    bool first_0;
+
+
+    /* Number of items in the recursion stack */
+    int n_stk;
+
+    /* Stack of directories being walked */
+    struct {
+
+        /* Base path of this part of the stack */
+        ksos_path base;
+
+        /* Subdirectories in 'base' */
+        ks_list dirs;
+
+        /* Files in 'base' */
+        ks_list files;
+
+        /* Position within 'dirs' and 'files'; if < dirs->len, still processing directories */
+        int pos;
+
+        /* Restult to be returned (may be NULL) */
+        ks_tuple res;
+
+    }* stk;
+
+}* ksos_path_walk;
+
 
 
 /* 'os.frame' - Single execution frame
@@ -85,6 +150,8 @@ struct ksos_frame_s {
     unsigned char** handlers;
 
 };
+
+
 
 /* 'os.thread' - Single thread of execution
  *
@@ -160,6 +227,8 @@ typedef struct ksos_mutex_s {
 
 /** Functions **/
 
+
+
 /* Create a new path from a C-style string, which will split on seperators
  *
  * If 'len_b < 0' then data is assumed to be NUL-terminated
@@ -169,6 +238,39 @@ KS_API ksos_path ksos_path_new(ks_ssize_t len_b, const char* data, kso root);
 /* Convert 'ob' to a path (if it isn't already one)
  */
 KS_API ksos_path ksos_path_new_o(kso ob);
+
+
+/* Return whether 'path' exists, and set '*res' to whether it does
+ */
+KS_API bool ksos_path_exists(kso path, bool* res);
+
+/* Calculate whether 'path' is a file */
+KS_API bool ksos_path_isfile(kso path, bool* res);
+
+/* Calculate whether 'path' is a directory */
+KS_API bool ksos_path_isdir(kso path, bool* res);
+
+/* Calculate whether 'path' is a symbolic link */
+KS_API bool ksos_path_islink(kso path, bool* res);
+
+
+/* Returns the parent of a path object.
+ *  If len(self.parts) == 0, ret os.path('..')
+ */
+KS_API ksos_path ksos_path_parent(kso self);
+
+/* Attempts to resolve 'path' to an absolute path */
+KS_API ksos_path ksos_path_real(kso path);
+
+
+/* Joins together 'map(os.path, paths)'
+ */
+KS_API ksos_path ksos_path_join(kso* paths, int len);
+
+/* Return a list of directories and files in a given directory */
+KS_API bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files);
+
+
 
 /* Create a new thread
  * Does not start executing the thread
@@ -222,6 +324,11 @@ KS_API void ksos_mutex_unlock(ksos_mutex self);
  */
 KS_API bool ksos_mutex_trylock(ksos_mutex self);
 
+/* Performs a C-style 'stat' on a path object
+ */
+KS_API bool ksos_stat(kso path, struct ksos_cstat* out);
+KS_API bool ksos_fstat(int fd, struct ksos_cstat* out);
+KS_API bool ksos_lstat(kso path, struct ksos_cstat* out);
 
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found
@@ -234,6 +341,7 @@ KS_API bool ksos_setenv(ks_str key, ks_str val);
 /* Types */
 KS_API extern ks_type
     ksost_path,
+    ksost_path_walk,
     ksost_thread,
     ksost_frame,
     ksost_mutex

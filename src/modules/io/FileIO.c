@@ -6,6 +6,7 @@
 #include <ks/impl.h>
 
 #define T_NAME "io.FileIO"
+#define TI_NAME T_NAME ".__iter"
 
 
 /* C-API */
@@ -181,20 +182,6 @@ static KS_TFUNC(T, init) {
         return NULL;
     }
 
-    //ksos_path path = ksos_path_new_o(ssrc);
-    //if (!path) return NULL;
-
-    /*bool isdir;
-    if (!ksos_path_isdir(path, &isdir)) {
-        KS_DECREF(path);
-        return NULL;
-    }
-    KS_DECREF(path);
-    if (isdir) {
-        KS_THROW(kst_IOError, "Failed to open %R: Is a directory", src);
-        return NULL;
-    }*/
-
     /* Attempt to open via the C library 
      * TODO: check filesystem encoding
      */
@@ -230,6 +217,7 @@ static KS_TFUNC(T, free) {
 
     return KSO_NONE;
 }
+
 static KS_TFUNC(T, bool) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
@@ -332,7 +320,6 @@ static KS_TFUNC(T, write) {
 
 /** Iterable type **/
 
-#define TI_NAME T_NAME ".__iter__"
 
 typedef struct _iter_s {
     KSO_BASE
@@ -407,14 +394,23 @@ static KS_TFUNC(TI, next) {
 
 /* Export */
 
+
+
 static struct ks_type_s tp;
 ks_type ksiot_FileIO = &tp;
 
+
 void _ksi_io_FileIO() {
+
     _ksinit(ksiot_FileIO, kst_object, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\n\n    Internally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, src, mode='r')", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
+
+        {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
+        {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},
 
     ));
 }

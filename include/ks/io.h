@@ -1,4 +1,4 @@
-/* ks/io.h - header for the `io` (input/output) module of kscript
+/* ks/io.h - header for the 'io' (input/output) module of kscript
  *
  * Provides general interfaces to file streams, buffer streams, and more
  * 
@@ -21,7 +21,9 @@
 /** Constants **/
 
 /* Buffer size */
-#define KSIO_BUFSIZ 2048
+#ifndef KSIO_BUFSIZ
+#define KSIO_BUFSIZ 256
+#endif
 
 /** Types **/
 

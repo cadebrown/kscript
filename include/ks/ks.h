@@ -219,6 +219,7 @@ KS_API extern ks_type
       kst_complex,
     kst_str,
     kst_bytes,
+    kst_regex,
     kst_range,
     kst_slice,
     kst_list,
@@ -636,8 +637,6 @@ KS_API bool kso_is_iterable(kso obj);
 KS_API bool kso_is_callable(kso obj);
 
 
-
-
 /* Apply C-style printf-like formatting, and return as a string
  *
  * Format specifiers:
@@ -734,6 +733,9 @@ KS_API ks_str ks_str_new(ks_ssize_t len_b, const char* data);
  */
 KS_API ks_str ks_str_newn(ks_ssize_t len_b, char* data);
 
+/* Calculate the length, in characters, of a UTF-8 string
+ */
+KS_API ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data);
 
 /* Compare 'L' and 'R', returning either a comparator, or a boolean telling equality
  */
@@ -761,9 +763,10 @@ KS_API ks_bytes ks_bytes_new(ks_ssize_t len_b, const char* data);
  */
 KS_API ks_bytes ks_bytes_newn(ks_ssize_t len_b, char* data);
 
-/* Calculate the length, in characters, of a UTF-8 string
+
+/* Create a new regular-expression from a descriptor string
  */
-KS_API ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data);
+KS_API ks_regex ks_regex_new(ks_str expr);
 
 
 /* Create a new 'tuple' from elements
@@ -787,6 +790,14 @@ KS_API void ks_list_clear(ks_list self);
 KS_API bool ks_list_push(ks_list self, kso ob);
 KS_API bool ks_list_pushu(ks_list self, kso ob);
 
+/* Push array
+ */
+KS_API bool ks_list_pusha(ks_list self, ks_cint len, kso* objs);
+
+/* Push all elements of an iterable onto a list
+ */
+KS_API bool ks_list_pushall(ks_list self, kso objs);
+
 /* Inserts an object at a given position
  */
 KS_API bool ks_list_insert(ks_list self, ks_cint idx, kso ob);
@@ -799,6 +810,11 @@ KS_API kso ks_list_pop(ks_list self);
 /* Pop an unused reference from a list
  */
 KS_API void ks_list_popu(ks_list self);
+
+/* Delete a given index
+ */
+KS_API bool ks_list_del(ks_list self, ks_cint idx);
+
 
 /* Create a new 'tuple' from elements
  * newn absorbs references
@@ -818,6 +834,53 @@ KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
 /* Create a new partial function with index '0' filled in
  */
 KS_API ks_partial ks_partial_new(kso of, kso arg0);
+
+
+
+/* Construct a new 'set' object from a list of elements
+ */
+KS_API ks_set ks_set_new(ks_cint len, kso* elems);
+
+/* Clear a set
+ */
+void ks_set_clear(ks_set self);
+
+
+/* Add an object to the set
+ */
+KS_API bool ks_set_add(ks_set self, kso obj);
+KS_API bool ks_set_add_h(ks_set self, kso obj, ks_hash_t hash);
+
+/* Delete an object from the set, and set '*found' to whether or not the item
+ *   was in the set
+ */
+KS_API bool ks_set_del(ks_set self, kso obj, bool* found);
+KS_API bool ks_set_del_h(ks_set self, kso obj, ks_hash_t hash, bool* found);
+
+/* Returns whether an object is in the set
+ */
+KS_API bool ks_set_has(ks_set self, kso obj, bool* out);
+KS_API bool ks_set_has_h(ks_set self, kso obj, ks_hash_t hash, bool* out);
+
+
+/* Add every element of the iterable to the set
+ */
+KS_API bool ks_set_addall(ks_set self, kso objs);
+KS_API bool ks_set_addn(ks_set self, ks_cint len, kso* objs);
+
+/* Delete every element of the iterable from the set
+ */
+KS_API bool ks_set_delall(ks_set self, kso objs);
+
+
+/* Return a list of the entries array
+ */
+KS_API ks_list ks_set_calc_ents(ks_set self);
+
+/* Return a list of the buckets array
+ */
+KS_API ks_list ks_set_calc_buckets(ks_set self);
+
 
 
 /* Create a new dictionary

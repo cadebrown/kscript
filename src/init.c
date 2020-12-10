@@ -90,6 +90,7 @@ _KS_DO_SPEC(_KSACT)
 
     _ksi_str();
     _ksi_bytes();
+    _ksi_regex();
 
     _ksi_set();
     _ksi_dict();
@@ -154,6 +155,7 @@ _KS_DO_SPEC(_KSACT)
 
         {"str",                    (kso)kst_str},
         {"bytes",                  (kso)kst_bytes},
+        {"regex",                  (kso)kst_regex},
 
         {"list",                   (kso)kst_list},
         {"tuple",                  (kso)kst_tuple},
@@ -187,6 +189,8 @@ _KS_DO_SPEC(_KSACT)
 
 
         /* Functions */
+        {"open", (kso)ksf_open},
+        
         {"print", (kso)ksf_print},
         {"pow", (kso)ksf_pow},
 

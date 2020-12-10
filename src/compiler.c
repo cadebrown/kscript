@@ -164,6 +164,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             if (!COMPILE(SUB(i))) return false;
             CLEAR(ssl);
         }
+        META(v->tok);
     } else if (k == KS_AST_LIST) {
         for (i = 0; i < NSUB; ++i) {
             if (!COMPILE(SUB(i))) return false;
@@ -172,6 +173,15 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         EMITI(KSB_LIST, NSUB);
         META(v->tok);
         LEN += 1 - NSUB;
+    } else if (k == KS_AST_TUPLE) {
+        for (i = 0; i < NSUB; ++i) {
+            if (!COMPILE(SUB(i))) return false;
+        }
+        assert(LEN == ssl + NSUB);
+        EMITI(KSB_TUPLE, NSUB);
+        META(v->tok);
+        LEN += 1 - NSUB;
+
 
     } else if (k == KS_AST_IF) {
         /* Emit conditional */
@@ -283,6 +293,9 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         if (!COMPILE(SUB(1))) return false;
         assert(LEN == ssl + 1);
         EMIT(KSB_FOR_START);
+        META(SUB(1)->tok);
+
+        ks_tok blame = ks_tok_combo(SUB(0)->tok, SUB(1)->tok);
 
         /* CFG:
          *       +------+
@@ -298,6 +311,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         int jc_l = BC_N;
         EMITI(KSB_FOR_NEXTF, -1);
+        META(blame);
         int jc_f = BC_N;
         LEN += 1;
 
@@ -312,6 +326,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         int jc2_l = BC_N;
         EMITI(KSB_FOR_NEXTT, -1);
+        META(blame);
         int jc2_f = BC_N;
 
         PATCH(jc2_l, jc2_f, jc_f);

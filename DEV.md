@@ -33,7 +33,6 @@ For changing the builtin modules, check `src/modules/<name>` (i.e. `src/modules/
 
 For changing the general kscript API and utilities, those files are typically located in `src/` (i.e. `src/init.c` for initialization routines).
 
-
 ## Commiting Changes
 
 To commit your changes, add any files you changed via `git add` (for example, `git add src/types/int.c`), then run `git commit` and enter your message (use `git commit -m "MESSAGE"` to not use an editor).

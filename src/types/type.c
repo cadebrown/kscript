@@ -31,6 +31,7 @@ void type_init(ks_type self, ks_type base, const char* name, int sz, int attr, c
 
     /* Now, actually set up type  */
 
+    self->num_obs_del = self->num_obs_new = 0;
     self->ob_sz = sz == 0 ? base->ob_sz : sz;
     self->ob_attr = attr == 0 ? base->ob_attr : attr;
     ks_type_set(self, _ksva__base, (kso)base);

@@ -32,6 +32,7 @@ void _ksi_rational();
 
 void _ksi_str();
 void _ksi_bytes();
+void _ksi_regex();
 
 void _ksi_range();
 void _ksi_slice();

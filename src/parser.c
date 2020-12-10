@@ -895,6 +895,9 @@ RULE(E14) {
 
     /* First, we find the base value. This is either a group '()', function, type, or ATOM */
     if (TOK.kind == KS_TOK_LPAR) {
+        /* Either a group, or a tuple. Try some special cases, or try as a tuple and then check afterwards whether there
+         *   was a comma given
+         */
         t = EAT();
         SKIP_N();
 
@@ -912,16 +915,40 @@ RULE(E14) {
             res = ks_ast_new(KS_AST_TUPLE, 0, NULL, NULL, ks_tok_combo(t, EAT()));
         } else {
             /* May be expression or tuple */
-            res = SUB(EXPR);
-            if (!res) return NULL;
+            ks_ast tup = ks_ast_new(KS_AST_TUPLE, 0, NULL, NULL, t);
+            bool had_comma = false;
+
+            while (TOK.kind != KS_TOK_RPAR) {
+                ks_ast sub = SUB(EXPR);
+                if (!sub) {
+                    KS_DECREF(tup);
+                    return NULL;
+                }
+
+                ks_ast_pushn(tup, sub);
+
+                SKIP_N();
+                if (TOK.kind == KS_TOK_COM) {
+                    EAT();                
+                    SKIP_N();
+                    had_comma = true;
+                } else break;
+            }
 
             if (TOK.kind != KS_TOK_RPAR) {
                 KS_THROW_SYNTAX(fname, src, TOK, "Expected ')' to end group here");
                 KS_DECREF(res);
                 return NULL;
             }
-            res->tok = ks_tok_combo(res->tok, EAT());
+            tup->tok = ks_tok_combo(tup->tok, EAT());
 
+            if (tup->args->len == 1 && !had_comma) {
+                res = (ks_ast)tup->args->elems[0];
+                KS_INCREF(res);
+                KS_DECREF(tup);
+            } else {
+                res = tup;
+            }
         }
 
     } else if (TOK.kind == KS_TOK_LBRK) {

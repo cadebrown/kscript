@@ -32,7 +32,7 @@
 WITH_gmp="auto"
 WITH_pthreads="auto"
 WITH_readline="auto"
-WITH_fftw="auto"
+WITH_fftw3="auto"
 
 CHECKTO="/dev/null"
 
@@ -228,11 +228,14 @@ check_header TIME_H "time.h" ""
 check_header LIMITS_H "limits.h" ""
 check_header FLOAT_H "float.h" ""
 
-check_header SIGNAL_H "signal.h" ""
 check_header SYS_TIME_H "sys/time.h" ""
+check_header SYS_TYPES_H "sys/types.h" ""
+check_header SYS_STAT_H "sys/stat.h" ""
+check_header SYS_SOCKET_H "sys/socket.h" ""
+
+check_header SIGNAL_H "signal.h" ""
 check_header DLFCN_H "dlfcn.h" ""
 
-check_header SYS_SOCKET_H "sys/socket.h" ""
 check_header ARPA_INET_H "arpa/inet.h" ""
 check_header NETDB_H "netdb.h" ""
 check_header NETINET_IN_H "netinet/in.h" ""
@@ -364,6 +367,12 @@ check_struct() {
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
 #endif
+#ifdef KS_HAVE_SYS_TYPES_H
+ #include <sys/types.h>
+#endif
+#ifdef KS_HAVE_SYS_STAT_H
+ #include <sys/stat.h>
+#endif
 
 int main(int argc, char** argv) {
     $2 v;
@@ -390,6 +399,7 @@ check_struct "struct_tm" "struct tm"
 check_struct "time_t" "time_t"
 check_struct "clock_t" "clock_t"
 check_struct "struct_timespec" "struct timespec"
+check_struct "struct_stat" "struct stat"
 
 echo ""
 echo " -- Members -- "
@@ -414,6 +424,9 @@ check_member() {
 #endif
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
+#endif
+#ifdef KS_HAVE_SYS_TYPES_H
+ #include <sys/types.h>
 #endif
 
 int main(int argc, char** argv) {
@@ -471,6 +484,12 @@ check_func() {
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
 #endif
+#ifdef KS_HAVE_SYS_TYPES_H
+ #include <sys/types.h>
+#endif
+#ifdef KS_HAVE_SYS_STAT_H
+ #include <sys/stat.h>
+#endif
 
 int main(int argc, char** argv) {
     int i = 0;
@@ -492,12 +511,18 @@ int main(int argc, char** argv) {
     #endif
     #ifdef KS_HAVE_struct_tm
      struct tm tm;
-     struct tm* tm_p;
+     struct tm* tm_p = &tm;
     #endif
     #ifdef KS_HAVE_struct_timespec
      struct timespec ts;
-     struct timespec* ts_p;
+     struct timespec* ts_p = &ts;
     #endif
+
+    #ifdef KS_HAVE_struct_stat
+     struct stat st;
+     struct stat* st_p = &st;
+    #endif
+
     $assignto $1($3);
     return 0;
 }
@@ -585,6 +610,10 @@ check_func sincos "v" "d,&d,&d"
 #check_func sincosl "v" "ld,&ld,&ld"
 #check_func sincosf128 "v" "f128,&f128,&f128"
 
+check_func "stat" "i" "s,&st"
+check_func "lstat" "i" "s,&st"
+check_func "fstat" "i" "s,&st"
+
 check_func "realpath" "s" "s,NULL"
 
 check_func "clock" "c" ""
@@ -596,6 +625,11 @@ check_func "strptime" "s" "s,s,&tm"
 check_func "clock_gettime" "i" "i,&ts"
 check_func "clock_settime" "i" "i,&ts"
 check_func "clock_nanosleep" "i" "i,i,&ts,&ts"
+
+
+echo ""
+echo " -- Names -- "
+echo ""
 
 
 # check_name <name> <cname>
@@ -857,7 +891,6 @@ echo "ks_C             := \$(wildcard src/ks/*.c)" >> $T
 echo "ks_O             := \$(patsubst %.c,.tmp/%.o,\$(ks_C))" >> $T
 echo "ks_BIN           := bin/ks$EXTBINARY" >> $T
 echo "" >> $T
-echo "main_H           := include/ks/ks.h include/ks/config.h" >> $T
 echo "all_H            := \$(wildcard include/ks/*.h include/ks/*.hh)" >> $T
 echo "" >> $T
 echo "tests_KS         := \$(wildcard tests/*.ks)" >> $T
@@ -903,7 +936,7 @@ echo "tests/%.ks: \$(ks_BIN) FORCE" >> $T
 echo "	@\$(ks_BIN) \$@ && echo PASSED: \$@ || (echo FAILED: \$@ && exit 1)" >> $T
 echo "" >> $T
 echo "# compile-rules for compiling source to object files" >> $T
-echo ".tmp/src/%.o: src/%.c \$(main_H)" >> $T
+echo ".tmp/src/%.o: src/%.c \$(all_H)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
 echo "	\$(CC) \$(CFLAGS) -I./include -DKS_BUILD -fPIC -c -o \$@ \$<" >> $T
 echo "" >> $T

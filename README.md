@@ -78,7 +78,7 @@ Optional Dependencies:
     * If this is not present, then kscript will use an implementation of a subset of GMP routines. This means operations with large integers will be slower
   3. The GNU Readline library (`readline`)
     * If this is not present, then the kscript interpreter will not have auto-completion and advanced line-editing features
-  4. The Fastest Fourier Transform in the West (`fftw`)
+  4. The Fastest Fourier Transform in the West (`fftw3`)
     * If this is not present, then the implementation of FFT plans may be slower
 
 

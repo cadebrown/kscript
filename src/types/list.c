@@ -101,8 +101,47 @@ bool ks_list_pushu(ks_list self, kso ob) {
     self->elems[i] = ob;
     return true;
 }
+bool ks_list_pusha(ks_list self, ks_cint len, kso* objs) {
+    ks_ssize_t i = self->len;
+    self->len += len;
+    if (self->len > self->_max_len) {
+        self->_max_len = ks_nextsize(self->_max_len, self->len);
+        self->elems = ks_zrealloc(self->elems, sizeof(*self->elems), self->_max_len);
+    }
+
+    memcpy(self->elems + i, objs, len * sizeof(*objs));
+    for (i = 0; i < len; ++i) {
+        KS_INCREF(objs[i]);
+    }
+
+    return true;
+}
 
 
+
+
+bool ks_list_pushall(ks_list self, kso objs) {
+    if (kso_issub(objs->type, kst_list)) {
+        return ks_list_pusha(self, ((ks_list)objs)->len, ((ks_list)objs)->elems);
+    } else if (kso_issub(objs->type, kst_tuple)) {
+        return ks_list_pusha(self, ((ks_tuple)objs)->len, ((ks_tuple)objs)->elems);
+    } else {
+        ks_cit it = ks_cit_make(objs);
+        kso ob;
+        while (ob = ks_cit_next(&it)) {
+            if (!ks_list_push(self, ob)) {
+                KS_DECREF(ob);
+                ks_cit_done(&it);
+                return false;
+            }
+            KS_DECREF(ob);
+        }
+        ks_cit_done(&it);
+        if (it.exc) return false;
+
+        return true;
+    }
+}
 bool ks_list_insert(ks_list self, ks_cint idx, kso ob) {
     bool res = ks_list_insertu(self, idx, ob);
     KS_INCREF(ob);
@@ -137,6 +176,20 @@ void ks_list_popu(ks_list self) {
 }
 
 
+bool ks_list_del(ks_list self, ks_cint idx) {
+    if (idx < 0) idx += self->len;
+
+    KS_DECREF(self->elems[idx]);
+
+    ks_cint i;
+    for (i = idx; i < self->len - 1; ++i) {
+        self->elems[i] = self->elems[i + 1];
+    }
+
+    self->len--;
+
+    return true;
+}
 
 /* Type Functions */
 

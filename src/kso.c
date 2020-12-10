@@ -580,13 +580,14 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
 
         if (res) {
             /* Successfully allocated it */
-            if (tp->i__call == kst_type->i__init) {
+            if (tp->i__init == kst_type->i__init) {
                 /* Default initializer, which is nothing */
+
             } else {
                 /* Custom initializer */
                 int new_nargs = nargs + 1;
                 kso* new_args = ks_zmalloc(sizeof(*new_args), new_nargs);
-                new_args[0] = (kso)tp;
+                new_args[0] = (kso)res;
                 for (i = 0; i < nargs; ++i) new_args[i + 1] = args[i];
                 kso t = kso_call(tp->i__init, new_nargs, new_args);
                 ks_free(new_args);
@@ -653,7 +654,7 @@ kso kso_next(kso ob) {
         return KS_NEWREF(it->of->elems[it->pos++]);
 
     } else if (ob->type->i__next) {
-        return kso_call(ob->type->i__ne, 1, &ob);
+        return kso_call(ob->type->i__next, 1, &ob);
     } else {
         /* Default to 'next(iter(ob))' */
         kso it = kso_iter(ob);
@@ -766,6 +767,8 @@ kso _kso_new(ks_type tp) {
     res->type = tp;
     res->refs = 1;
 
+    tp->num_obs_new++;
+
     if (tp->ob_attr > 0) {
         /* Initialize attribute dictionary */
         ks_dict* attr = (ks_dict*)(((ks_uint)res + tp->ob_attr));
@@ -776,7 +779,15 @@ kso _kso_new(ks_type tp) {
 }
 
 void _kso_del(kso ob) {
+    if (ob->refs < 0) {
+        printf("BAD REFS ON: '%s' obj: %lli\n", ob->type->i__fullname->data, (long long int)ob->refs);
+        exit(1);
+    }
+
+    ob->type->num_obs_del++;
+
     KS_DECREF(ob->type);
+
 
     if (ob->type->ob_attr > 0) {
         /* Initialize attribute dictionary */

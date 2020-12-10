@@ -270,6 +270,11 @@ kso _ks_exec(ks_code bc) {
             ks_list_pushu(stk, (kso)ks_list_newn(arg, stk->elems + stk->len));
         VMD_OP_END
 
+        VMD_OPA(KSB_TUPLE)
+            stk->len -= arg;
+            ks_list_pushu(stk, (kso)ks_tuple_newn(arg, stk->elems + stk->len));
+        VMD_OP_END
+
 
         /** Control Flow **/
 
@@ -495,6 +500,9 @@ kso _ks_exec(ks_code bc) {
         pc = frame->handlers[--frame->n_handlers];
         VMD_NEXT();
     }
+
+    /* Ensure we return NULL */
+    res = NULL;
 
     done:;
     /* Clean up and return */

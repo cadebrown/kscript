@@ -283,22 +283,51 @@ static bool add_O_dict(ksio_AnyIO self, ks_dict val) {
 }
 
 static bool add_O_path(ksio_AnyIO self, ksos_path val) {
-    if (val->str_) return add_str(self, (kso)val->str_);
+    if (val->str_ != NULL) {
+        return add_str(self, (kso)val->str_);
+    }
+
+    /* Have stringIO so we are appending, then capture the string at the end to cache for later */
+    ksio_StringIO sio = NULL;
+    if (kso_issub(self->type, ksiot_StringIO)) {
+        sio = (ksio_StringIO)self;
+        KS_INCREF(sio);
+    } else {
+        sio = ksio_StringIO_new();
+    }
+
+    /* Where it began in the stream */
+    ks_cint pos = sio->len_b;
 
     if (val->root == KSO_NONE && val->parts->len == 0) {
-        if (!ksio_add(self, ".")) return false;
+        if (!ksio_add((ksio_AnyIO)sio, ".")) {
+            KS_DECREF(sio);
+            return false;
+
+        }
     } else {
-        if (val->root != KSO_NONE) if (!ksio_add(self, "%S", val->root)) return false;
+        if (val->root != KSO_NONE) if (!ksio_add((ksio_AnyIO)sio, "%S", val->root)) {
+            KS_DECREF(sio);
+            return false;
+        }
 
         ks_size_t i;
         for (i = 0; i < val->parts->len; ++i) {
-            if (i > 0) ksio_add(self, "%s", KS_PLATFORM_PATHSEP);
-            if (!ksio_add(self, "%S", val->parts->elems[i])) return false;
+            if (i > 0) ksio_add((ksio_AnyIO)sio, "%s", KS_PLATFORM_PATHSEP);
+            if (!ksio_add((ksio_AnyIO)sio, "%S", val->parts->elems[i])) {
+                KS_DECREF(sio);
+                return false;
+            }
         }
-
-
     }
-    return true;
+
+    val->str_ = ks_str_new(sio->len_b - pos, sio->data);
+    if ((ksio_AnyIO)sio != self) {
+        ksio_addbuf(self, val->str_->len_b, val->str_->data);
+    }
+    KS_DECREF(sio);
+
+    return true; //ksio_addbuf(self, val->str_->len_b, val->str_->data);
 }
 
 /* Add 'str(obj)' */

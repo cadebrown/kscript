@@ -525,6 +525,12 @@ enum {
      */
     KSB_LIST,
 
+    /* TUPLE num
+     *
+     * Creates a new tuple out of the last 'num' items on the stack (popping them off) and then pushes
+     *   the tuple back on
+     */
+    KSB_TUPLE,
 
     /** Control Flow **/
 

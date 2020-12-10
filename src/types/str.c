@@ -11,11 +11,10 @@
 /* C-API */
 
 
-
 ks_str ks_str_newt(ks_type tp, ks_ssize_t len_b, const char* data) {
     if (len_b < 0) len_b = strlen(data);
 
-    char* new_data= ks_zmalloc(1, len_b + 1);
+    char* new_data = ks_zmalloc(1, len_b + 1);
     memcpy(new_data, data, len_b);
     new_data[len_b] = '\0';
 
@@ -54,7 +53,6 @@ ks_str ks_str_newnt(ks_type tp, ks_ssize_t len_b, char* data) {
 ks_str ks_str_new(ks_ssize_t len_b, const char* data) {
     return ks_str_newt(kst_str, len_b, data);
 }
-
 ks_str ks_str_newn(ks_ssize_t len_b, char* data) {
     return ks_str_newnt(kst_str, len_b, data);
 }
@@ -254,7 +252,7 @@ void _ksi_str() {
 
     _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, "String (i.e. a collection of Unicode characters)\n\n    Indicies, operations, and so forth take character positions, not byte positions", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
-        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none)", "")},
 
         {"__iter",               KS_NEWREF(kst_str_iter)},
 

@@ -36,7 +36,13 @@ ks_func
     ksf_next
 ;
 
+static KS_FUNC(open) {
+    int n_args;
+    kso* args;
+    KS_ARGS("*args", &n_args, &args);
 
+    return kso_call((kso)ksiot_FileIO, n_args, args);
+}
 static KS_FUNC(print) {
     int n_args;
     kso* args;
@@ -152,6 +158,8 @@ void _ksi_funcs() {
 
     /* Create a function */
     #define F(_name, _sig, _doc) ksf_##_name = (ks_func)ksf_wrap(_name##_, _sig, _doc);
+
+    F(open, "open(src, mode='r')", "Opens a file on disk, and returns an IO object which can be read from (or written to, based on 'mode')");
 
     F(print, "print(*args)", "Prints out all the arguments to 'os.stdout', seperated by spaces, and followed by a newline")
 

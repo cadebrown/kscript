@@ -142,6 +142,8 @@ typedef ks_uint ks_size_t;
 typedef struct ks_type_s* ks_type;
 typedef struct ks_str_s* ks_str;
 
+
+
 /* 'object' - the base type which all other types inherit from
  *
  * All kscript objects have a type which derives from 'object'
@@ -294,6 +296,95 @@ typedef struct ks_bytes_s {
     unsigned char* data;
 
 }* ks_bytes;
+
+
+
+/* Regex NFA types */
+enum {
+
+    /* End/accepting state */
+    KS_REGEX_NFA_END = 0,
+
+    /* Epsilon transitions on line start and end */
+    KS_REGEX_NFA_LINESTART,
+    KS_REGEX_NFA_LINEEND,
+
+    /* Epsilon transition on a word break */
+    KS_REGEX_NFA_WORDBREAK,
+
+    /* Epsilon transition at any time */
+    KS_REGEX_NFA_EPS,
+
+    /* Matches a single (unicode) character */
+    KS_REGEX_NFA_UCP,
+
+    /* Matches a single (unicode) category */
+    KS_REGEX_NFA_CAT,
+
+    /* Matches any characters within a character set (inverted for 'KS_REGEX_NFA_NOT') */
+    KS_REGEX_NFA_ANY,
+    KS_REGEX_NFA_NOT
+
+};
+
+
+/* 'regex' - regular expression pattern, which can be used to match strings
+ *
+ * 
+ * 
+ */
+typedef struct ks_regex_s {
+    KSO_BASE
+
+    /* Expression which generated the regex */
+    ks_str expr;
+
+    /* Number of states in the regular expression */
+    int n_states;
+
+    /* Array of states in the regular expression */
+    struct ks_regex_nfa {
+
+        /* Kind of NFA node, see 'KS_REGEX_NFA_*' values */
+        int kind;
+
+        /* Outgoing edges to other states, or -1 if they don't exist */
+        int to0, to1;
+
+        union {
+
+            /* For 'KS_REGEX_NFA_UCP' */
+            ks_ucp ucp;
+
+
+            /* For 'KS_REGEX_NFA_ANY' and 'KS_REGEX_NFA_NOT' */
+            struct {
+
+                /* Bitset of whether the set contains a byte. Only valid
+                 *   for ASCII characters, and bytes when in binary mode
+                 */
+                bool* has_byte;
+
+                /* Bitset of whether the set contains all characters within
+                 *   a categoriy. Indexes are 'ksucd_cat'
+                 */
+                bool* has_cat;
+
+                /* Array of unicode characters in the set (TODO: hashtable?) */
+                int n_ext;
+                ks_ucp* ext;
+
+            } set;
+
+        };
+
+    }* states;
+
+    /* Initial and final states of the regular expression */
+    int s0, sf;
+
+}* ks_regex;
+
 
 /* 'range' - (immutable) integral range
  *
@@ -590,6 +681,9 @@ struct ks_type_s {
 
     /* Integer sizes and attribute dictionary offsets of instances */
     ks_cint ob_sz, ob_attr;
+
+    /* Number of objects created and deleted */
+    ks_cint num_obs_new, num_obs_del;
 
 
     /** Special Values (saved as variables here) **/
