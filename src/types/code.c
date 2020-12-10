@@ -88,13 +88,13 @@ int ks_code_addconst(ks_code self, kso ob) {
 }
 
 void ks_code_emit(ks_code self, ksb op) {
-    ksio_addbuf((ksio_AnyIO)self->bc, sizeof(op), (const char*)&op);
+    ksio_addbuf((ksio_BaseIO)self->bc, sizeof(op), (const char*)&op);
 }
 void ks_code_emiti(ks_code self, ksb op, int arg) {
     ksba o;
     o.op = op;
     o.arg = arg;
-    ksio_addbuf((ksio_AnyIO)self->bc, sizeof(o), (const char*)&o);
+    ksio_addbuf((ksio_BaseIO)self->bc, sizeof(o), (const char*)&o);
 }
 void ks_code_emito(ks_code self, ksb op, kso arg) {
     ks_code_emiti(self, op, ks_code_addconst(self, arg));
@@ -180,7 +180,7 @@ static KS_TFUNC(T, dis) {
 
     ksio_StringIO sio = ksio_StringIO_new();
 
-    ksio_add((ksio_AnyIO)sio, "# code \n# vc: %R\n", self->vc);
+    ksio_add((ksio_BaseIO)sio, "# code \n# vc: %R\n", self->vc);
 
     int i = 0, sz = self->bc->len_b;
     ksb* bc = self->bc->data;
@@ -197,19 +197,19 @@ static KS_TFUNC(T, dis) {
 
         #define OP(_o) else if (o == _o) { \
             i += sizeof(op.op); \
-            ksio_add((ksio_AnyIO)sio, "%04i: %s\n", p, #_o + 4); \
+            ksio_add((ksio_BaseIO)sio, "%04i: %s\n", p, #_o + 4); \
         }
         #define OPI(_o) else if (o == _o) { \
             i += sizeof(op); \
-            ksio_add((ksio_AnyIO)sio, "%04i: %s %i\n", p, #_o + 4, v); \
+            ksio_add((ksio_BaseIO)sio, "%04i: %s %i\n", p, #_o + 4, v); \
         }
         #define OPT(_o) else if (o == _o) { \
             i += sizeof(op); \
-            ksio_add((ksio_AnyIO)sio, "%04i: %s %i # to %i\n", p, #_o + 4, v, i + v); \
+            ksio_add((ksio_BaseIO)sio, "%04i: %s %i # to %i\n", p, #_o + 4, v, i + v); \
         }
         #define OPV(_o) else if (o == _o) { \
             i += sizeof(op); \
-            ksio_add((ksio_AnyIO)sio, "%04i: %s %i # %R\n", p, #_o + 4, v, self->vc->elems[v]); \
+            ksio_add((ksio_BaseIO)sio, "%04i: %s %i # %R\n", p, #_o + 4, v, self->vc->elems[v]); \
         }
 
 
@@ -276,7 +276,7 @@ static KS_TFUNC(T, dis) {
         OP(KSB_UOP_NOT)
             
         else {
-            ksio_add((ksio_AnyIO)sio, "%4i: <err>\n", i);
+            ksio_add((ksio_BaseIO)sio, "%4i: <err>\n", i);
             i += sizeof(op.op);
         }
 

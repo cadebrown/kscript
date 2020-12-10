@@ -45,7 +45,7 @@ ks_str ks_fmt(const char* fmt, ...) {
 ks_str ks_fmtv(const char* fmt, va_list ap) {
     ksio_StringIO sio = ksio_StringIO_new();
 
-    if (!ksio_addv((ksio_AnyIO)sio, fmt, ap)) {
+    if (!ksio_addv((ksio_BaseIO)sio, fmt, ap)) {
         KS_DECREF(sio);
         return NULL;
     }
@@ -56,7 +56,7 @@ ks_str ks_fmtv(const char* fmt, va_list ap) {
 bool ks_printf(const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    bool res = ksio_addv((ksio_AnyIO)ksos_stdout, fmt, ap);
+    bool res = ksio_addv((ksio_BaseIO)ksos_stdout, fmt, ap);
     va_end(ap);
     return res;
 }

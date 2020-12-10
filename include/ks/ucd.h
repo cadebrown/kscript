@@ -67,8 +67,6 @@ enum {
     ksucd_cat_C  = 38,
 };
 
-
-
 struct ksucd_info {
 
     /* (0)

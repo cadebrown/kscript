@@ -121,7 +121,6 @@ int main(int argc, char** argv) {
         ks_list_insertu(ksos_argv, 0, (kso)ks_str_new(-1, "-"));
     }
 
-
     KS_DECREF(p);
     bool res = false;
 

@@ -215,34 +215,34 @@ static KS_TFUNC(T, repr) {
     KS_ARGS("self:*", &self, kst_graph);
 
     ksio_StringIO sio = ksio_StringIO_new();
-    ksio_add((ksio_AnyIO)sio, "%T(", self);
+    ksio_add((ksio_BaseIO)sio, "%T(", self);
 
     if (kso_inrepr((kso)self)) {
-        ksio_add((ksio_AnyIO)sio, "%T(", KS_REPR_SELF);
+        ksio_add((ksio_BaseIO)sio, "%T(", KS_REPR_SELF);
     } else {
         ks_cint i, j, ct;
-        ksio_add((ksio_AnyIO)sio, "[");
+        ksio_add((ksio_BaseIO)sio, "[");
         for (i = 0; i < self->n_nodes; ++i) {
-            if (i > 0) ksio_add((ksio_AnyIO)sio, ", ");
-            ksio_add((ksio_AnyIO)sio, "%R", self->nodes[i].val);
+            if (i > 0) ksio_add((ksio_BaseIO)sio, ", ");
+            ksio_add((ksio_BaseIO)sio, "%R", self->nodes[i].val);
         }
         
-        ksio_add((ksio_AnyIO)sio, "], [");
+        ksio_add((ksio_BaseIO)sio, "], [");
         for (ct = i = 0; i < self->n_nodes; ++i) {
             for (j = 0; j < self->nodes[i].n_edges; ++j) {
-                if (ct++ > 0) ksio_add((ksio_AnyIO)sio, ", ");
+                if (ct++ > 0) ksio_add((ksio_BaseIO)sio, ", ");
                 kso val = self->nodes[i].edges[j].val;
                 if (val == KSO_NONE) {
-                    ksio_add((ksio_AnyIO)sio, "(%l, %l)", i, self->nodes[i].edges[j].to);
+                    ksio_add((ksio_BaseIO)sio, "(%l, %l)", i, self->nodes[i].edges[j].to);
                 } else {
-                    ksio_add((ksio_AnyIO)sio, "(%l, %l, %R)", i, self->nodes[i].edges[j].to, val);
+                    ksio_add((ksio_BaseIO)sio, "(%l, %l, %R)", i, self->nodes[i].edges[j].to, val);
                 }
             }
         }
-        ksio_add((ksio_AnyIO)sio, "]");
+        ksio_add((ksio_BaseIO)sio, "]");
     }
 
-    ksio_add((ksio_AnyIO)sio, ")");
+    ksio_add((ksio_BaseIO)sio, ")");
     return (kso)ksio_StringIO_getf(sio);
 }
 
@@ -333,25 +333,25 @@ static KS_TFUNC(T, dotfile) {
 
     ksio_StringIO sio = ksio_StringIO_new();
 
-    ksio_add((ksio_AnyIO)sio, "digraph G {\n");
+    ksio_add((ksio_BaseIO)sio, "digraph G {\n");
 
     ks_cint i, j;
     for (i = 0; i < self->n_nodes; ++i) {
         if (self->nodes[i].val == KSO_NONE) {
-            ksio_add((ksio_AnyIO)sio, "    %i;\n", (int)i);
+            ksio_add((ksio_BaseIO)sio, "    %i;\n", (int)i);
         } else {
-            ksio_add((ksio_AnyIO)sio, "    %i [label=\"%S\"];\n", (int)i, self->nodes[i].val);
+            ksio_add((ksio_BaseIO)sio, "    %i [label=\"%S\"];\n", (int)i, self->nodes[i].val);
         }
         for (j = 0; j < self->nodes[i].n_edges; ++j) {
             if (self->nodes[i].edges[j].val == KSO_NONE) {
-                ksio_add((ksio_AnyIO)sio, "    %i -> %i;\n", (int)i, (int)self->nodes[i].edges[j].to);
+                ksio_add((ksio_BaseIO)sio, "    %i -> %i;\n", (int)i, (int)self->nodes[i].edges[j].to);
             } else {
-                ksio_add((ksio_AnyIO)sio, "    %i -> %i [label=\"%S\"];\n", (int)i, (int)self->nodes[i].edges[j].to, self->nodes[i].edges[j].val);
+                ksio_add((ksio_BaseIO)sio, "    %i -> %i [label=\"%S\"];\n", (int)i, (int)self->nodes[i].edges[j].to, self->nodes[i].edges[j].val);
             }
         }
     }
 
-    ksio_add((ksio_AnyIO)sio, "}\n");
+    ksio_add((ksio_BaseIO)sio, "}\n");
 
     return (kso)ksio_StringIO_getf(sio);
 }

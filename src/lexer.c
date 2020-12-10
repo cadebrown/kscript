@@ -75,7 +75,7 @@ ks_str ks_tok_str(ks_str src, ks_tok tok) {
     return ks_str_new(tok.epos - tok.spos, src->data + tok.spos);
 }
 
-void ks_tok_add(ksio_AnyIO self, ks_str fname, ks_str src, ks_tok tok) {
+void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok) {
 
     /* Subidivide line */
     if (tok.sline < 0 || tok.scol < 0 || tok.spos < 0) {

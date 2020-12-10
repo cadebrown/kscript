@@ -12,11 +12,13 @@
 /* Export */
 
 ks_module _ksi_io() {
+    _ksi_io_BaseIO();
     _ksi_io_FileIO();
     _ksi_io_StringIO();
     _ksi_io_BytesIO();
 
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "Input/output utilities", KS_IKV(
+        {"BaseIO",                 KS_NEWREF(ksiot_BaseIO)},
         {"StringIO",               KS_NEWREF(ksiot_StringIO)},
         {"BytesIO",                KS_NEWREF(ksiot_BytesIO)},
         {"FileIO",                 KS_NEWREF(ksiot_FileIO)},

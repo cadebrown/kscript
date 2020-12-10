@@ -56,7 +56,7 @@ ksos_frame ksos_frame_copy(ksos_frame of) {
 
 ks_str ksos_frame_get_tb(ksos_frame of) {
     ksio_StringIO sio = ksio_StringIO_new();
-    ksio_AnyIO aio = (ksio_AnyIO)sio;
+    ksio_BaseIO aio = (ksio_BaseIO)sio;
 
     kso f = of->func;
     if (kso_issub(f->type, kst_func)) {

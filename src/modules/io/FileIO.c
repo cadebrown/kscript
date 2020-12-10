@@ -27,108 +27,6 @@ ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, boo
     return self;
 }
 
-ks_ssize_t ksio_FileIO_readb(ksio_FileIO self, ks_ssize_t sz_b, void* data) {
-    if (!self->is_open) {
-        KS_THROW(kst_IOError, "File is not open");
-        return -1;
-    }
-
-    if (!self->is_r) {
-        KS_THROW(kst_IOError, "File is not open for reading");
-        return -1;
-    }
-
-    /* Unlock GIL for IO */
-    KS_GIL_UNLOCK();
-    size_t real_sz = fread(data, 1, sz_b, self->fp);
-    self->sz_r += real_sz;
-    KS_GIL_LOCK();
-
-    return real_sz;
-}
-
-ks_ssize_t ksio_FileIO_reads(ksio_FileIO self, ks_ssize_t sz_c, void* data, ks_ssize_t* num_c) {
-    if (!self->is_open) {
-        KS_THROW(kst_IOError, "File is not open");
-        return -1;
-    }
-
-    if (!self->is_r) {
-        KS_THROW(kst_IOError, "File is not open for reading");
-        return -1;
-    }
-
-    ks_ssize_t sz_b = 0;
-    char utf8[5];
-    *num_c = 0;
-    bool keep_going = true;
-    while (*num_c < sz_c && keep_going) {
-        /* Read single character */
-
-
-        /* Assume UTF8 */
-        int i;
-        for (i = 0; i < 4; ++i) {
-            int c = fgetc(self->fp);
-            if (c == EOF) {
-                keep_going = false;
-                break;
-            }
-
-            self->sz_r++;
-            utf8[i] = c;
-
-            /* Check if it is NOT a continuation byte */
-            if ((c & 0x80) == 0x0) {
-                i++;
-                break;
-            }
-        }
-        if (i == 0) break;
-        utf8[i] = '\0';
-
-        /* Now, add to destination */
-        memcpy(((char*)data) + sz_b, utf8, i);
-        sz_b += i;
-        (*num_c)++;
-    }
-
-    return sz_b;
-}
-
-bool ksio_FileIO_writeb(ksio_FileIO self, ks_ssize_t sz_b, const void* data) {
-    if (!self->is_open) {
-        KS_THROW(kst_IOError, "File is not open");
-        return false;
-    }
-
-    if (!self->is_w) {
-        KS_THROW(kst_IOError, "File is not open for writing");
-        return false;
-    }
-
-    /* Unlock GIL for IO */
-    KS_GIL_UNLOCK();
-    size_t real_sz = fwrite(data, 1, sz_b, self->fp);
-    self->sz_w += real_sz;
-    //fflush(self->fp);
-    KS_GIL_LOCK();
-
-    if (sz_b != real_sz) {
-        KS_THROW(kst_IOError, "Failed to write to file: output was truncated (attempted %l bytes, only wrote %l)", (ks_cint)sz_b, (ks_cint)real_sz);
-        return false;
-    }
-
-    return true;
-}
-
-bool ksio_FileIO_writes(ksio_FileIO self, ks_ssize_t sz_b, const void* data) {
-
-    /* Assume output is UTF8 */
-    return ksio_FileIO_writeb(self, sz_b, data);
-}
-
-
 /* Type Functions */
 
 static KS_TFUNC(T, init) {
@@ -191,7 +89,6 @@ static KS_TFUNC(T, init) {
         return NULL;
     }
 
-    KS_INCREF(src);
     self->fname = src;
     self->is_r = is_r;
     self->is_w = is_w;
@@ -208,7 +105,8 @@ static KS_TFUNC(T, free) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
 
-    KS_NDECREF(self->fname);
+    KS_DECREF(self->fname);
+    
     if (self->do_close && self->is_open && self->fp) {
         fclose(self->fp);
     }
@@ -216,13 +114,6 @@ static KS_TFUNC(T, free) {
     KSO_DEL(self);
 
     return KSO_NONE;
-}
-
-static KS_TFUNC(T, bool) {
-    ksio_FileIO self;
-    KS_ARGS("self:*", &self, ksiot_FileIO);
-
-    return KSO_BOOL(!feof(self->fp));
 }
 
 static KS_TFUNC(T, str) {
@@ -236,6 +127,7 @@ static KS_TFUNC(T, str) {
 static KS_TFUNC(T, close) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
+
     if (self->do_close && self->is_open && self->fp) {
         self->is_open = false;
         if (fclose(self->fp) != 0) {
@@ -258,7 +150,7 @@ static KS_TFUNC(T, read) {
         void* dest = NULL;
         while (rsz < sz) {
             dest = ks_realloc(dest, rsz + bsz);
-            ks_ssize_t csz = ksio_FileIO_readb(self, bsz, ((char*)dest) + rsz);
+            ks_ssize_t csz = ksio_readb((ksio_BaseIO)self, bsz, ((char*)dest) + rsz);
             if (csz < 0) {
                 ks_free(dest);
                 return NULL;
@@ -276,7 +168,7 @@ static KS_TFUNC(T, read) {
         void* dest = NULL;
         while (rsz < sz) {
             dest = ks_realloc(dest, rsz + bsz * 4);
-            ks_ssize_t csz = ksio_FileIO_reads(self, bsz, ((char*)dest) + rsz, &num_c);
+            ks_ssize_t csz = ksio_reads((ksio_BaseIO)self, bsz, ((char*)dest) + rsz, &num_c);
             if (csz < 0) {
                 ks_free(dest);
                 return NULL;
@@ -299,7 +191,7 @@ static KS_TFUNC(T, write) {
         /* Write bytes */
         ks_bytes vm = kso_bytes(msg);
         if (!vm) return NULL;
-        if (!ksio_FileIO_writeb(self, vm->len_b, vm->data)) {
+        if (!ksio_writeb((ksio_BaseIO)self, vm->len_b, vm->data)) {
             KS_DECREF(vm);
             return NULL;
         }
@@ -308,7 +200,7 @@ static KS_TFUNC(T, write) {
         /* Write string */
         ks_str vm = ks_fmt("%S", msg);
         if (!vm) return NULL;
-        if (!ksio_FileIO_writes(self, vm->len_b, vm->data)) {
+        if (!ksio_writes((ksio_BaseIO)self, vm->len_b, vm->data)) {
             KS_DECREF(vm);
             return NULL;
         }
@@ -318,83 +210,9 @@ static KS_TFUNC(T, write) {
 }
 
 
-/** Iterable type **/
-
-
-typedef struct _iter_s {
-    KSO_BASE
-
-    ksio_FileIO of;
-}* _iter;
-
-
-static struct ks_type_s _t_iter;
-static ks_type t_iter = &_t_iter;
-
-static KS_TFUNC(TI, free) {
-    _iter self;
-    KS_ARGS("self:*", &self, t_iter);
-
-    KS_DECREF(self->of);
-
-    KSO_DEL(self);
-
-    return KSO_NONE;
-}
-
-static KS_TFUNC(TI, init) {
-    _iter self;
-    ksio_FileIO of;
-    KS_ARGS("self:* of:*", &self, t_iter, &of, ksiot_FileIO);
-
-    KS_INCREF(of);
-    self->of = of;
-
-    return KSO_NONE;
-}
-
-static KS_TFUNC(TI, next) {
-    _iter self;
-    KS_ARGS("self:*", &self, t_iter);
-
-    if (feof(self->of->fp)) {
-        KS_OUTOFITER();
-        return NULL;
-    }
-
-    char* data = NULL;
-    ks_ssize_t num_c, rsz = 0;
-
-    while (true) {
-        data = ks_realloc(data, rsz + 4);
-        ks_ssize_t csz = ksio_FileIO_reads(self->of, 1, data + rsz, &num_c);
-        rsz += csz;
-        if (csz < 0) {
-            ks_free(data);
-            return NULL;
-        } else if (csz == 0) {
-            ks_str res = ks_str_new(rsz, data);
-            ks_free(data);
-            return (kso)res;
-        } else if (data[rsz - csz] == '\n') {
-            rsz--;
-            if (rsz > 0 && data[rsz - 1] == '\r') {
-                rsz--;
-            }
-            ks_str res = ks_str_new(rsz, data);
-            ks_free(data);
-            return (kso)res;
-        }
-    }
-    assert(false);
-    return NULL;
-}
-
 
 
 /* Export */
-
-
 
 static struct ks_type_s tp;
 ks_type ksiot_FileIO = &tp;
@@ -402,12 +220,11 @@ ks_type ksiot_FileIO = &tp;
 
 void _ksi_io_FileIO() {
 
-    _ksinit(ksiot_FileIO, kst_object, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\n\n    Internally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
+    _ksinit(ksiot_FileIO, ksiot_BaseIO, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\n\n    Internally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, src, mode='r')", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
-        {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
 
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},

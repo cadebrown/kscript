@@ -59,6 +59,7 @@ void _ksi_enumerate();
 void _ksi_Exception();
 
 ks_module _ksi_io();
+void _ksi_io_BaseIO();
 void _ksi_io_FileIO();
 void _ksi_io_StringIO();
 void _ksi_io_BytesIO();
@@ -78,7 +79,10 @@ ks_module _ksi_time();
 void _ksi_time_struct();
 
 ks_module _ksi_net();
+void _ksi_net_SocketIO();
 ks_module _ksi_net_http();
+
+
 ks_module _ksi_nx();
 ks_module _ksi_re();
 ks_module _ksi_gram();

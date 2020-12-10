@@ -784,7 +784,7 @@ KS_API ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const 
  * ```
  * 
  */
-KS_API void ks_tok_add(ksio_AnyIO self, ks_str fname, ks_str src, ks_tok tok);
+KS_API void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok);
 
 /* Create a new AST */
 KS_API ks_ast ks_ast_new(int kind, int n_args, ks_ast* args, kso val, ks_tok tok);

@@ -61,12 +61,12 @@ struct sbfield {
 #define SBFIELD_DEFAULT ((struct sbfield){ .w = -1, .p = -1, .f = SBF_NONE })
 
 /* Forward declarations */
-static bool add_str(ksio_AnyIO self, kso obj);
-static bool add_repr(ksio_AnyIO self, kso obj);
+static bool add_str(ksio_BaseIO self, kso obj);
+static bool add_repr(ksio_BaseIO self, kso obj);
 
 
 /* Base method to add a C-style integer to the output */
-static bool add_int(ksio_AnyIO self, ks_cint val, int base, struct sbfield sbf) {
+static bool add_int(ksio_BaseIO self, ks_cint val, int base, struct sbfield sbf) {
 
     char tmp[256];
     int i = 0;
@@ -109,7 +109,7 @@ static bool add_int(ksio_AnyIO self, ks_cint val, int base, struct sbfield sbf) 
 }
 
 /* Add unsigned integer */
-static bool add_uint(ksio_AnyIO self, ks_uint val, int base, struct sbfield sbf) {
+static bool add_uint(ksio_BaseIO self, ks_uint val, int base, struct sbfield sbf) {
     char tmp[256];
     int i = 0;
     bool is_neg = val < 0;
@@ -148,7 +148,7 @@ static bool add_uint(ksio_AnyIO self, ks_uint val, int base, struct sbfield sbf)
 
 
 /* Add floating point value */
-static bool add_float(ksio_AnyIO self, ks_cfloat val, int base, struct sbfield sbf) {
+static bool add_float(ksio_BaseIO self, ks_cfloat val, int base, struct sbfield sbf) {
     char tmp[256];
     int i = 0;
     if (sbf.p < 0) sbf.p = 11;
@@ -163,7 +163,7 @@ static bool add_float(ksio_AnyIO self, ks_cfloat val, int base, struct sbfield s
 }
 
 /* Add generic object */
-static bool add_O(ksio_AnyIO self, kso obj) {
+static bool add_O(ksio_BaseIO self, kso obj) {
     return 
         ksio_addbuf(self, 2, "<'") &&
         ksio_addbuf(self, obj->type->i__fullname->len_b, obj->type->i__fullname->data) &&
@@ -177,7 +177,7 @@ static bool add_O(ksio_AnyIO self, kso obj) {
 
 
 /* Add integer type */
-static bool add_O_int(ksio_AnyIO self, ks_int val) {
+static bool add_O_int(ksio_BaseIO self, ks_int val) {
     int base = 10;
     ks_size_t mlb = 16 + mpz_sizeinbase(val->val, base);
     char* buf = ks_malloc(mlb);
@@ -201,7 +201,7 @@ static bool add_O_int(ksio_AnyIO self, ks_int val) {
 
 /* Add integer type */
 
-static bool add_O_list(ksio_AnyIO self, ks_list val) {
+static bool add_O_list(ksio_BaseIO self, ks_list val) {
     if (!ksio_addbuf(self, 1, "[")) return false;
 
     if (kso_inrepr((kso)val)) {
@@ -220,7 +220,7 @@ static bool add_O_list(ksio_AnyIO self, ks_list val) {
     return true;
 }
 
-static bool add_O_tuple(ksio_AnyIO self, ks_tuple val) {
+static bool add_O_tuple(ksio_BaseIO self, ks_tuple val) {
     if (!ksio_addbuf(self, 1, "(")) return false;
 
     if (kso_inrepr((kso)val)) {
@@ -239,7 +239,7 @@ static bool add_O_tuple(ksio_AnyIO self, ks_tuple val) {
     return true;
 }
 
-static bool add_O_set(ksio_AnyIO self, ks_set val) {
+static bool add_O_set(ksio_BaseIO self, ks_set val) {
     if (!ksio_addbuf(self, 1, "{")) return false;
 
     if (kso_inrepr((kso)val)) {
@@ -260,7 +260,7 @@ static bool add_O_set(ksio_AnyIO self, ks_set val) {
     return true;
 }
 
-static bool add_O_dict(ksio_AnyIO self, ks_dict val) {
+static bool add_O_dict(ksio_BaseIO self, ks_dict val) {
     if (!ksio_addbuf(self, 1, "{")) return false;
     if (kso_inrepr((kso)val)) {
         ksio_addbuf(self, 3, "...");
@@ -282,7 +282,7 @@ static bool add_O_dict(ksio_AnyIO self, ks_dict val) {
     return true;
 }
 
-static bool add_O_path(ksio_AnyIO self, ksos_path val) {
+static bool add_O_path(ksio_BaseIO self, ksos_path val) {
     if (val->str_ != NULL) {
         return add_str(self, (kso)val->str_);
     }
@@ -300,21 +300,21 @@ static bool add_O_path(ksio_AnyIO self, ksos_path val) {
     ks_cint pos = sio->len_b;
 
     if (val->root == KSO_NONE && val->parts->len == 0) {
-        if (!ksio_add((ksio_AnyIO)sio, ".")) {
+        if (!ksio_add((ksio_BaseIO)sio, ".")) {
             KS_DECREF(sio);
             return false;
 
         }
     } else {
-        if (val->root != KSO_NONE) if (!ksio_add((ksio_AnyIO)sio, "%S", val->root)) {
+        if (val->root != KSO_NONE) if (!ksio_add((ksio_BaseIO)sio, "%S", val->root)) {
             KS_DECREF(sio);
             return false;
         }
 
         ks_size_t i;
         for (i = 0; i < val->parts->len; ++i) {
-            if (i > 0) ksio_add((ksio_AnyIO)sio, "%s", KS_PLATFORM_PATHSEP);
-            if (!ksio_add((ksio_AnyIO)sio, "%S", val->parts->elems[i])) {
+            if (i > 0) ksio_add((ksio_BaseIO)sio, "%s", KS_PLATFORM_PATHSEP);
+            if (!ksio_add((ksio_BaseIO)sio, "%S", val->parts->elems[i])) {
                 KS_DECREF(sio);
                 return false;
             }
@@ -322,7 +322,7 @@ static bool add_O_path(ksio_AnyIO self, ksos_path val) {
     }
 
     val->str_ = ks_str_new(sio->len_b - pos, sio->data);
-    if ((ksio_AnyIO)sio != self) {
+    if ((ksio_BaseIO)sio != self) {
         ksio_addbuf(self, val->str_->len_b, val->str_->data);
     }
     KS_DECREF(sio);
@@ -331,7 +331,7 @@ static bool add_O_path(ksio_AnyIO self, ksos_path val) {
 }
 
 /* Add 'str(obj)' */
-static bool add_str(ksio_AnyIO self, kso obj) {
+static bool add_str(ksio_BaseIO self, kso obj) {
     if (kso_issub(obj->type, kst_str) && obj->type->i__str == kst_str->i__str) {
         ks_str sobj = (ks_str)obj;
         return ksio_addbuf(self, sobj->len_b, sobj->data);
@@ -379,7 +379,7 @@ static bool add_str(ksio_AnyIO self, kso obj) {
 }
 
 /* Add 'repr(obj)' */
-static bool add_repr(ksio_AnyIO self, kso obj) {
+static bool add_repr(ksio_BaseIO self, kso obj) {
     if (kso_issub(obj->type, kst_str) && obj->type->i__str == kst_str->i__str) {
         ks_str sobj = (ks_str)obj;
 
@@ -459,46 +459,8 @@ static bool add_repr(ksio_AnyIO self, kso obj) {
     return add_O(self, obj);
 }
 
-bool ksio_addbuf(ksio_AnyIO self, ks_ssize_t sz, const char* data) {
 
-    if (kso_issub(self->type, ksiot_FileIO)) {
-        ksio_FileIO fio = (ksio_FileIO)self;
-        return ksio_FileIO_writes(fio, sz, data);
-    } else if (kso_issub(self->type, ksiot_StringIO)) {
-        ksio_StringIO sio = (ksio_StringIO)self;
-        ks_ssize_t pos = sio->len_b;
-
-        /* Determine number of characters */
-        sio->len_b += sz;
-        sio->len_c += ks_str_lenc(sz, data);
-
-        sio->data = ks_zrealloc(sio->data, 1, 1 + sio->len_b);
-        memcpy(sio->data + pos, data, sz);
-        sio->data[sio->len_b] = '\0';
-
-        return true;
-
-    } else if (kso_issub(self->type, ksiot_BytesIO)) {
-        ksio_BytesIO sio = (ksio_BytesIO)self;
-        ks_ssize_t pos = sio->len_b;
-
-        /* Determine number of characters */
-        sio->len_b += sz;
-
-        sio->data = ks_zrealloc(sio->data, 1, 1 + sio->len_b);
-        memcpy(sio->data + pos, data, sz);
-        sio->data[sio->len_b] = '\0';
-
-        return true;
-
-    } else {
-        return false;
-    }
-}
-
-
-
-bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap) {
+bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap) {
     const char* ofmt = fmt;
     struct sbfield sbf;
 
@@ -611,6 +573,7 @@ bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap) {
                     break;
 
                 case 'S':
+
                     obj = va_arg(ap, kso);
                     if (!add_str(self, obj)) return false;
                     break;
@@ -660,10 +623,10 @@ bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap) {
     return true;
 }
 
-bool ksio_add(ksio_AnyIO self, const char* fmt, ...) {
+bool ksio_fmt(ksio_BaseIO self, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
-    bool res = ksio_addv(self, fmt, ap);
+    bool res = ksio_fmtv(self, fmt, ap);
     va_end(ap);
     return res;
 }
@@ -681,7 +644,7 @@ ks_str ksio_readall(ks_str fname) {
     void* dest = NULL;
     while (true) {
         dest = ks_realloc(dest, rsz + bsz * 4);
-        ks_ssize_t csz = ksio_FileIO_reads(fio, bsz, ((char*)dest) + rsz, &num_c);
+        ks_ssize_t csz = ksio_reads((ksio_BaseIO)fio, bsz, ((char*)dest) + rsz, &num_c);
         if (csz < 0) {
             ks_free(dest);
             KS_DECREF(fio);

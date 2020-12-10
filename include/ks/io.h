@@ -28,7 +28,7 @@
 /** Types **/
 
 /* Any Input/Output stream */
-typedef kso ksio_AnyIO;
+typedef kso ksio_BaseIO;
 
 /* 'io.FileIO' - represents a file that can be read or written
  */
@@ -64,38 +64,16 @@ typedef struct ksio_FileIO_s {
 typedef struct ksio_StringIO_s {
     KSO_BASE
 
-    /* Whether the FileIO is readable/writeable */
+    /* Whether the IO is readable/writeable */
     bool is_r, is_w;
 
     /* Number of bytes read and written (not rigorous, don't rely on these) */
     ks_ssize_t sz_r, sz_w;
 
-
-    /* Length of the data (in bytes and characters)  */
+    /* Length of the data (in bytes and characters) 
+     * For byte-oriented IO, len_c==len_b, but should not be used
+     */
     int len_b, len_c;
-
-    /* Allocated array of data */
-    char* data;
-
-    /* Internal maximum length it is allocated to hold */
-    ks_ssize_t max_len_b;
-
-}* ksio_StringIO;
-
-/* 'io.BytesIO' - in-memory stream of raw bytes
- */
-typedef struct ksio_BytesIO_s {
-    KSO_BASE
-
-    /* Whether the FileIO is readable/writeable */
-    bool is_r, is_w;
-
-    /* Number of bytes read and written (not rigorous, don't rely on these) */
-    ks_ssize_t sz_r, sz_w;
-
-
-    /* Length of the data (in bytes)  */
-    int len_b;
 
     /* Allocated array of data */
     unsigned char* data;
@@ -103,13 +81,17 @@ typedef struct ksio_BytesIO_s {
     /* Internal maximum length it is allocated to hold */
     ks_ssize_t max_len_b;
 
-}* ksio_BytesIO;
+    /* Current position in the buffer */
+    int pos_b, pos_c;
 
+}* ksio_StringIO;
+
+/* 'io.BytesIO' - like 'io.StringIO', but for binary data
+ */
+typedef ksio_StringIO ksio_BytesIO;
 
 
 /** Unicode Translation **/
-
-
 
 /* Decodes a single character from UTF8 source
  *
@@ -176,34 +158,66 @@ typedef struct ksio_BytesIO_s {
 } while (0)
 
 
-
 /** Functions **/
 
-/* Return a wrapper around an opened C-style FILE*
+
+/* Calculate whether the IO is open
  */
-KS_API ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, bool is_w, bool is_bin, ks_str src_name);
+KS_API bool ksio_is_open(ksio_BaseIO self, bool* out);
+
+/* Calculate whether reading the IO is at the end
+ */
+KS_API bool ksio_is_eof(ksio_BaseIO self, bool* out);
+
+/* Calculate whether the IO is readable/writeable
+ */
+KS_API bool ksio_is_r(ksio_BaseIO self, bool* out);
+KS_API bool ksio_is_w(ksio_BaseIO self, bool* out);
+
+/* Get the datatype of the IO stream. The other methods
+ *   test for bytes- and str- based streams
+ */
+KS_API ks_type ksio_rtype(ksio_BaseIO self);
+KS_API bool ksio_is_bytes(ksio_BaseIO self, bool* out);
+KS_API bool ksio_is_str(ksio_BaseIO self, bool* out);
+
 
 /* Read up to 'sz_b' bytes, and store in 'data'
  *
  * Number of bytes written is returned, or negative number on an error
  */
-KS_API ks_ssize_t ksio_FileIO_readb(ksio_FileIO self, ks_ssize_t sz_b, void* data);
+KS_API ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data);
 
 /* Read up to 'sz_c' characters (real number stored in '*num_c')
  *
  * Writes characters in UTF8 format to 'data', which should have been allocated for 'sz_c * 4' bytes
  * Number of bytes written is returned, or negative number on an error
  */
-KS_API ks_ssize_t ksio_FileIO_reads(ksio_FileIO self, ks_ssize_t sz_c, void* data, ks_ssize_t* num_c);
+KS_API ks_ssize_t ksio_reads(ksio_BaseIO self, ks_ssize_t sz_c, void* data, ks_ssize_t* num_c);
 
 /* Write 'sz_b' bytes of data to the file
  */
-KS_API bool ksio_FileIO_writeb(ksio_FileIO self, ks_ssize_t sz_b, const void* data);
+KS_API bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data);
 
 /* Write 'sz_b' of 'data' (which should be in UTF8 encoding) to the file
  */
-KS_API bool ksio_FileIO_writes(ksio_FileIO self, ks_ssize_t sz_b, const void* data);
+KS_API bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data);
 
+/* Adds a C-style printf-like formatting to the output stream
+ */
+KS_API bool ksio_fmt(ksio_BaseIO self, const char* fmt, ...);
+KS_API bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap);
+
+/* Macro for automatic casting */
+#define ksio_add(_self, ...) (ksio_fmt((ksio_BaseIO)(_self), __VA_ARGS__))
+#define ksio_addv(_self, ...) (ksio_fmtv((ksio_BaseIO)(_self), __VA_ARGS__))
+#define ksio_addbuf(_self, ...) (ksio_writeb((ksio_BaseIO)(_self), __VA_ARGS__))
+
+/** Specific Types **/
+
+/* Return a wrapper around an opened C-style FILE*
+ */
+KS_API ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, bool is_w, bool is_bin, ks_str src_name);
 
 /* Create a new StringIO
  */
@@ -226,16 +240,9 @@ KS_API ksio_BytesIO ksio_BytesIO_new();
 KS_API ks_bytes ksio_BytesIO_get(ksio_BytesIO self);
 KS_API ks_bytes ksio_BytesIO_getf(ksio_BytesIO self);
 
-/* Adds a C-style printf-like formatting to the output
- *
- */
-KS_API bool ksio_add(ksio_AnyIO self, const char* fmt, ...);
-KS_API bool ksio_addv(ksio_AnyIO self, const char* fmt, va_list ap);
 
-/* Add a buffer to an IO
- */
-KS_API bool ksio_addbuf(ksio_AnyIO self, ks_ssize_t sz, const char* data);
 
+/** Misc. Utils **/
 
 /* Read entire file and return as a string. Returns NULL and throws an error if there was a problem
  */
@@ -256,6 +263,7 @@ KS_API ks_ssize_t ksu_getline(char** lineptr, ks_ssize_t* n, FILE* fp);
 
 /* Types */
 KS_API extern ks_type
+    ksiot_BaseIO,
     ksiot_FileIO,
     ksiot_StringIO,
     ksiot_BytesIO

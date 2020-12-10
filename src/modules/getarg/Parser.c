@@ -347,7 +347,7 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
 
 ks_str ksga_help(ksga_Parser self) {
     ksio_StringIO sio = ksio_StringIO_new();
-    ksio_AnyIO aio = (ksio_AnyIO)sio;
+    ksio_BaseIO aio = (ksio_BaseIO)sio;
 
     /* Generate usage message */
     int i, j, k, col;
@@ -642,10 +642,10 @@ static KS_TFUNC(T, on_help) {
     KS_ARGS("self:* name:* opt:*", &parser, ksgat_Parser, &name, kst_str, &opt, kst_str);
 
     if (parser->help) {
-        ksio_add((ksio_AnyIO)ksos_stderr, "%S", parser->help);
+        ksio_add((ksio_BaseIO)ksos_stderr, "%S", parser->help);
     } else {
         ks_str v = ksga_help(parser);
-        ksio_add((ksio_AnyIO)ksos_stderr, "%S", v);
+        ksio_add((ksio_BaseIO)ksos_stderr, "%S", v);
         KS_DECREF(v);
     }
 
@@ -659,7 +659,7 @@ static KS_TFUNC(T, on_version) {
     ks_str name, opt;
     KS_ARGS("self:* name:* opt:*", &parser, ksgat_Parser, &name, kst_str, &opt, kst_str);
 
-    ksio_add((ksio_AnyIO)ksos_stderr, "%S", parser->version);
+    ksio_add((ksio_BaseIO)ksos_stderr, "%S", parser->version);
 
     /* Exit peacefully */
     exit(0);

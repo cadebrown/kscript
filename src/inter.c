@@ -321,7 +321,7 @@ bool ks_inter() {
                 /* If non-empty, add to history */
                 if (*rl_res) add_history(rl_res);
 
-                ksio_add((ksio_AnyIO)code, "%s", rl_res);
+                ksio_add((ksio_BaseIO)code, "%s", rl_res);
 
                 free(rl_res);
                 #else
@@ -336,7 +336,7 @@ bool ks_inter() {
                     done = true;
                     break;
                 }
-                ksio_add((ksio_AnyIO)code, "%.*s", (int)len, gl_res);
+                ksio_add((ksio_BaseIO)code, "%.*s", (int)len, gl_res);
 
                 ks_free(gl_res);
 
@@ -350,7 +350,7 @@ bool ks_inter() {
                     done = true;
                     break;
                 }
-                ksio_add((ksio_AnyIO)code, "%.*s", (int)len, gl_res);
+                ksio_add((ksio_BaseIO)code, "%.*s", (int)len, gl_res);
 
                 ks_free(gl_res);
             }
@@ -416,7 +416,7 @@ bool ks_inter() {
 
         if (do_print && sz_w == ksos_stdout->sz_w) {
             /* We should actually print it out */
-            ksio_add((ksio_AnyIO)ksos_stdout, "%R\n", res);
+            ksio_add((ksio_BaseIO)ksos_stdout, "%R\n", res);
         }
         ks_dict_set(ksg_inter_vars, (kso)prompt2, res);
         KS_DECREF(res);

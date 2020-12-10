@@ -717,29 +717,29 @@ bool kso_catch_ignore() {
 bool kso_catch_ignore_print() {
     ks_Exception exc = kso_catch();
     if (exc) {
-        ksio_add((ksio_AnyIO)ksos_stderr, KS_COL_RED KS_COL_BOLD "%T" KS_COL_RESET ": %S\n", exc, exc->what);
+        ksio_add((ksio_BaseIO)ksos_stderr, KS_COL_RED KS_COL_BOLD "%T" KS_COL_RESET ": %S\n", exc, exc->what);
         ks_list frames = exc->frames;
         assert(frames != NULL);
 
-        ksio_add((ksio_AnyIO)ksos_stderr, "Call Stack:\n");
+        ksio_add((ksio_BaseIO)ksos_stderr, "Call Stack:\n");
 
         #define _PFRAME(_i) do { \
             ksos_frame frame = (ksos_frame)frames->elems[_i]; \
             ks_str tb = ksos_frame_get_tb(frame); \
-            ksio_add((ksio_AnyIO)ksos_stderr, "  #%i: %S\n", _i, tb); \
+            ksio_add((ksio_BaseIO)ksos_stderr, "  #%i: %S\n", _i, tb); \
             KS_DECREF(tb); \
         } while (0)
 
         int mxn = 10, i;
         if (frames->len > mxn) {
             for (i = 0; i < mxn/2; ++i) _PFRAME(i);
-            ksio_add((ksio_AnyIO)ksos_stderr, "  ... (%i more)\n", (int)(frames->len - mxn));
+            ksio_add((ksio_BaseIO)ksos_stderr, "  ... (%i more)\n", (int)(frames->len - mxn));
             for (i = frames->len-mxn/2; i < frames->len; ++i) _PFRAME(i);
         } else {
             for (i = 0; i < frames->len; ++i) _PFRAME(i);
         }
 
-        ksio_add((ksio_AnyIO)ksos_stderr, "In %R\n", ksos_thread_get());
+        ksio_add((ksio_BaseIO)ksos_stderr, "In %R\n", ksos_thread_get());
 
         KS_DECREF(exc);
 

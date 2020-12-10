@@ -48,8 +48,9 @@ static KS_FUNC(print) {
     kso* args;
     KS_ARGS("*args", &n_args, &args);
 
+
     /* Where to output to */
-    ksio_AnyIO out = (ksio_AnyIO)ksos_stdout;
+    ksio_BaseIO out = (ksio_BaseIO)ksos_stdout;
 
     int i;
     for (i = 0; i < n_args; ++i) {

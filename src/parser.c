@@ -22,13 +22,13 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
 
     va_list ap;
     va_start(ap, fmt);
-    bool r = ksio_addv((ksio_AnyIO)sio, fmt, ap);
+    bool r = ksio_addv((ksio_BaseIO)sio, fmt, ap);
     assert(r);
     va_end(ap);
 
-    ksio_addbuf((ksio_AnyIO)sio, 1, "\n");
+    ksio_addbuf((ksio_BaseIO)sio, 1, "\n");
 
-    ks_tok_add((ksio_AnyIO)sio, fname, src, tok);
+    ks_tok_add((ksio_BaseIO)sio, fname, src, tok);
 
     ks_Exception res = ks_Exception_new_c(kst_SyntaxError, NULL, NULL, -1, "%.*s", (int)sio->len_b, sio->data);
     KS_DECREF(sio);
@@ -1113,7 +1113,7 @@ RULE(ATOM) {
         ks_tok t = EAT();
         /* Parse string literal */
         ksio_StringIO sio = ksio_StringIO_new();
-        ksio_AnyIO aio = (ksio_AnyIO)sio;
+        ksio_BaseIO aio = (ksio_BaseIO)sio;
 
         char c = src->data[t.spos];
         assert(c == '\'' || c == '"');

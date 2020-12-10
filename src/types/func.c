@@ -163,14 +163,14 @@ static KS_TFUNC(TP, str) {
 
     ksio_StringIO sio = ksio_StringIO_new();
 
-    ksio_add((ksio_AnyIO)sio, "<%T of=%R, args=(", self, self->of);
+    ksio_add((ksio_BaseIO)sio, "<%T of=%R, args=(", self, self->of);
     int i;
     for (i = 0; i < self->n_args; ++i) {
-        if (i > 0) ksio_add((ksio_AnyIO)sio, ", ");
-        ksio_add((ksio_AnyIO)sio, "%i: %R", self->args[i].idx, self->args[i].val);
+        if (i > 0) ksio_add((ksio_BaseIO)sio, ", ");
+        ksio_add((ksio_BaseIO)sio, "%i: %R", self->args[i].idx, self->args[i].val);
     }
 
-    ksio_add((ksio_AnyIO)sio, ")>");
+    ksio_add((ksio_BaseIO)sio, ")>");
 
     return (kso)ksio_StringIO_getf(sio);
 }
