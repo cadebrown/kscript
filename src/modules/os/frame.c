@@ -99,7 +99,39 @@ ks_str ksos_frame_get_tb(ksos_frame of) {
 
     return ksio_StringIO_getf(sio);
 }
+bool ksos_frame_get_info(ksos_frame self, ks_str* fname, ks_str* func, int* line) {
+    kso f = self->func;
+    if (kso_issub(f->type, kst_func)) {
 
+        ks_func ff = (ks_func)f;
+        if (ff->is_cfunc) {
+            return false;
+        } else {
+            /* Extract bytecode and let later code handle it*/
+            //f = (kso)ff->bfunc.;
+        }
+    }
+
+    if (kso_issub(f->type, kst_code)) {
+        ks_code bc = (ks_code)f;
+
+        *fname = bc->fname;
+        *func = bc->fname;
+        *line = -1;
+
+        struct ks_code_meta meta;
+        if (!ks_code_get_meta(bc, (int)(self->pc - bc->bc->data), &meta)) {
+            kso_catch_ignore();
+        } else {
+            *line = meta.tok.sline;
+        }
+
+        return true;
+    }
+
+
+    return false;
+}
 
 
 /* Type Functions */

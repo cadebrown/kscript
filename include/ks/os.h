@@ -305,6 +305,11 @@ KS_API ksos_frame ksos_frame_copy(ksos_frame of);
  */
 KS_API ks_str ksos_frame_get_tb(ksos_frame self);
 
+/* Returns information about the the given frame
+ * References are NOT returned to the output variables, and no exception is thrown if it returns false
+ */
+KS_API bool ksos_frame_get_info(ksos_frame self, ks_str* fname, ks_str* func, int* line);
+
 
 /* Linearize the linked-list structure of the frames, returning a list of frames with 
  *   'self' at the beginning

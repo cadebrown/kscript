@@ -70,6 +70,8 @@ struct compiler {
 } while (0)
 
 
+static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code, ks_ast v);
+
 
 /* Computes assignment, from the TOS (which should alrea)
  */
@@ -79,7 +81,10 @@ static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, 
         EMITO(KSB_STORE, lhs->val);
 
     } else if (lhs->kind == KS_AST_ATTR) {
+        if (!COMPILE((ks_ast)lhs->args->elems[0])) return false;
         EMITO(KSB_SETATTR, lhs->val);
+        LEN--;
+        META(par->tok);
 
     } else {
         KS_THROW_SYNTAX(fname, src, par->tok, "Can't assign to the left hand side");

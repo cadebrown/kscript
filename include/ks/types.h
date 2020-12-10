@@ -403,6 +403,31 @@ typedef struct ks_range_s {
 
 }* ks_range;
 
+
+/* 'range.__iter' iterator type */
+typedef struct ks_range_iter_s {
+    KSO_BASE
+
+    ks_range of;
+
+    /* Current value to be iterated */
+    ks_int cur;
+
+    /* of->step <=> 0 */
+    int cmp_step_0;
+
+    /* flag set once the iterator is exhausted */
+    bool done;
+
+    bool use_ci;
+
+    /* Optimized for when fully in range of C-style integer */
+    struct {
+        ks_cint cur, start, end, step;
+    } _ci;
+
+}* ks_range_iter;
+
 /* 'list' - collection of objects
  *
  */
@@ -617,6 +642,27 @@ typedef struct ks_graph_s {
 
 }* ks_graph;
 
+
+/* Logging level */
+
+enum {
+    /* Nothing is output */
+    KS_LOGGER_SILENT               = 0,
+
+    /* Only the most fine grained logging */
+    KS_LOGGER_TRACE                = 10,
+    /* Extra information */
+    KS_LOGGER_DEBUG                = 20,
+    /* Misc. information */
+    KS_LOGGER_INFO                 = 30,
+    /* Suspicious result, which should be reported by default (this is the default level) */
+    KS_LOGGER_WARN                 = 40,
+    /* Severe error that may cause malfunctioning */
+    KS_LOGGER_ERROR                = 50,
+    /* Something very bad, normally signals the program will exit */
+    KS_LOGGER_FATAL                = 60,
+};
+
 /* 'logger' - represents a utility object which can log with different levels to the output stream
  *
  */
@@ -634,7 +680,7 @@ typedef struct ks_logger_s {
     ks_cint level;
 
     /* Stream that the output that passes the level gets redirected to
-     * Should normally be a 'os.FileStream' object
+     * Default is 'os.stderr'
      */
     kso output;
 
@@ -725,6 +771,9 @@ struct ks_type_s {
     /* Elements */
     kso i__getelem, i__setelem, i__delelem;
 
+    /* Contains */
+    kso i__contains;
+
     /* Misc. Properties */
     kso i__hash, i__abs, i__len, i__repr;
 
@@ -778,6 +827,7 @@ struct ks_type_s {
     m(__getelem) \
     m(__setelem) \
     m(__delelem) \
+    m(__contains) \
     m(__hash) \
     m(__abs) \
     m(__len) \

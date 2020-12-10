@@ -343,6 +343,12 @@ static bool add_str(ksio_BaseIO self, kso obj) {
         return ksio_addbuf(self, 4, "none");
     } else if (obj->type == kst_bool) {
         return ksio_add(self, obj == KSO_TRUE ? "true" : "false");
+    } else if (kso_isinst(obj, kst_enum) && obj->type->i__str == kst_enum->i__str) {
+        ks_enum v = (ks_enum)obj;
+        if (!add_str(self, (kso)v->s_int.type->i__fullname)) return false;
+        if (!ksio_addbuf(self, 1, ".")) return false;
+        if (!add_str(self, (kso)v->name)) return false;
+        return true;
     } else if (kso_isinst(obj, kst_int) && obj->type->i__str == kst_int->i__str) {
         return add_O_int(self, (ks_int)obj);
     } else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
@@ -426,6 +432,12 @@ static bool add_repr(ksio_BaseIO self, kso obj) {
         return ksio_addbuf(self, 4, "none");
     } else if (obj->type == kst_bool) {
         return ksio_add(self, obj == KSO_TRUE ? "true" : "false");
+    } else if (kso_isinst(obj, kst_enum) && obj->type->i__str == kst_enum->i__str) {
+        ks_enum v = (ks_enum)obj;
+        if (!add_str(self, (kso)v->s_int.type->i__fullname)) return false;
+        if (!ksio_addbuf(self, 1, ".")) return false;
+        if (!add_str(self, (kso)v->name)) return false;
+        return true;
     } else if (kso_isinst(obj, kst_int) && obj->type->i__repr == kst_int->i__repr) {
         return add_O_int(self, (ks_int)obj);
     } else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
@@ -529,12 +541,14 @@ bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap) {
                 /* Otherwise, check 'c' */
                 //if (!add_c(self, fmt, c, sbf, &sap)) return false;
                 kso obj = NULL;
+                kso* objs;
                 ks_cint vi = 0;
                 ks_uint vu = 0;
                 ks_cfloat vf = 0;
                 char* ss = NULL;
                 ks_ucp c_v = 0;
                 char c_v_utf8[5];
+                int k;
 
                 switch (c)
                 {
@@ -573,7 +587,6 @@ bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap) {
                     break;
 
                 case 'S':
-
                     obj = va_arg(ap, kso);
                     if (!add_str(self, obj)) return false;
                     break;
@@ -582,7 +595,19 @@ bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap) {
                     obj = va_arg(ap, kso);
                     if (!add_repr(self, obj)) return false;
                     break;
-                        
+                 
+                case 'J':
+                    ss = va_arg(ap, char*);
+                    vi = va_arg(ap, int);
+                    objs = va_arg(ap, kso*);
+                    int sl = strlen(ss);
+
+                    for (k = 0; k < vi; ++k) {
+                        if (k > 0) if (!ksio_addbuf(self, sl, ss)) return false;
+                        if (!add_str(self, objs[k])) return false;
+                    }
+                    break;
+
                 case 'c':
                     if (sbf.w == -2) sbf.w = va_arg(ap, int);
                     if (sbf.p == -2) sbf.p = va_arg(ap, int);

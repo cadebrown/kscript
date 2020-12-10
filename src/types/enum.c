@@ -28,6 +28,8 @@ ks_type ks_enum_make(const char* name, struct ks_eikv* eikv) {
                 assert(false);
             }
 
+            ks_type_set(tp, mem->name, (kso)mem);
+
             eikv++;
         }
     }
@@ -68,6 +70,32 @@ static KS_TFUNC(T, getattr) {
     return NULL;
 }
 
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso of;
+    KS_ARGS("tp:* of", &tp, kst_type, &of);
+
+    if (kso_issub(of->type, kst_int)) {
+        ks_dict i_v2m = (ks_dict)ks_dict_get_c(tp->attr, "_v2m");
+        assert(i_v2m && i_v2m->type == kst_dict);
+
+        ks_enum r = (ks_enum)ks_dict_get(i_v2m, (kso)of);
+        KS_DECREF(i_v2m);
+
+        return (kso)r;
+    } else {
+        ks_dict i_n2m = (ks_dict)ks_dict_get_c(tp->attr, "_n2m");
+        assert(i_n2m && i_n2m->type == kst_dict);
+
+        ks_enum r = (ks_enum)ks_dict_get(i_n2m, (kso)of);
+        KS_DECREF(i_n2m);
+
+        return (kso)r;
+    }
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -75,6 +103,7 @@ ks_type kst_enum = &tp;
 
 void _ksi_enum() {
     _ksinit(kst_enum, kst_int, T_NAME, sizeof(struct ks_enum_s), -1, "Enumeration of (integral) values, with associated names and values\n\n    This is a numeric (and integral) type, and is treated this way in expressions\n\n    SEE: https://en.wikipedia.org/wiki/Enumeration", KS_IKV(
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of)", "")},
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
     ));
 }

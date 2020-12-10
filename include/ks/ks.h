@@ -245,6 +245,8 @@ KS_API extern ks_type
     kst_partial,
     kst_module,
 
+    kst_logger,
+
     kst_ast,
     kst_code,
 
@@ -651,6 +653,7 @@ KS_API bool kso_is_callable(kso obj);
  *   %T: 'kso', formats the type name
  *   %S: 'kso', formats 'str(ob)'
  *   %R: 'kso', formats 'repr(ob)'
+ *   %J: char*, int, 'kso', formats 's.join(objs)'
  * 
  */
 KS_API ks_str ks_fmt(const char* fmt, ...);
@@ -767,6 +770,11 @@ KS_API ks_bytes ks_bytes_newn(ks_ssize_t len_b, char* data);
 /* Create a new regular-expression from a descriptor string
  */
 KS_API ks_regex ks_regex_new(ks_str expr);
+
+
+/* Create new 'range'
+ */
+KS_API ks_range ks_range_new(ks_type tp, ks_int start, ks_int end, ks_int step);
 
 
 /* Create a new 'tuple' from elements
@@ -963,6 +971,32 @@ KS_API bool ks_graph_add_edge(ks_graph self, ks_cint from, ks_cint to, kso val);
  */
 KS_API void ks_graph_clear(ks_graph self);
 
+/* Return the logger for a given name
+ */
+KS_API ks_logger ks_logger_get(ks_str name);
+KS_API ks_logger ks_logger_get_c(const char* name);
+
+/* C-style logging functions
+ */
+KS_API bool ks_logger_clogv(ks_logger self, int level, const char* file, const char* func, int line, const char* fmt, va_list ap);
+KS_API bool ks_logger_clog(ks_logger self, int level, const char* file, const char* func, int line, const char* fmt, ...);
+
+
+/* Template */
+#define _ks_logT(_name, _level, ...) do { \
+    ks_logger _log = ks_logger_get_c(_name); \
+    assert(_log != NULL); \
+    bool _haderr = !ks_logger_clog(_log, _level, __FILE__, __func__, __LINE__, __VA_ARGS__); \
+    KS_DECREF(_log); \
+    assert(!_haderr); \
+} while (0);
+
+#define ks_trace(_name, ...) _ks_logT(_name, KS_LOGGER_TRACE, __VA_ARGS__)
+#define ks_debug(_name, ...) _ks_logT(_name, KS_LOGGER_DEBUG, __VA_ARGS__)
+#define ks_info(_name, ...) _ks_logT(_name, KS_LOGGER_INFO, __VA_ARGS__)
+#define ks_warn(_name, ...) _ks_logT(_name, KS_LOGGER_WARN, __VA_ARGS__)
+#define ks_error(_name, ...) _ks_logT(_name, KS_LOGGER_ERROR, __VA_ARGS__)
+#define ks_fatal(_name, ...) _ks_logT(_name, KS_LOGGER_FATAL, __VA_ARGS__)
 
 
 
@@ -1005,7 +1039,7 @@ KS_API ks_dict kso_try_getattr_dict(kso obj);
 /* Get, set, or delete an attribute from an object
  */
 KS_API kso kso_getattr(kso ob, ks_str attr);
-KS_API bool kso_setattr(kso ob, ks_str attr);
+KS_API bool kso_setattr(kso ob, ks_str attr, kso val);
 KS_API bool kso_delattr(kso ob, ks_str attr);
 
 /* Get, set, or delete an element from an object
@@ -1106,6 +1140,8 @@ KS_API kso ks_uop_pos(kso V);
 KS_API kso ks_uop_neg(kso V);
 KS_API kso ks_uop_sqig(kso V);
 
+/*  */
+KS_API kso ks_contains(kso L, kso R);
 
 /*** Internal Functions ***/
 

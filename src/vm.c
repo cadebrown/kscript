@@ -242,6 +242,15 @@ kso _ks_exec(ks_code bc) {
             ks_list_pushu(stk, R);
         VMD_OP_END
 
+        VMD_OPA(KSB_SETATTR)
+            L = stk->elems[stk->len - 1];
+            R = stk->elems[stk->len - 2];
+            if (!kso_setattr(L, (ks_str)VC(arg), R)) {
+                goto thrown;
+            }
+            ks_list_popu(stk);
+        VMD_OP_END
+
         VMD_OPA(KSB_GETELEMS)
             ARGS_FROM_STK(arg);
             V = kso_getelems(arg, args);
@@ -484,9 +493,20 @@ kso _ks_exec(ks_code bc) {
         T_UOP(KSB_UOP_SQIG, sqig)
 
 
+        VMD_OP(KSB_BOP_IN)
+            R = ks_list_pop(stk);
+            L = ks_list_pop(stk);
+            V = ks_contains(R, L);
+            if (!V) {
+                KS_DECREF(L);
+                KS_DECREF(R);
+                goto thrown;
+            }
 
-
-
+            KS_DECREF(L);
+            KS_DECREF(R);
+            ks_list_pushu(stk, V);
+        VMD_OP_END
 
         /* Error on unknown */
         VMD_CATCH_REST

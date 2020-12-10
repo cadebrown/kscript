@@ -768,6 +768,7 @@ RULE(E5) {
         else if (TOK.kind == KS_TOK_GE) k = KS_AST_BOP_GE;
         else if (TOK.kind == KS_TOK_EQ) k = KS_AST_BOP_EQ;
         else if (TOK.kind == KS_TOK_NE) k = KS_AST_BOP_NE;
+        else if (TOK.kind == KS_TOK_IN) k = KS_AST_BOP_IN;
         else break; /* not valid */
 
         /* Skip token */

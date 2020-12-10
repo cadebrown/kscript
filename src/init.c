@@ -92,6 +92,8 @@ _KS_DO_SPEC(_KSACT)
     _ksi_bytes();
     _ksi_regex();
 
+    _ksi_range();
+    
     _ksi_set();
     _ksi_dict();
     _ksi_graph();
@@ -101,6 +103,8 @@ _KS_DO_SPEC(_KSACT)
 
     _ksi_func();
     _ksi_names();
+ 
+    _ksi_logger();
  
     _ksi_Exception();
 
@@ -147,6 +151,8 @@ _KS_DO_SPEC(_KSACT)
         {"type",                   (kso)kst_type},
         {"func",                   (kso)kst_func},
 
+        {"logger",                 (kso)kst_logger},
+
         {"int",                    (kso)kst_int},
         {"enum",                   (kso)kst_enum},
         {"bool",                   (kso)kst_bool},
@@ -157,6 +163,7 @@ _KS_DO_SPEC(_KSACT)
         {"bytes",                  (kso)kst_bytes},
         {"regex",                  (kso)kst_regex},
 
+        {"range",                  (kso)kst_range},
         {"list",                   (kso)kst_list},
         {"tuple",                  (kso)kst_tuple},
         {"set",                    (kso)kst_set},
@@ -204,7 +211,6 @@ _KS_DO_SPEC(_KSACT)
         {"chr", (kso)ksf_chr},
         {"ord", (kso)ksf_ord},
     
-
     ));
 
     return has_init = true;

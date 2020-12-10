@@ -487,7 +487,7 @@ enum {
 
     /* SETATTR idx
      *
-     * Sets 'stk[-2].(vc[idx]) = stk[-1]', then deletes 'stk[-2]', with 'stk[-1]' taking its place
+     * Sets 'stk[-1].(vc[idx]) = stk[-2]', then deletes 'stk[-1]'
      */
     KSB_SETATTR,
 

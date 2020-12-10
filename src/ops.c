@@ -59,3 +59,11 @@ T_UOP("+", pos, i__pos)
 T_UOP("-", neg, i__neg)
 T_UOP("~", sqig, i__sqig)
 
+kso ks_contains(kso L, kso R) {
+    if (L->type->i__contains) {
+        return kso_call(L->type->i__contains, 2, (kso[]){ L, R });
+    }
+
+    KS_THROW_METH(L, "__contains");
+    return NULL; 
+}

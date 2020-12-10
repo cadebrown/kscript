@@ -127,7 +127,22 @@ bool kso_hash(kso ob, ks_hash_t* val) {
     } else if (kso_isinst(ob, kst_str) && ob->type->i__hash == kst_str->i__hash) {
         *val = ((ks_str)ob)->v_hash;
         return true;
+    } else if (kso_isinst(ob, kst_tuple) && ob->type->i__hash == kst_tuple->i__hash) {
+        *val = 0;
+        ks_tuple v = (ks_tuple)ob;
+        ks_cint i;
+        ks_hash_t ho;
+        for (i = 0; i < v->len; ++i) {
+            if (!kso_hash(v->elems[i], &ho)) return false;
+            *val = (*val) * KS_HASH_MUL + KS_HASH_ADD + ho;
+        }
+
+        return true;
+    } else if (ob->type->i__hash == kst_object->i__hash) {
+        *val = (ks_hash_t)ob;
+        return true;
     }
+
 
     KS_THROW(kst_TypeError, "'%T' object is not hashable", ob);
     return false;
@@ -354,7 +369,36 @@ kso kso_getattr(kso ob, ks_str attr) {
     return NULL;
 }
 
-bool kso_setattr(kso ob, ks_str attr);
+bool kso_setattr(kso ob, ks_str attr, kso val) {
+    ksos_thread th = ksos_thread_get();
+
+    if (ob->type->i__setattr != kst_object->i__setattr) {
+        /* Attempt to resolve it */
+        kso res = kso_call(ob->type->i__setattr, 3, (kso[]){ ob, (kso)attr, val});
+        if (res) {
+            KS_DECREF(res);
+            return true;
+        } else if (kso_issub(th->exc->type, kst_AttrError)) {
+            kso_catch_ignore();
+        } else {
+            return false;
+        }
+    }
+
+    ks_dict attrdict = kso_try_getattr_dict(ob);
+    if (attrdict) {
+
+        /* Search for it */
+        if (ks_dict_set_h(attrdict, (kso)attr, attr->v_hash, val)) {
+            return true;
+        } else {
+            kso_catch_ignore();
+        }
+    }
+
+    KS_THROW_ATTR(ob, attr);
+    return false;
+}
 bool kso_delattr(kso ob, ks_str attr);
 
 
@@ -652,6 +696,56 @@ kso kso_next(kso ob) {
         }
 
         return KS_NEWREF(it->of->elems[it->pos++]);
+    } else if (kso_issub(ob->type, kst_range_iter) && ob->type->i__next == kst_range_iter->i__next) {
+        /* Range iterator */
+        ks_range_iter it = (ks_range_iter)ob;
+        if (it->done) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+
+        /* Shortcut for speedup */
+        if (it->use_ci) {
+            ks_cint n_cur = it->_ci.cur + it->_ci.step;
+            int cmp_ce = (it->_ci.cur > it->_ci.end) - (it->_ci.cur < it->_ci.end);
+
+            if (cmp_ce == 0 || (it->cmp_step_0 > 0 && cmp_ce > 0) || (it->cmp_step_0 < 0 && cmp_ce < 0)) {
+                it->done = true;
+                KS_OUTOFITER();
+                return NULL;
+            }
+
+            ks_int res = ks_int_new(it->_ci.cur);
+            it->_ci.cur = n_cur;
+
+            return (kso)res;
+        }
+
+
+        /* Determine the next value */
+        if (it->cur) {
+
+            ks_int newcur = (ks_int)ks_bop_add((kso)it->cur, (kso)it->of->step);
+            if (!newcur) return NULL;
+            assert(newcur->type == kst_int);
+            KS_DECREF(it->cur);
+            it->cur = (ks_int)newcur;
+
+        } else {
+            it->cur = (ks_int)KS_NEWREF(it->of->start);
+        }
+
+        /* Do bounds check */
+        int cmp_ce = ks_int_cmp(it->cur, it->of->end);
+
+        /* Do check with step direction */
+        if (cmp_ce == 0 || (it->cmp_step_0 > 0 && cmp_ce > 0) || (it->cmp_step_0 < 0 && cmp_ce < 0)) {
+            it->done = true;
+            KS_OUTOFITER();
+            return NULL;
+        }
+
+        return KS_NEWREF(it->cur);
 
     } else if (ob->type->i__next) {
         return kso_call(ob->type->i__next, 1, &ob);

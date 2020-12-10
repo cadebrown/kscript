@@ -48,6 +48,7 @@ void _ksi_module();
 void _ksi_type();
 void _ksi_func();
 void _ksi_partial();
+void _ksi_logger();
 
 void _ksi_ast();
 void _ksi_code();
