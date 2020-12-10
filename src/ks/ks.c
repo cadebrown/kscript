@@ -108,12 +108,17 @@ int main(int argc, char** argv) {
 
     /* Reclaim 'os.argv' */
     ks_list_clear(ksos_argv);
+
     if (expr != KSO_NONE || code != KSO_NONE) {
         ks_list_insertu(ksos_argv, 0, (kso)ks_str_new(-1, "-"));
     }
 
     for (i = 0; i < newargv->len; ++i) {
         ks_list_pushu(ksos_argv, newargv->elems[i]);
+    }
+
+    if (expr == KSO_NONE && code == KSO_NONE) {
+        ks_list_insertu(ksos_argv, 0, (kso)ks_str_new(-1, "-"));
     }
 
 

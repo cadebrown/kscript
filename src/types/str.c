@@ -149,7 +149,6 @@ ks_list ks_str_split_c(const char* self, const char* by) {
 }
 
 
-
 /* Type Functions */
 
 static KS_TFUNC(T, free) {
@@ -193,8 +192,7 @@ static KS_TFUNC(T, new) {
         }
     }
 
-    KS_THROW_CONV(extra[0]->type, tp);
-    return NULL;
+    return (kso)ks_fmt("%S", extra[0]);
 }
 
 
