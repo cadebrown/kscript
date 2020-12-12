@@ -27,12 +27,15 @@ static int I_digv(ks_ucp c) {
 
 /* C-API */
 
-ks_float ks_float_new(ks_cfloat val) {
-    ks_float self = KSO_NEW(ks_float, kst_float);
+ks_float ks_float_newt(ks_type tp, ks_cfloat val) {
+    ks_float self = KSO_NEW(ks_float, tp);
 
     self->val = val;
 
     return self;
+}
+ks_float ks_float_new(ks_cfloat val) {
+    return ks_float_newt(kst_float, val);
 }
 
 
@@ -332,6 +335,41 @@ int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int b
     return i;
 }
 
+
+/* Type functions */
+
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso obj = KSO_NONE;
+    ks_cint base = 0;
+    KS_ARGS("tp:* ?obj", &tp, kst_type, &obj);
+
+    if (kso_issub(obj->type, kst_str)) {
+        /* String conversion */
+        ks_cfloat x;
+        if (!ks_cfloat_from_str(((ks_str)obj)->data, ((ks_str)obj)->len_b, &x)) return NULL;
+
+        return (kso)ks_float_newt(tp, x);
+    }
+    if (_nargs > 2) {
+        KS_THROW(kst_ArgError, "'base' can only be given when 'obj' is a 'str' object, but it was a '%T' object", obj);
+        return NULL;
+    }
+    if (obj == KSO_NONE) {
+        return (kso)ks_float_newt(tp, 0);
+    } else if (kso_issub(obj->type, tp)) {
+        return KS_NEWREF(obj);
+    } else if (kso_is_float(obj) || kso_is_int(obj)) {
+        ks_cfloat x;
+        if (!kso_get_cf(obj, &x)) return NULL;
+        return (kso)ks_float_newt(tp, x);
+    }
+
+    KS_THROW_CONV(obj->type, tp);
+    return NULL;
+}
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -342,7 +380,7 @@ ks_float ksg_nan, ksg_inf;
 
 void _ksi_float() {
     _ksinit(kst_float, kst_number, T_NAME, sizeof(struct ks_float_s), -1, "Floating point (real) number, which is a quanitity represented by a 'double' in C\n\n    SEE: https://en.wikipedia.org/wiki/Floating-point_arithmetic", KS_IKV(
-
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, obj=non, base=10)", "")},
     ));
 
     ksg_nan = ks_float_new(KS_CFLOAT_NAN);

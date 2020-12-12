@@ -75,12 +75,12 @@ ks_str ks_tok_str(ks_str src, ks_tok tok) {
     return ks_str_new(tok.epos - tok.spos, src->data + tok.spos);
 }
 
-void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok) {
+void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok, bool inc_at) {
 
     /* Subidivide line */
     if (tok.sline < 0 || tok.scol < 0 || tok.spos < 0) {
         /* Invalid token/not real file */
-        ksio_add(self, "@ <EOF> in %R", fname);
+        if (inc_at) ksio_add(self, "@ <EOF> in %R", fname);
 
     } else {
         /* Real token, so add context */
@@ -108,7 +108,7 @@ void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok) {
         /* Add context */
         ksio_add(self, KS_COL_RESET
                   "%.*s" KS_COL_RED KS_COL_BOLD "%.*s" KS_COL_RESET "%.*s\n"
-                  "%.*c" KS_COL_RED KS_COL_BOLD "^%.*c%s" KS_COL_RESET "\n",
+                  "%.*c" KS_COL_RED KS_COL_BOLD "^%.*c%s" KS_COL_RESET,
             tok.spos - pl, s + pl,
             is_multi ? el - tok.spos : tok.epos - tok.spos, s + tok.spos,
             is_multi ? 0 : el - tok.epos, s + tok.epos,
@@ -118,7 +118,7 @@ void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok) {
             is_multi ? "(continued on next line)" : ""
         );
         
-        ksio_add(self, "@ Line %i, Col %i in %R", tok.sline + 1, tok.scol + 1, fname);
+        if (inc_at) ksio_add(self, "\n@ Line %i, Col %i in %R", tok.sline + 1, tok.scol + 1, fname);
     }
 
 }

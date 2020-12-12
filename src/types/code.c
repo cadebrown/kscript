@@ -187,7 +187,7 @@ static KS_TFUNC(T, dis) {
     while (i < sz) {
         ksba op;
         int p = i;
-        if (sz - i >= sizeof(ksba)) {
+        if (i + sizeof(ksba) <= sz) {
             op = *(ksba*)(bc + i);
         } else {
             op.op = *(bc + i);
@@ -223,13 +223,17 @@ static KS_TFUNC(T, dis) {
         OPV(KSB_LOAD)
         OPV(KSB_STORE)
         
-        OP(KSB_GETATTR)
-        OP(KSB_SETATTR)
+        OPV(KSB_GETATTR)
+        OPV(KSB_SETATTR)
         OPI(KSB_GETELEMS)
         OPI(KSB_SETELEMS)
         OPI(KSB_CALL)
 
         OPI(KSB_LIST)
+        OPI(KSB_TUPLE)
+        OPV(KSB_FUNC)
+        OPI(KSB_FUNC_DEFA)
+        OPV(KSB_TYPE)
 
         OPT(KSB_JMP)
         OPT(KSB_JMPT)

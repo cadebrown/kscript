@@ -13,12 +13,19 @@
 
 
 /* Internal routines to handle setting on all platforms */
-static void my_mpz_set_ci(mpz_t self, ks_cint v) {
-    mpz_import(self, 1, 1, sizeof(v), 0, 0, &v);
-}
+
 
 static void my_mpz_set_ui(mpz_t self, ks_uint v) {
     mpz_import(self, 1, 1, sizeof(v), 0, 0, &v);
+}
+
+static void my_mpz_set_ci(mpz_t self, ks_cint v) {
+    if (v < 0) {
+        my_mpz_set_ui(self, -(v + 1) + 1);
+        mpz_neg(self, self);
+    } else {
+        my_mpz_set_ui(self, v);
+    }
 }
 
 #endif
@@ -48,17 +55,22 @@ ks_int ks_int_newu(ks_uint val) {
 }
 
 
-ks_int ks_int_newf(ks_cfloat val) {
+ks_int ks_int_newft(ks_type tp, ks_cfloat val) {
     val = floor(val);
     if ((ks_cint)val == val) {
-        return ks_int_new((ks_cint)val);
+        return ks_int_newt(tp, (ks_cint)val);
     } else {
         /* use GMP */
         mpz_t res;
         mpz_init(res);
         mpz_set_d(res, val);
-        return ks_int_newzn(res);
+        return ks_int_newznt(tp, res);
     }
+}
+
+
+ks_int ks_int_newf(ks_cfloat val) {
+    return ks_int_newft(kst_int, val);
 }
 
 
@@ -120,6 +132,7 @@ ks_int ks_int_newst(ks_type tp, ks_ssize_t sz, const char* src, int base) {
     if (gmp_err < 0) {
         mpz_clear(r);
         KS_THROW(kst_Error, "Invalid format for base %i int: '%.*s'", base, (int)o_sz, o_src);
+        return NULL;
     }
 
     /* Final conversion, and eat 'r' */
@@ -161,10 +174,7 @@ int ks_int_cmp_c(ks_int L, ks_cint r) {
 }
 
 
-
-
 /* Type Functions */
-
 
 static KS_TFUNC(T, free) {
     ks_int self;
@@ -192,9 +202,13 @@ static KS_TFUNC(T, new) {
         return NULL;
     }
     if (obj == KSO_NONE) {
-        return (kso)ks_int_newt(0, -1);
+        return (kso)ks_int_newt(tp, 0);
     } else if (kso_issub(obj->type, tp)) {
         return KS_NEWREF(obj);
+    } else if (kso_is_float(obj)) {
+        ks_cfloat x;
+        if (!kso_get_cf(obj, &x)) return NULL;
+        return (kso)ks_int_newft(tp, x);
     }
 
     KS_THROW_CONV(obj->type, tp);

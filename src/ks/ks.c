@@ -117,7 +117,7 @@ int main(int argc, char** argv) {
         ks_list_pushu(ksos_argv, newargv->elems[i]);
     }
 
-    if (expr == KSO_NONE && code == KSO_NONE) {
+    if (expr == KSO_NONE && code == KSO_NONE && ksos_argv->len == 0) {
         ks_list_insertu(ksos_argv, 0, (kso)ks_str_new(-1, "-"));
     }
 

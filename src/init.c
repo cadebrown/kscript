@@ -213,6 +213,8 @@ _KS_DO_SPEC(_KSACT)
     
     ));
 
+    kst_type->refs = KS_REFS_INF;
+
     return has_init = true;
 }
 

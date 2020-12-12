@@ -241,13 +241,15 @@ enum {
 
     /* Function constructor
      *
-     * args = [name, (*params), body]
+     * val = name
+     * args = [(*params), body]
      */
     KS_AST_FUNC,
 
     /* Type constructor
      *
-     * args = [name, extends, body]
+     * val = name
+     * args = [extends, body]
      */
     KS_AST_TYPE,
 
@@ -532,6 +534,29 @@ enum {
      */
     KSB_TUPLE,
 
+
+    /* FUNC idx
+     *
+     * Creates a new function, from creation info 'vc[idx]', as well as a bytecode, which should be popped
+     *   off the stack
+     * 
+     * vc[idx] = (name, names, sig, doc, va_idx)
+     */
+    KSB_FUNC,
+
+
+    /* FUNC_DEFA num
+     *
+     * Pops the last 'num' elements and sets the function (which should be located under it) to those as defaulst
+     */
+    KSB_FUNC_DEFA,
+
+    /* TYPE idx
+     *
+     * Create a new type, by popping off a base type, and then filling using 'vc[i]' as the body of the bytecode
+     */
+    KSB_TYPE,
+
     /** Control Flow **/
 
     /* JMP amt
@@ -734,6 +759,9 @@ typedef struct ks_code_s {
     /* Actual instructions are stored here */
     ksio_BytesIO bc;
 
+    /* Entire token */
+    ks_tok tok;
+
     
     /* Number of meta-entries  */
     ks_ssize_t n_meta;
@@ -784,7 +812,7 @@ KS_API ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const 
  * ```
  * 
  */
-KS_API void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok);
+KS_API void ks_tok_add(ksio_BaseIO self, ks_str fname, ks_str src, ks_tok tok, bool inc_at);
 
 /* Create a new AST */
 KS_API ks_ast ks_ast_new(int kind, int n_args, ks_ast* args, kso val, ks_tok tok);
@@ -864,6 +892,6 @@ KS_API ks_code ks_compile(ks_str fname, ks_str src, ks_ast prog, ks_code from);
 /** Internal methods **/
 
 /* Execute on the current thread's last frame (see 'vm.c' for semantics) */
-KS_API kso _ks_exec(ks_code bc);
+KS_API kso _ks_exec(ks_code bc, ks_type _in);
 
 #endif /* KS_COMPILER_H__ */

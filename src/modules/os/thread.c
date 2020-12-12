@@ -145,6 +145,33 @@ bool ksos_thread_join(ksos_thread self) {
 
 /* Type Functions */
 
+static KS_TFUNC(T, free) {
+    ksos_thread self;
+    KS_ARGS("self:*", &self, ksost_thread);
+
+    KS_DECREF(self->name);
+    KS_NDECREF(self->args);
+
+
+    ks_free(self->handlers);
+
+    KSO_DEL(self);
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso of;
+    kso args = (kso)_ksv_emptytuple;
+    KS_ARGS("tp:* of ?args", &tp, kst_type, &of, &args);
+
+    ks_tuple rr = ks_tuple_newi(args);
+    if (!rr) return NULL;
+    ksos_thread res = ksos_thread_new(tp, NULL, of, rr);
+    KS_DECREF(rr);
+
+    return (kso)res;
+}
 static KS_TFUNC(T, str) {
     ksos_thread self;
     KS_ARGS("self:*", &self, ksost_thread);
@@ -159,6 +186,7 @@ ks_type ksost_thread = &tp;
 
 void _ksi_os_thread() {
     _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, "Thread of execution, which is a single strand of execution happening (possibly) at the same time as other threads\n\n    Although these are typically wrapped by OS-level threads, there is also the Global Interpreter Lock (GIL) which prevents bytecodes from executing at the same time", KS_IKV(
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of, args=none)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
     ));

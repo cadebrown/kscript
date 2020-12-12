@@ -27,6 +27,7 @@ ks_module ks_import(ks_str name) {
     _BIMOD(m)
     _BIMOD(getarg)
     _BIMOD(time)
+    _BIMOD(libc)
 
     if (!res) {
         /* No builtin found, so try dynamically searching */

@@ -22,9 +22,6 @@ ksos_frame ksos_frame_new(kso func) {
     self->pc = NULL;
     self->closure = NULL;
 
-    self->n_handlers = 0;
-    self->handlers = NULL;
-
     return self;
 }
 
@@ -41,14 +38,6 @@ ksos_frame ksos_frame_copy(ksos_frame of) {
     self->closure = of->closure;
 
     self->pc = of->pc;
-
-    self->n_handlers = of->n_handlers;
-    self->handlers = ks_zmalloc(sizeof(*self->handlers), self->n_handlers);
-
-    ks_size_t i;
-    for (i = 0; i < self->n_handlers; ++i) {
-        self->handlers[i] = of->handlers[i];
-    }
 
     return self;
 }
@@ -69,7 +58,7 @@ ks_str ksos_frame_get_tb(ksos_frame of) {
             return ksio_StringIO_getf(sio);
         } else {
             /* Extract bytecode and let later code handle it*/
-            //f = (kso)ff->bfunc.;
+            f = (kso)ff->bfunc.bc;
         }
     }
 
@@ -80,18 +69,24 @@ ks_str ksos_frame_get_tb(ksos_frame of) {
         ks_tok tok = KS_TOK_MAKE_EMPTY();
 
         struct ks_code_meta meta;
-        if (!ks_code_get_meta(bc, (int)(of->pc - bc->bc->data), &meta)) {
-            kso_catch_ignore();
+        if (of->pc) {
+            if (!ks_code_get_meta(bc, (int)(of->pc - bc->bc->data), &meta)) {
+                kso_catch_ignore();
 
-            if (tok.sline > 0) {
-                ksio_add(aio, " (line %i):\n", tok.sline + 1);
-                ks_tok_add(aio, bc->fname, bc->src, tok);
+                if (tok.sline > 0) {
+                    ksio_add(aio, " (line %i, col %i):\n", tok.sline + 1, meta.tok.scol + 1);
+                    ks_tok_add(aio, bc->fname, bc->src, tok, false);
+                }
+
+            } else {
+                ksio_add(aio, " (line %i, col %i):\n", meta.tok.sline + 1, meta.tok.scol + 1);
+                ks_tok_add(aio, bc->fname, bc->src, meta.tok, false);
             }
-
         } else {
-            ksio_add(aio, " (line %i):\n", meta.tok.sline + 1);
-            ks_tok_add(aio, bc->fname, bc->src, meta.tok);
+            ksio_add(aio, " (line %i, col %i):\n", bc->tok.sline + 1, bc->tok.scol + 1);
+            ks_tok_add(aio, bc->fname, bc->src, bc->tok, false);
         }
+
     } else {
         ksio_add(aio, "In %R", f);
     }
@@ -145,7 +140,6 @@ static KS_TFUNC(T, free) {
 
     KS_DECREF(self->func);
     if (self->args) KS_DECREF(self->args);
-    ks_free(self->handlers);
 
     KSO_DEL(self);
 

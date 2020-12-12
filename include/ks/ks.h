@@ -543,6 +543,14 @@ KS_API bool ks_cfloat_from_str(const char* str, int sz, ks_cfloat* out);
 KS_API int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int base);
 
 
+/* Converts a string (in 'str', of 'sz', or if '-1', it is NUL-terminated) to a 'ks_ccomplex', stored in '*out'
+ */
+KS_API bool ks_ccomplex_from_str(const char* str, int sz, ks_ccomplex* out);
+
+/* Converts a 'ks_ccomplex' to a string
+ */
+KS_API int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci, int prec, int base);
+
 
 /** Object API **/
 
@@ -695,7 +703,7 @@ KS_API ks_int ks_int_news(ks_ssize_t sz, const char* src, int base);
  */
 KS_API ks_int ks_int_newz(mpz_t val);
 KS_API ks_int ks_int_newzn(mpz_t val);
-
+KS_API ks_int ks_int_newznt(ks_type tp, mpz_t val);
 
 /* Compare two kscript integers, returning a comparator
  */
@@ -838,6 +846,18 @@ KS_API ks_tuple ks_tuple_newi(kso objs);
 /* Create a new C-style function wrapper
  */
 KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
+
+/* Create a new kscript bytecode function
+ * 'args' is the tuple of (str) names of all parameters
+ * 'n_defa' is the number of default arguments (on the right side of 'args')
+ * 'vararg_idx' is the index of the vararg (or -1 if none exists)
+ */
+KS_API ks_func ks_func_new_k(kso bc, ks_tuple args, int n_defa, kso* defa, int vararg_idx, ks_str sig, ks_str doc);
+
+/* Set defaults for a function (last 'n_defa' parameters)
+ */
+KS_API void ks_func_setdefa(ks_func self, int n_defa, kso* defa);
+
 
 /* Create a new partial function with index '0' filled in
  */
@@ -1019,7 +1039,7 @@ KS_API kso kso_call(kso func, int nargs, kso* args);
 
 /* Extended calling method which allows you to pass in locals to forward to it
  */
-KS_API kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals);
+KS_API kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame closure);
 
 
 /* Create an iterable from 'ob'

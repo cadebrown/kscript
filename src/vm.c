@@ -113,7 +113,7 @@ static bool is_typeinfo(ks_type tp, kso info, bool* out) {
  * This method does not add anything to the thread's stack frames (that should be
  *   done in the caller, for example in 'kso_call_ext()')
  */
-kso _ks_exec(ks_code bc) {
+kso _ks_exec(ks_code bc, ks_type _in) {
     /* Thread we are executing on */
     ksos_thread th = ksos_thread_get();
     assert(th && th->frames->len > 0);
@@ -129,6 +129,9 @@ kso _ks_exec(ks_code bc) {
     /* Program stack (value stack) */
     ks_list stk = th->stk;
     int ssl = stk->len;
+
+    /* Number of handlers */
+    int snh = th->n_handlers;
 
     /* Get a value from the value cache/constant array */
     #define VC(_idx) (bc->vc->elems[_idx])
@@ -178,6 +181,18 @@ kso _ks_exec(ks_code bc) {
         } \
     } while (0)
 
+    /* Store a local value */
+    #define STORE(_name, _obj) do { \
+        if (_in != NULL) { \
+            if (!ks_type_set(_in, _name, (kso)_obj)) { \
+                goto thrown; \
+            } \
+        } else { \
+            if (!ks_dict_set_h(frame->locals, (kso)_name, _name->v_hash, (kso)_obj)) { \
+                goto thrown; \
+            } \
+        } \
+    } while (0)
 
     /* Dispatch */
     disp:;
@@ -230,7 +245,7 @@ kso _ks_exec(ks_code bc) {
             name = (ks_str)VC(arg);
             assert(name->type == kst_str);
             V = stk->elems[stk->len - 1];
-            if (!ks_dict_set_h(frame->locals, (kso)name, name->v_hash, V)) goto thrown;
+            STORE(name, V);
         VMD_OP_END
 
         VMD_OPA(KSB_GETATTR)
@@ -282,6 +297,65 @@ kso _ks_exec(ks_code bc) {
         VMD_OPA(KSB_TUPLE)
             stk->len -= arg;
             ks_list_pushu(stk, (kso)ks_tuple_newn(arg, stk->elems + stk->len));
+        VMD_OP_END
+
+        VMD_OPA(KSB_FUNC)
+            /* (name, sig, (*pars), doc, va_idx) */
+            ks_tuple finfo = (ks_tuple)VC(arg);
+            assert(finfo->type == kst_tuple && finfo->len == 5);
+
+            ks_cint va_idx;
+            if (!kso_get_ci(finfo->elems[4], &va_idx)) {
+                assert(false);
+            }
+
+            kso fbc = ks_list_pop(stk);
+            assert(fbc && fbc->type == kst_code);
+            ks_func fnew = ks_func_new_k(fbc, (ks_tuple)finfo->elems[2], 0, NULL, va_idx, (ks_str)finfo->elems[1], (ks_str)finfo->elems[3]);
+            KS_DECREF(fbc);
+
+            ks_list_pushu(stk, (kso)fnew);
+
+        VMD_OP_END
+
+        VMD_OPA(KSB_FUNC_DEFA)
+            ARGS_FROM_STK(arg);
+            ks_func f = (ks_func)stk->elems[stk->len - 1];
+            assert(f->type == kst_func && !f->is_cfunc);
+            ks_func_setdefa(f, n_args, args);
+            DECREF_ARGS(arg);
+        VMD_OP_END
+
+        VMD_OPA(KSB_TYPE)
+            /* (name, doc) */
+            ks_tuple tinfo = (ks_tuple)VC(arg);
+            assert(tinfo->type == kst_tuple && tinfo->len == 2);
+
+            ks_type tbase = (ks_type)ks_list_pop(stk);
+            assert(tbase && kso_issub(tbase->type, kst_type));
+            kso tbc = ks_list_pop(stk);
+            assert(tbc && tbc->type == kst_code);
+
+            int tsz = tbase->ob_sz, tattr = tbase->ob_attr;
+
+            if (tattr < 0) {
+                tattr = tsz;
+                tsz += sizeof(ks_dict);
+            }
+            ks_type tnew = ks_type_new(((ks_str)tinfo->elems[0])->data, tbase, tsz, tattr, ((ks_str)tinfo->elems[1])->data, NULL);
+            KS_DECREF(tbase);
+
+            /* Execute the body */
+            V = kso_call_ext(tbc, 1, (kso[]){ (kso)tnew }, tnew->attr, frame);
+            KS_DECREF(tbc);
+            if (!V) {
+                KS_DECREF(tnew);
+                KS_DECREF(tbc);
+                goto thrown;
+            }
+
+            ks_list_pushu(stk, (kso)tnew);
+
         VMD_OP_END
 
 
@@ -370,9 +444,10 @@ kso _ks_exec(ks_code bc) {
         VMD_OP_END
 
         VMD_OPA(KSB_TRY_START)
-            i = frame->n_handlers++;
-            frame->handlers = ks_zrealloc(frame->handlers, sizeof(*frame->handlers), frame->n_handlers);
-            frame->handlers[i] = pc + arg;
+            i = th->n_handlers++;
+            th->handlers = ks_zrealloc(th->handlers, sizeof(*th->handlers), th->n_handlers);
+            th->handlers[i].topc = pc + arg;
+            th->handlers[i].stklen = stk->len;
         VMD_OP_END
 
         VMD_OPA(KSB_TRY_CATCH)
@@ -399,7 +474,7 @@ kso _ks_exec(ks_code bc) {
         VMD_OP_END
 
         VMD_OPA(KSB_TRY_END)
-            frame->n_handlers--;
+            th->n_handlers--;
             pc += arg;
         VMD_OP_END
 
@@ -515,9 +590,12 @@ kso _ks_exec(ks_code bc) {
 
     thrown:;
     /* Exception was thrown */
-    if (frame->n_handlers > 0) {
+    if (th->n_handlers > snh) {
         /* Execute handler */
-        pc = frame->handlers[--frame->n_handlers];
+        while (stk->len > th->handlers[th->n_handlers - 1].stklen) {
+            ks_list_popu(stk);
+        }
+        pc = th->handlers[--th->n_handlers].topc;
         VMD_NEXT();
     }
 

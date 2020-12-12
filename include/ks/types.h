@@ -888,7 +888,7 @@ typedef struct ks_func_s {
         struct {
 
             /* Bytecode object attached */
-            //ks_bytecode bc;
+            kso bc;
 
             /* Number of formal parameters to the function */
             int n_pars;

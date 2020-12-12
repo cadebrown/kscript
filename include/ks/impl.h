@@ -83,6 +83,12 @@ ks_module _ksi_net();
 void _ksi_net_SocketIO();
 ks_module _ksi_net_http();
 
+ks_module _ksi_libc();
+void _ksi_libc_dll();
+void _ksi_libc_fp();
+void _ksi_libc_ints();
+
+
 
 ks_module _ksi_nx();
 ks_module _ksi_re();

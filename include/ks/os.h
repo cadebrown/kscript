@@ -142,13 +142,6 @@ struct ksos_frame_s {
     /* Program counter, current position */
     unsigned char* pc;
 
-
-    /* Number of bytecode handlers in the current thread */
-    int n_handlers;
-
-    /* Array of bytecode handlers */
-    unsigned char** handlers;
-
 };
 
 
@@ -190,6 +183,19 @@ typedef struct ksos_thread_s {
 
     /* Whether it is active, or it has some action queued up */
     bool is_active, is_queue;
+
+    /* Number of bytecode handlers in the current thread */
+    int n_handlers;
+
+    /* Array of bytecode handlers */
+    struct ksos_thread_handler {
+        /* Stack length to restore to */
+        int stklen;
+
+        /* Program counter to jump to */
+        unsigned char* topc;
+
+    }* handlers;
 
 
 #ifdef KS_HAVE_PTHREADS

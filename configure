@@ -29,6 +29,7 @@
 
 # --- Optional Packages ---
 
+WITH_ffi="auto"
 WITH_gmp="auto"
 WITH_pthreads="auto"
 WITH_readline="auto"
@@ -316,6 +317,15 @@ check_clib pthreads "$WITH_pthreads" "" "-pthread" "
 
 int main(int argc, char** argv) {
     pthread_t thd;
+    return 0;
+}
+"
+
+check_clib ffi "$WITH_ffi" "" "-lffi" "
+#include <ffi.h>
+
+int main(int argc, char** argv) {
+    ffi_cif cif;
     return 0;
 }
 "

@@ -41,7 +41,7 @@ struct compiler {
 
 /* Emit an opcode and argument */
 #define EMITI(_op, _ival) ks_code_emiti(code, (_op), (_ival))
-#define EMITO(_op, _oval) ks_code_emito(code, (_op), (_oval))
+#define EMITO(_op, _oval) ks_code_emito(code, (_op), (kso)(_oval))
 
 /* Emit a token as meta at the current position */
 #define META(_tok) ks_code_meta(code, (_tok))
@@ -187,6 +187,116 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         META(v->tok);
         LEN += 1 - NSUB;
 
+    } else if (k == KS_AST_FUNC) {
+        assert(NSUB == 2);
+        /* info = (name, sig, names, doc) */
+        ks_tuple info = (ks_tuple)v->val;
+        assert(info && kso_issub(info->type, kst_tuple) && info->len == 4);
+        ks_ast params = SUB(0), body = SUB(1);
+        assert(params->kind == KS_AST_TUPLE);
+
+        /* Index of the vararg, and the start of the default arguments */
+        int vararg_idx = -1, defa_idx = -1;
+        for (i = 0; i < params->args->len; ++i) {
+            ks_ast par = (ks_ast)params->args->elems[i];
+            if (par->kind == KS_AST_UOP_STAR) {
+                /* Vararg (*NAME) */
+                if (vararg_idx >= 0) {
+                    KS_THROW_SYNTAX(fname, src, par->tok, "Given multiple '*' parameters; there may only be one in a 'func' definition");
+                    return false;
+                }
+                vararg_idx = i;
+                assert(par->args->len == 1);
+                par = (ks_ast)par->args->elems[0];
+                assert(par->kind == KS_AST_NAME);
+            } else if (par->kind == KS_AST_BOP_ASSIGN) {
+                /* Default parameter (NAME=VAL) */
+                if (defa_idx < 0) defa_idx = i;
+                assert(par->args->len == 2);
+                par = (ks_ast)par->args->elems[0];
+
+            } else if (par->kind == KS_AST_NAME) {
+                /* Just normal name (NAME) */
+                if (defa_idx >= 0) {
+                    KS_THROW_SYNTAX(fname, src, par->tok, "Given normal parameter after default parameter");
+                    return false;
+                }
+
+            } else {
+                KS_THROW_SYNTAX(fname, src, par->tok, "Invalid parameter to %s", v->kind == KS_AST_FUNC ? "function" : "lambda");
+                return false;
+            }
+        }
+
+        if (vararg_idx >= 0 && defa_idx >= 0) {
+            KS_THROW_SYNTAX(fname, src, params->tok, "Given '*' parameters and default parameters (may not have both)");
+            return false;
+        }
+
+        ks_tuple newinfo = ks_tuple_new(5, (kso[]){
+            info->elems[0],
+            info->elems[1],
+            info->elems[2],
+            info->elems[3],
+            (kso)ks_int_new((ks_cint)vararg_idx)
+        });
+
+        ks_code body_bc = ks_compile((ks_str)info->elems[1], src, body, code);
+        if (!body_bc) {
+            KS_DECREF(newinfo);
+            return NULL;
+        }
+        body_bc->tok = ks_tok_combo(params->tok, params->tok);
+
+        EMITO(KSB_PUSH, body_bc);
+        KS_DECREF(body_bc);
+        LEN += 1;
+
+        EMITO(KSB_FUNC, newinfo);
+        LEN += 1 - 1;
+        KS_DECREF(newinfo);
+
+        if (((ks_str)info->elems[0])->data[0] != '<') {
+            EMITO(KSB_STORE, info->elems[0]);
+        }
+
+        /* Now, emit the defaults */
+        int n_defa = 0;
+        if (defa_idx >= 0) {
+            n_defa = params->args->len - defa_idx;
+            for (i = defa_idx; i < params->args->len; ++i) {
+                ks_ast par = (ks_ast)params->args->elems[i];
+                assert(par->kind == KS_AST_BOP_ASSIGN && par->args->len == 2);
+                par = (ks_ast)par->args->elems[1];
+                if (!COMPILE(par)) return false;
+            }
+            EMITI(KSB_FUNC_DEFA, n_defa);
+            LEN -= n_defa;
+        }
+    } else if (k == KS_AST_TYPE) {
+        assert(NSUB == 2);
+        ks_tuple info = (ks_tuple)v->val;
+        assert(info && kso_issub(info->type, kst_tuple) && info->len == 2);
+        ks_ast ext = SUB(0), body = SUB(1);
+
+        ks_code body_bc = ks_compile((ks_str)info->elems[0], src, body, code);
+        if (!body_bc) return false;
+
+        body_bc->tok = v->tok;
+
+        EMITO(KSB_PUSH, body_bc);
+        KS_DECREF(body_bc);
+        LEN += 1;
+
+        if (!COMPILE(ext)) return false;
+
+        EMITO(KSB_TYPE, info);
+        LEN += 1 - 2;
+
+        /* Store as a name */
+        if (((ks_str)info->elems[0])->data[0] != '<') {
+            EMITO(KSB_STORE, info->elems[0]);
+        }
 
     } else if (k == KS_AST_IF) {
         /* Emit conditional */

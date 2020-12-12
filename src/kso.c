@@ -289,9 +289,27 @@ ks_int kso_int(kso ob) {
     if (kso_issub(ob->type, kst_int)) {
         KS_INCREF(ob);
         return (ks_int)ob;
+    } else if (ob->type->i__int) {
+        ks_int res = (ks_int)kso_call(ob->type->i__int, 1, &ob);
+        if (!res) return NULL;
+        if (!kso_issub(res->type, kst_int)) {
+            KS_THROW(kst_TypeError, "'%T.__int()' returned non-'bytes' object of type '%T'", ob, res);
+            KS_DECREF(res);
+            return NULL;
+        }
+        return res;
+    } else if (ob->type->i__integral) {
+        ks_int res = (ks_int)kso_call(ob->type->i__integral, 1, &ob);
+        if (!res) return NULL;
+        if (!kso_issub(res->type, kst_int)) {
+            KS_THROW(kst_TypeError, "'%T.__integral()' returned non-'bytes' object of type '%T'", ob, res);
+            KS_DECREF(res);
+            return NULL;
+        }
+        return res;
     }
 
-    KS_THROW(kst_TypeError, "Failed to convert '%T' object to 'int'");
+    KS_THROW(kst_TypeError, "Failed to convert '%T' object to 'int'", ob);
     return NULL;
 }
 
@@ -528,7 +546,7 @@ bool kso_delelems(int n_keys, kso* keys) {
 
 
 
-kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
+kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame closure) {
     ksos_thread th = ksos_thread_get();
     assert(th != NULL);
     int i, j, k;
@@ -546,6 +564,58 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
         } else {
             /* Execute a bytecode directly */
 
+            /* Bytecode function */
+            if (!frame->locals) frame->locals = ks_dict_new(NULL);
+            int i;
+
+            if (!frame->closure) {
+                if (f->bfunc.closure) {
+                    KS_INCREF(f->bfunc.closure);
+                    frame->closure = (ksos_frame)f->bfunc.closure;
+                }
+            }
+
+            if (f->bfunc.vararg_idx >= 0) {
+                /* Vararg calling */
+                if (nargs < f->bfunc.n_req) {
+                    KS_THROW(kst_ArgError, "Expected at least %i arguments, but got %i", f->bfunc.n_req, nargs);
+                } else {
+                    int n_before = f->bfunc.vararg_idx;
+                    int n_after = f->bfunc.n_pars - f->bfunc.vararg_idx - 1;
+                    int n_va = nargs - (n_before + n_after);
+
+                    for (i = 0; i < n_before; ++i) {
+                        bool b = ks_dict_set_h(frame->locals, (kso)f->bfunc.pars[i].name, f->bfunc.pars[i].name->v_hash, args[i]);
+                        assert(b);
+                    }
+                    ks_list vas = ks_list_new(n_va, args + i);
+                    ks_dict_set_h(frame->locals, (kso)f->bfunc.pars[i].name, f->bfunc.pars[i].name->v_hash, (kso)vas);
+                    i += n_va;
+                    KS_DECREF(vas);
+
+                    int j;
+                    for (j = n_before+1; i < nargs; ++i, ++j) {
+                        bool b = ks_dict_set_h(frame->locals, (kso)f->bfunc.pars[j].name, f->bfunc.pars[j].name->v_hash, args[i]);
+                        assert(b);
+                    }
+
+                    res = _ks_exec((ks_code)f->bfunc.bc, NULL);
+                }
+            } else {
+                /* Standard calling */
+                if (f->bfunc.n_req == f->bfunc.n_pars && nargs != f->bfunc.n_req) {
+                    KS_THROW(kst_ArgError, "Expected at least %i arguments, but got %i", f->bfunc.n_req, nargs);
+                } else if (nargs < f->bfunc.n_req || nargs > f->bfunc.n_pars) {
+                    KS_THROW(kst_ArgError, "Expected between %i and %i arguments, but got %i", f->bfunc.n_req, f->bfunc.n_pars, nargs);
+                } else {
+                    for (i = 0; i < f->bfunc.n_pars; ++i) {
+                        bool b = ks_dict_set_h(frame->locals, (kso)f->bfunc.pars[i].name, f->bfunc.pars[i].name->v_hash, i < nargs ? args[i] : f->bfunc.pars[i].defa);
+                        assert(b);
+                    }
+
+                    res = _ks_exec((ks_code)f->bfunc.bc, NULL);
+                }
+            }
         }
 
         ks_list_popu(th->frames);
@@ -563,7 +633,9 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
             /* TODO: possibly don't use dictionaries until they're needed? */
             frame->locals = ks_dict_new(NULL);
         }
-        res = _ks_exec((ks_code)func);
+        ks_type _in = NULL;
+        if (nargs >= 1 && kso_issub(args[0]->type, kst_type)) _in = (ks_type)args[0];
+        res = _ks_exec((ks_code)func, _in);
 
         ks_list_popu(th->frames);
         KS_DECREF(frame);
@@ -587,7 +659,7 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
         assert(i == new_nargs && j == f->n_args && k == nargs);
 
         /* Call the thing being wrapped */
-        res = kso_call_ext(f->of, new_nargs, new_args, locals);
+        res = kso_call(f->of, new_nargs, new_args);
 
         ks_free(new_args);
 
@@ -644,7 +716,23 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
                 }
             }
         }
+        
+    } else if (func->type->i__call) {
+        ksos_frame frame = ksos_frame_new(func);
+        ks_list_push(th->frames, (kso)frame);
 
+        /* Allocate new arguments with the instance at the front */
+        int new_nargs = nargs + 1;
+        kso* new_args = ks_zmalloc(sizeof(*new_args), new_nargs);
+        new_args[0] = (kso)func;
+        for (i = 0; i < nargs; ++i) new_args[i + 1] = args[i];
+
+        res = kso_call(func->type->i__call, new_nargs, new_args);
+
+        ks_free(new_args);
+
+        ks_list_popu(th->frames);
+        KS_DECREF(frame);
     } else {
         KS_THROW(kst_TypeError, "'%T' object was not callable", func);
     }
@@ -654,7 +742,7 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals) {
 
 
 kso kso_call(kso func, int nargs, kso* args) {
-    return kso_call_ext(func, nargs, args, NULL);
+    return kso_call_ext(func, nargs, args, NULL, NULL);
 }
 
 
@@ -878,17 +966,15 @@ void _kso_del(kso ob) {
         exit(1);
     }
 
-    ob->type->num_obs_del++;
-
-    KS_DECREF(ob->type);
-
-
     if (ob->type->ob_attr > 0) {
         /* Initialize attribute dictionary */
         ks_dict* attr = (ks_dict*)(((ks_uint)ob + ob->type->ob_attr));
     
         KS_DECREF(*attr);
     }
+
+    ob->type->num_obs_del++;
+    KS_DECREF(ob->type);
 
     ks_free(ob);
 }

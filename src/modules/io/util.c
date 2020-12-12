@@ -369,7 +369,7 @@ static bool add_str(ksio_BaseIO self, kso obj) {
         ks_str sobj = (ks_str)kso_call(obj->type->i__str, 1, &obj);
         if (!sobj) return false;
         if (!kso_issub(sobj->type, kst_str)) {
-            //KS_THROW_EXC(kst_Error, "'__str' method returned non-str");
+            KS_THROW(kst_Error, "'%T.__str' method returned non-str object of type '%T'", obj, sobj);
             KS_DECREF(sobj);
             return false;
         }

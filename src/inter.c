@@ -298,6 +298,10 @@ bool ks_inter() {
         /* Clear buffer for source code */
         code->len_b = code->len_c = 0;
 
+        ks_str src = NULL;
+        ks_tok* toks = NULL;
+        ks_ssize_t n_toks = 0;
+
         /* Parse lines contained in this input */
         while (true) {
 
@@ -356,16 +360,63 @@ bool ks_inter() {
             }
 
             /* Now, tokenize the new source code, and see if a continuation should be added */
+            if (src) KS_DECREF(src);
+            src = ksio_StringIO_get(code);
+                
+            toks = NULL;
+            n_toks = ks_lex(fname, src, &toks);
+            if (n_toks < 0) {
+                kso_catch_ignore_print();
+                ks_free(toks);
+                continue;
+            }
 
-            break;
+            /* Count tokens */
+            int n_brk = 0, n_brc = 0, n_par = 0, i;
+            for (i = 0; i < n_toks; ++i) {
+                switch (toks[i].kind)
+                {
+                case KS_TOK_LPAR:
+                    n_par++;
+                    break;
+                case KS_TOK_RPAR:
+                    n_par--;
+                    break;
+                case KS_TOK_LBRC:
+                    n_brc++;
+                    break;
+                case KS_TOK_RBRC:
+                    n_brc--;
+                    break;
+                
+                case KS_TOK_LBRK:
+                    n_brk++;
+                    break;
+                case KS_TOK_RBRK:
+                    n_brk--;
+                    break;
+                
+                default:
+                    break;
+                }
+            }
+
+            ks_free(toks);
+
+            if (n_brk > 0 || n_brc > 0 || n_par > 0) {
+                continue;
+            } else {
+                break;
+            }
+
         }
 
         /* Now, actually compile and run the input */
-        ks_str src = ksio_StringIO_get(code);
+        src = ksio_StringIO_get(code);
 
         /* Turn the input code into a list of tokens */
-        ks_tok* toks = NULL;
-        ks_ssize_t n_toks = ks_lex(fname, src, &toks);
+        toks = NULL;
+        n_toks = ks_lex(fname, src, &toks);
         if (n_toks < 0) {
             kso_catch_ignore_print();
             ks_free(toks);
@@ -407,7 +458,7 @@ bool ks_inter() {
         ks_ssize_t sz_w = ksos_stdout->sz_w;
 
         /* Execute the program, which should return the value */
-        kso res = kso_call_ext((kso)code, 0, NULL, ksg_inter_vars);
+        kso res = kso_call_ext((kso)code, 0, NULL, ksg_inter_vars, NULL);
         KS_DECREF(code);
         if (!res) {
             kso_catch_ignore_print();
