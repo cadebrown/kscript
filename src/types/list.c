@@ -101,6 +101,19 @@ bool ks_list_pushu(ks_list self, kso ob) {
     self->elems[i] = ob;
     return true;
 }
+bool ks_list_pushan(ks_list self, ks_cint len, kso* objs) {
+    ks_ssize_t i = self->len;
+    self->len += len;
+    if (self->len > self->_max_len) {
+        self->_max_len = ks_nextsize(self->_max_len, self->len);
+        self->elems = ks_zrealloc(self->elems, sizeof(*self->elems), self->_max_len);
+    }
+
+    memcpy(self->elems + i, objs, len * sizeof(*objs));
+    return true;
+}
+
+
 bool ks_list_pusha(ks_list self, ks_cint len, kso* objs) {
     ks_ssize_t i = self->len;
     self->len += len;
@@ -116,8 +129,6 @@ bool ks_list_pusha(ks_list self, ks_cint len, kso* objs) {
 
     return true;
 }
-
-
 
 
 bool ks_list_pushall(ks_list self, kso objs) {
@@ -314,4 +325,6 @@ void _ksi_list() {
         {"__iter",               KS_NEWREF(kst_list_iter)},
         {"__add",                ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
     ));
+
+    kst_list->i__hash = NULL;
 }

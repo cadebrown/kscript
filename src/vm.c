@@ -138,6 +138,10 @@ kso _ks_exec(ks_code bc, ks_type _in) {
 
     /* Temporaries */
     ks_str name;
+    ks_tuple tup;
+    ks_list lis;
+    ks_set st;
+    ks_dict dc;
     kso L, R, V;
     bool truthy;
     int i, j;
@@ -298,7 +302,16 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             DECREF_ARGS(arg);
             if (!V) goto thrown;
             ks_list_pushu(stk, V);
+        VMD_OP_END
 
+        VMD_OP(KSB_CALLV)
+            lis = (ks_list)ks_list_pop(stk);
+            assert(lis->type == kst_list);
+            V = kso_call(lis->elems[0], lis->len-1, lis->elems+1);
+            KS_DECREF(lis);
+            if (!V) goto thrown;
+
+            ks_list_pushu(stk, V);
         VMD_OP_END
 
         /** Constructors **/
@@ -308,9 +321,82 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             ks_list_pushu(stk, (kso)ks_list_newn(arg, stk->elems + stk->len));
         VMD_OP_END
 
+        VMD_OPA(KSB_LIST_PUSHN)
+            stk->len -= arg;
+            ks_list_pushan((ks_list)stk->elems[stk->len - 1], arg, stk->elems + stk->len);
+        VMD_OP_END
+
+        VMD_OP(KSB_LIST_PUSHI)
+            V = ks_list_pop(stk);
+            if (!ks_list_pushall((ks_list)stk->elems[stk->len - 1], V)) {
+                KS_DECREF(V);
+                goto thrown;
+            }
+            KS_DECREF(V);
+        VMD_OP_END
+
+
         VMD_OPA(KSB_TUPLE)
             stk->len -= arg;
             ks_list_pushu(stk, (kso)ks_tuple_newn(arg, stk->elems + stk->len));
+        VMD_OP_END
+
+        VMD_OPA(KSB_TUPLE_PUSHN)
+            stk->len -= arg;
+            tup = (ks_tuple)stk->elems[stk->len - 1];
+            tup->elems = ks_zrealloc(tup->elems, sizeof(*tup->elems), tup->len + arg);
+            memcpy(tup->elems + tup->len, stk->elems + stk->len, arg * sizeof(*tup->elems));
+            tup->len += arg;
+        VMD_OP_END
+
+        VMD_OP(KSB_TUPLE_PUSHI)
+            V = ks_list_pop(stk);
+            tup = (ks_tuple)stk->elems[stk->len - 1];
+            ks_tuple ttt = ks_tuple_newi(V);
+            KS_DECREF(V);
+            if (!ttt) {
+                goto thrown;
+            }
+            tup->elems = ks_zrealloc(tup->elems, sizeof(*tup->elems), tup->len + ttt->len);
+            memcpy(tup->elems + tup->len, ttt->elems, ttt->len * sizeof(*tup->elems));
+            tup->len += ttt->len;
+        VMD_OP_END
+
+
+        VMD_OPA(KSB_SET)
+            stk->len -= arg;
+            st = ks_set_new(arg, stk->elems + stk->len);
+            for (i = 0; i < arg; ++i) KS_DECREF(stk->elems[stk->len + i]);
+            if (!st) goto thrown;
+            ks_list_pushu(stk, (kso)st);
+        VMD_OP_END
+
+        VMD_OPA(KSB_SET_PUSHN)
+            stk->len -= arg;
+            for (i = 0; i < stk->len; ++i) {
+                if (!ks_set_add((ks_set)stk->elems[stk->len - 1], stk->elems[stk->len + i])) {
+                    for (j = 0; j < arg; ++j) KS_DECREF(stk->elems[stk->len + j]);
+                    goto thrown;
+                }
+            }
+            for (j = 0; j < arg; ++j) KS_DECREF(stk->elems[stk->len + j]);
+        VMD_OP_END
+
+        VMD_OP(KSB_SET_PUSHI)
+            V = ks_list_pop(stk);
+            if (!ks_set_addall((ks_set)stk->elems[stk->len - 1], V)) {
+                KS_DECREF(V);
+                goto thrown;
+            }
+            KS_DECREF(V);
+        VMD_OP_END
+
+        VMD_OPA(KSB_DICT)
+            stk->len -= arg;
+            dc = ks_dict_newkv(arg, stk->elems + stk->len);
+            for (i = 0; i < arg; ++i) KS_DECREF(stk->elems[stk->len + i]);
+            if (!dc) goto thrown;
+            ks_list_pushu(stk, (kso)dc);
         VMD_OP_END
 
         VMD_OPA(KSB_FUNC)

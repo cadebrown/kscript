@@ -526,6 +526,11 @@ enum {
      */
     KSB_CALL,
 
+    /* CALLV
+     *
+     * Like 'KSB_CALL', except it pops off an iterable, and a function and performs 'args[0](*args[1:])'
+     */
+    KSB_CALLV,
 
     /** Constructors **/
 
@@ -536,6 +541,18 @@ enum {
      */
     KSB_LIST,
 
+    /* LIST_PUSHN num
+     *
+     * Pops the top 'num' objects, and pushes it onto the list (which should be under the objects popped)
+     */
+    KSB_LIST_PUSHN,
+
+    /* LIST_PUSHI
+     *
+     * Like 'KSB_LIST_PUSHN' except pops off the TOS, which should be an iterable, and adds all elements
+     */
+    KSB_LIST_PUSHI,
+
     /* TUPLE num
      *
      * Creates a new tuple out of the last 'num' items on the stack (popping them off) and then pushes
@@ -543,6 +560,51 @@ enum {
      */
     KSB_TUPLE,
 
+    /* TUPLE_PUSHN num
+     *
+     * Pops the top 'num' objects, and pushes it onto the tuple (which should be under the objects popped)
+     * 
+     * Although tuples are supposed to be immutable, this is fine because it is never used before it
+     *   is fully built
+     */
+    KSB_TUPLE_PUSHN,
+
+    /* TUPLE_PUSHI
+     *
+     * Like 'KSB_TUPLE_PUSHN' except pops off the TOS, which should be an iterable, and adds all elements
+     */
+    KSB_TUPLE_PUSHI,
+
+    /* SET num
+     *
+     * Creates a new set out of the last 'num' items on the stack (popping them off) and then pushes
+     *   the set back on
+     */
+    KSB_SET,
+
+    /* SET_PUSHN num
+     *
+     * Pops the top 'num' objects, and pushes it onto the set (which should be under the objects popped)
+     */
+    KSB_SET_PUSHN,
+
+    /* SET_PUSHI
+     *
+     * Like 'KSB_SET_PUSHN' except pops off the TOS, which should be an iterable, and adds all elements
+     */
+    KSB_SET_PUSHI,
+
+    /* DICT num
+     *
+     * Pops off 'num' entries (should be divisible by 2), and treats them as (key, val) pairs
+     */
+    KSB_DICT,
+    /* DICT_PUSHN num
+     */
+    KSB_DICT_PUSHN,
+    /* DICT_PUSHI
+     */
+    KSB_DICT_PUSHI,
 
     /* FUNC idx
      *

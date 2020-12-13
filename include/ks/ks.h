@@ -823,6 +823,7 @@ KS_API bool ks_list_pushu(ks_list self, kso ob);
 /* Push array
  */
 KS_API bool ks_list_pusha(ks_list self, ks_cint len, kso* objs);
+KS_API bool ks_list_pushan(ks_list self, ks_cint len, kso* objs);
 
 /* Push all elements of an iterable onto a list
  */
@@ -930,6 +931,10 @@ KS_API ks_list ks_set_calc_buckets(ks_set self);
  */
 KS_API ks_dict ks_dict_new(struct ks_ikv* ikv);
 KS_API ks_dict ks_dict_newn(struct ks_ikv* ikv);
+
+/* Create a new dictionary from key, val interleaved
+ */
+KS_API ks_dict ks_dict_newkv(int nargs, kso* args);
 
 /* Empty the dictionary
  */

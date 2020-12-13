@@ -5,6 +5,7 @@
 #include <ks/impl.h>
 
 #define T_NAME "set"
+#define TI_NAME T_NAME ".__iter"
 
 /* Internals */
 
@@ -405,15 +406,121 @@ ks_list ks_set_calc_buckets(ks_set self) {
     return res;
 }
 
+/* Type Functions */
+
+static KS_TFUNC(T, free) {
+    ks_set self;
+    KS_ARGS("self:*", &self, kst_set);
+
+    ks_cint i;
+    for (i = 0; i < self->len_ents; ++i) {
+        struct ks_set_ent* ent = &self->ents[i];
+        if (ent->key) {
+            KS_DECREF(ent->key);
+        }
+    }
+
+    ks_free(self->ents);
+    ks_free(self->buckets_s8);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    int nargs;
+    kso* args;
+    KS_ARGS("tp:* *args", &tp, kst_type, &nargs, &args);
+
+    ks_set self = KSO_NEW(ks_set, tp);
+
+    self->len_buckets = self->len_ents = self->len_real = 0;
+    self->_max_len_buckets_b = self->_max_len_ents = 0;
+
+    self->ents = NULL;
+    self->buckets_s8 = NULL;
+
+    return (kso)self;
+}
+
+static KS_TFUNC(T, init) {
+    ks_set self;
+    kso objs = KSO_NONE;
+    KS_ARGS("self:* ?objs", &self, kst_set, &objs);
+
+    ks_set_clear(self);
+
+    if (objs != KSO_NONE) {
+        if (!ks_set_addall(self, objs)) {
+            return NULL;
+        }
+    }
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, len) {
+    ks_set self;
+    KS_ARGS("self:*", &self, kst_set);
+
+    return (kso)ks_int_newu(self->len_real);
+}
+
+
+/** Iterator **/
+
+static KS_TFUNC(TI, free) {
+    ks_set_iter self;
+    KS_ARGS("self:*", &self, kst_set_iter);
+
+    KS_DECREF(self->of);
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(TI, new) {
+    ks_type tp;
+    ks_set of;
+    KS_ARGS("tp:* of:*", &tp, kst_type, &of, kst_set);
+
+    ks_set_iter self = KSO_NEW(ks_set_iter, tp);
+
+    KS_INCREF(of);
+    self->of = of;
+
+    self->pos = 0;
+
+    return (kso)self;
+}
 
 /* Export */
 
 static struct ks_type_s tp;
 ks_type kst_set = &tp;
 
-void _ksi_set() {
-    _ksinit(kst_set, kst_object, T_NAME, sizeof(struct ks_set_s), -1, "A set of (unique) objects, which can be modified, ordered by first insertion order, resetting with deletion\n\n    Internally, it is a hash-set, which means only one object that hashes a certain way and compares equal with other keys may be contained. Therefore, you cannot store things like 'true' and '1' in the same hashset -- they will become the same item", KS_IKV(
+static struct ks_type_s tp_iter;
+ks_type kst_set_iter = &tp_iter;
 
+void _ksi_set() {
+
+
+    _ksinit(kst_set_iter, kst_object, TI_NAME, sizeof(struct ks_set_s), -1, "", KS_IKV(
+        {"__free",               ksf_wrap(TI_free_, TI_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(TI_new_, TI_NAME ".__new(tp, of)", "")},
     ));
-    
+
+
+    _ksinit(kst_set, kst_object, T_NAME, sizeof(struct ks_set_s), -1, "A set of (unique) objects, which can be modified, ordered by first insertion order, resetting with deletion\n\n    Internally, it is a hash-set, which means only one object that hashes a certain way and compares equal with other keys may be contained. Therefore, you cannot store things like 'true' and '1' in the same hashset -- they will become the same item", KS_IKV(
+        {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
+        {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, objs=none)", "")},
+
+        {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
+        {"__iter",                 KS_NEWREF(kst_set_iter)},
+    ));
+
+    kst_set->i__hash = NULL;
 }

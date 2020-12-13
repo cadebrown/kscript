@@ -976,12 +976,20 @@ RULE(E14) {
             bool had_comma = false;
 
             while (TOK.kind != KS_TOK_RPAR) {
+                tt = TOK;
+                bool is_va = TOK.kind == KS_TOK_MUL;
+                if (is_va) {
+                    EAT();
+                    had_comma = true;
+                }
+
                 ks_ast sub = SUB(EXPR);
                 if (!sub) {
                     KS_DECREF(tup);
                     return NULL;
                 }
 
+                if (is_va) sub = ks_ast_newn(KS_AST_UOP_STAR, 1, &sub, NULL, tt);
                 ks_ast_pushn(tup, sub);
 
                 SKIP_N();
@@ -1043,6 +1051,90 @@ RULE(E14) {
         }
 
         res->tok = ks_tok_combo(res->tok, EAT());
+
+    } else if (TOK.kind == KS_TOK_LBRC) {
+        /* Set or dictionary constructor */
+        t = EAT();
+        SKIP_N();
+
+        if (TOK.kind == KS_TOK_COM) {
+            EAT();
+            SKIP_N();
+
+            if (TOK.kind == KS_TOK_RBRC) {
+                res = ks_ast_new(KS_AST_DICT, 0, NULL, NULL, ks_tok_combo(t, EAT()));
+            } else {
+                KS_THROW_SYNTAX(fname, src, TOK, "Expected '}' immediately after ',' in the empty dict constructor '{,}'");
+                return NULL;
+            }
+        } else if (TOK.kind == KS_TOK_RBRC) {
+            res = ks_ast_new(KS_AST_DICT, 0, NULL, NULL, ks_tok_combo(t, EAT()));
+        } else {
+            /* May be set or dict */
+            assert(res == NULL);
+            bool is_dict = true;
+
+            while (TOK.kind != KS_TOK_RBRC) {
+                tt = TOK;
+                bool is_va = tt.kind == KS_TOK_MUL;
+                if (is_va) EAT();
+
+                ks_ast sub = SUB(EXPR);
+                if (!sub) {
+                    if (res) KS_DECREF(res);
+                    return NULL;
+                }
+
+                if (!res) {
+                    /* First time */
+                    is_dict = TOK.kind == KS_TOK_COL;
+                    res = ks_ast_newn(is_dict ? KS_AST_DICT : KS_AST_SET, 0, NULL, NULL, t);
+                } else {
+                    if (is_dict && TOK.kind != KS_TOK_COL) {
+                        KS_THROW_SYNTAX(fname, src, TOK, "Expected ':' for keyval entry in dict constructor");
+                        KS_DECREF(sub);
+                        KS_DECREF(res);
+                        return NULL;
+                    } else if (!is_dict && TOK.kind == KS_TOK_COL) {
+                        KS_THROW_SYNTAX(fname, src, TOK, "Unxpected ':' for entry in set constructor (did you mean to make a dict?)");
+                        KS_DECREF(sub);
+                        KS_DECREF(res);
+                        return NULL;
+                    }
+                }
+                if (is_va) sub = ks_ast_newn(KS_AST_UOP_STAR, 1, &sub, NULL, tt);
+
+                if (is_dict) {
+                    /* Error should have been handled above */
+                    ks_tok ttt = EAT();
+                    assert(ttt.kind == KS_TOK_COL);
+                    ks_ast val = SUB(EXPR);
+                    if (!val) {
+                        KS_DECREF(res);
+                        KS_DECREF(sub);
+                        return NULL;
+                    }
+                    ks_ast_pushn(res, sub);
+                    ks_ast_pushn(res, val);
+
+                } else {
+                    ks_ast_pushn(res, sub);
+                }
+
+                SKIP_N();
+                if (TOK.kind == KS_TOK_COM) {
+                    EAT();                
+                    SKIP_N();
+                } else break;
+            }
+
+            if (TOK.kind != KS_TOK_RBRC) {
+                KS_THROW_SYNTAX(fname, src, TOK, "Expected '}' to end dict here");
+                KS_DECREF(res);
+                return NULL;
+            }
+            res->tok = ks_tok_combo(res->tok, EAT());
+        }
 
     } else if (TOK_EQ(TOK, "func") && (toks[toki+1].kind == KS_TOK_LBRC || toks[toki+1].kind == KS_TOK_LPAR || toks[toki+1].kind == KS_TOK_NAME)) {
         res = ks_ast_new(KS_AST_FUNC, 0, NULL, NULL, EAT());

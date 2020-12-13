@@ -191,6 +191,54 @@ static KS_TFUNC(T, getelem) {
     return (kso)ks_type_template(self, nargs, args);
 }
 
+
+static int buildgraph(ks_type self, ks_graph res, int* ct) {
+    ks_graph_add_node(res, (kso)self);
+    int me = (*ct)++;
+    int i;
+    for (i = 0; i < self->n_subs; ++i) {
+        int c = buildgraph(self->subs[i], res, ct);
+        if (c < 0) return -1;
+
+        ks_graph_add_edge(res, me, c, KSO_NONE);
+    }
+
+    return me;
+}
+
+static KS_TFUNC(T, graph) {
+    ks_type self;
+    KS_ARGS("self:*", &self, kst_type);
+
+    ks_graph res = (ks_graph)kso_call((kso)kst_graph, 0, NULL);
+    if (!res) return NULL;
+
+    /* Generate dependency graph from type hierarchy */
+    int ct = 0;
+
+    if (buildgraph(self, res, &ct) < 0) {
+        KS_DECREF(res);
+        return NULL;
+    }
+
+    /* Build a path up to object */
+    int iti = 0;
+    ks_type it = self;
+    do {
+        it = it->i__base;
+        int me = ct++;
+
+        ks_graph_add_node(res, (kso)it);
+        ks_graph_add_edge(res, me, iti, KSO_NONE);
+
+        iti = me;
+    }  while (it != kst_object);
+
+    return (kso)res;
+}
+
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -200,5 +248,8 @@ void _ksi_type() {
     _ksinit(kst_type, kst_object, T_NAME, sizeof(struct ks_type_s), offsetof(struct ks_type_s, attr), "Represents a type, which is a descriptor of objects which are instances of the type", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *args)", "")},
+        {"__graph",                ksf_wrap(T_graph_, T_NAME ".__graph(self)", "")},
+
+
     ));
 }

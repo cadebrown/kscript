@@ -845,6 +845,15 @@ kso kso_next(kso ob) {
         }
 
         return KS_NEWREF(it->of->elems[it->pos++]);
+    } else if (kso_issub(ob->type, kst_set_iter) && ob->type->i__next == kst_set_iter->i__next) {
+        ks_set_iter it = (ks_set_iter)ob;
+        if (it->pos >= it->of->len_ents) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+        while (!it->of->ents[it->pos].key) it->pos++;
+
+        return KS_NEWREF(it->of->ents[it->pos++].key);
     } else if (kso_issub(ob->type, kst_range_iter) && ob->type->i__next == kst_range_iter->i__next) {
         /* Range iterator */
         ks_range_iter it = (ks_range_iter)ob;

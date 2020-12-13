@@ -228,9 +228,18 @@ static KS_TFUNC(T, dis) {
         OPI(KSB_GETELEMS)
         OPI(KSB_SETELEMS)
         OPI(KSB_CALL)
+        OP(KSB_CALLV)
 
         OPI(KSB_LIST)
+        OPI(KSB_LIST_PUSHN)
+        OP(KSB_LIST_PUSHI)
         OPI(KSB_TUPLE)
+        OPI(KSB_TUPLE_PUSHN)
+        OP(KSB_TUPLE_PUSHI)
+
+        OPI(KSB_SET)
+        OPI(KSB_SET_PUSHN)
+        OP(KSB_SET_PUSHI)
         OPV(KSB_FUNC)
         OPI(KSB_FUNC_DEFA)
         OPV(KSB_TYPE)

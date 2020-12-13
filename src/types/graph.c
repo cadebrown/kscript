@@ -378,4 +378,7 @@ void _ksi_graph() {
 
         {"_dotfile",               ksf_wrap(T_dotfile_, T_NAME "._dotfile(self)", "Generate a Graphviz dotfile source\n\n    SEE: https://graphviz.org/")},
     ));
+
+    kst_graph->i__hash = NULL;
+
 }

@@ -451,7 +451,7 @@ typedef struct ks_list_iter_s {
 
     ks_list of;
 
-    /* Current position (in bytes) that the iterator is at */
+    /* Current position that the iterator is at */
     ks_cint pos;
 
 }* ks_list_iter;
@@ -517,6 +517,19 @@ typedef struct ks_set_s {
     ks_size_t _max_len_ents, _max_len_buckets_b;
 
 }* ks_set;
+
+/* 'set.__iter' iterator type */
+typedef struct ks_set_iter_s {
+    KSO_BASE
+
+    ks_set of;
+
+    /* Current position (in ents) */
+    ks_cint pos;
+
+}* ks_set_iter;
+
+
 
 /* 'dict' - mapping of keys to values, where keys are unique
  *

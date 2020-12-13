@@ -249,6 +249,22 @@ ks_dict ks_dict_newn(struct ks_ikv* ikv) {
     return res;
 }
 
+ks_dict ks_dict_newkv(int nargs, kso* args) {
+    ks_dict res = ks_dict_new(NULL);
+
+    assert(nargs % 2 == 0);
+    int i;
+    for (i = 0; i < nargs; i += 2) {
+        if (!ks_dict_set(res, args[i], args[i+1])) {
+            KS_DECREF(res);
+            return NULL;
+        }
+    }
+
+    return res;
+}
+
+
 void ks_dict_clear(ks_dict self) {
 
     ks_cint i;
@@ -509,8 +525,6 @@ ks_list ks_dict_calc_buckets(ks_dict self) {
 }
 
 
-
-
 /* Type Functions */
 
 static KS_TFUNC(T, free) {
@@ -533,8 +547,6 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
-
-
 /* Export */
 
 static struct ks_type_s tp;
@@ -545,4 +557,5 @@ void _ksi_dict() {
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
     ));
     
+    kst_dict->i__hash = NULL;
 }

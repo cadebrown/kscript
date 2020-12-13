@@ -141,12 +141,48 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
     } else if (k == KS_AST_CALL) {
         for (i = 0; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                break;
+            }
             if (!COMPILE(SUB(i))) return false;
         }
-        assert((LEN - ssl) == NSUB);
-        EMITI(KSB_CALL, NSUB);
-        LEN += 1 - NSUB;
-        META(v->tok);
+        assert((LEN - ssl) == i);
+
+        if (i == NSUB) {
+            /* Normal call */
+            EMITI(KSB_CALL, i);
+            LEN += 1 - i;
+            META(v->tok);
+
+        } else {
+            EMITI(KSB_LIST, i);
+            LEN += 1 - i;
+            for (j = i+1; i < NSUB; ++i) {
+                if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                    if (i > j) {
+                        EMITI(KSB_LIST_PUSHN, i - j);
+                        LEN -= (i - j);
+                        j = i+1;
+                    }
+
+                    if (!COMPILE((ks_ast)SUB(i)->args->elems[0])) return false;
+                    EMIT(KSB_LIST_PUSHI);
+                    LEN -= 1;
+                } else {
+                    if (!COMPILE(SUB(i))) return false;
+
+                }
+            }
+            if (i > j) {
+                EMITI(KSB_LIST_PUSHN, i - j);
+                LEN -= (i - j);
+                j = i+1;
+            }
+
+            EMIT(KSB_CALLV);
+            LEN += 1 - 1;
+            META(v->tok);
+        }
 
     } else if (k == KS_AST_RET) {
         assert(NSUB == 1);
@@ -190,20 +226,141 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         META(v->tok);
     } else if (k == KS_AST_LIST) {
         for (i = 0; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                break;
+            }
             if (!COMPILE(SUB(i))) return false;
         }
-        assert(LEN == ssl + NSUB);
-        EMITI(KSB_LIST, NSUB);
+        EMITI(KSB_LIST, i);
+        LEN += 1 - i;
+
         META(v->tok);
-        LEN += 1 - NSUB;
+        for (j = i+1; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                if (i > j) {
+                    EMITI(KSB_LIST_PUSHN, i - j);
+                    LEN -= (i - j);
+                    j = i+1;
+                }
+
+                if (!COMPILE((ks_ast)SUB(i)->args->elems[0])) return false;
+                EMIT(KSB_LIST_PUSHI);
+                LEN -= 1;
+            } else {
+                if (!COMPILE(SUB(i))) return false;
+
+            }
+        }
+        if (i > j) {
+            EMITI(KSB_LIST_PUSHN, i - j);
+            LEN -= (i - j);
+            j = i+1;
+        }
+
     } else if (k == KS_AST_TUPLE) {
         for (i = 0; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                break;
+            }
             if (!COMPILE(SUB(i))) return false;
         }
-        assert(LEN == ssl + NSUB);
-        EMITI(KSB_TUPLE, NSUB);
+        if (i == NSUB) {
+            /* Just create tuple */
+            EMITI(KSB_TUPLE, i);
+            LEN += 1 - i;
+            META(v->tok);
+        } else {
+            /* Built tuple */
+            EMITI(KSB_TUPLE, i);
+            LEN += 1 - i;
+            META(v->tok);
+            for (j = i+1; i < NSUB; ++i) {
+                if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                    if (i > j) {
+                        EMITI(KSB_TUPLE_PUSHN, i - j);
+                        LEN -= (i - j);
+                        j = i+1;
+                    }
+
+                    if (!COMPILE((ks_ast)SUB(i)->args->elems[0])) return false;
+                    EMIT(KSB_TUPLE_PUSHI);
+                    LEN -= 1;
+                } else {
+                    if (!COMPILE(SUB(i))) return false;
+
+                }
+            }
+            if (i > j) {
+                EMITI(KSB_TUPLE_PUSHN, i - j);
+                LEN -= (i - j);
+                j = i+1;
+            }
+        }
+    } else if (k == KS_AST_SET) {
+        for (i = 0; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                break;
+            }
+            if (!COMPILE(SUB(i))) return false;
+        }
+        EMITI(KSB_SET, i);
+        LEN += 1 - i;
+
         META(v->tok);
-        LEN += 1 - NSUB;
+        for (j = i+1; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                if (i > j) {
+                    EMITI(KSB_SET_PUSHN, i - j);
+                    LEN -= (i - j);
+                    j = i+1;
+                }
+
+                if (!COMPILE((ks_ast)SUB(i)->args->elems[0])) return false;
+                EMIT(KSB_SET_PUSHI);
+                LEN -= 1;
+            } else {
+                if (!COMPILE(SUB(i))) return false;
+
+            }
+        }
+        if (i > j) {
+            EMITI(KSB_SET_PUSHN, i - j);
+            LEN -= (i - j);
+            j = i+1;
+        }
+    } else if (k == KS_AST_DICT) {
+        assert(NSUB % 2 == 0);
+        for (i = 0; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                break;
+            }
+            if (!COMPILE(SUB(i))) return false;
+        }
+        EMITI(KSB_DICT, i);
+        LEN += 1 - i;
+
+        META(v->tok);
+        for (j = i+1; i < NSUB; ++i) {
+            if (SUB(i)->kind == KS_AST_UOP_STAR) {
+                if (i > j) {
+                    EMITI(KSB_DICT_PUSHN, i - j);
+                    LEN -= (i - j);
+                    j = i+1;
+                }
+
+                if (!COMPILE((ks_ast)SUB(i)->args->elems[0])) return false;
+                EMIT(KSB_SET_PUSHI);
+                LEN -= 1;
+            } else {
+                if (!COMPILE(SUB(i))) return false;
+
+            }
+        }
+        if (i > j) {
+            EMITI(KSB_DICT_PUSHN, i - j);
+            LEN -= (i - j);
+            j = i+1;
+        }
 
     } else if (k == KS_AST_FUNC) {
         assert(NSUB == 2);
