@@ -82,6 +82,7 @@ ks_type kst_Exception = &tp;
     _macro(SyntaxError, Error) \
     _macro(ImportError, Error) \
     _macro(TypeError, Error) \
+    _macro(TemplateError, TypeError) \
     _macro(NameError, Error) \
     _macro(AttrError, Error) \
     _macro(KeyError, Error) \

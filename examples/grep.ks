@@ -7,20 +7,19 @@ Searches through files
 """
 
 import os
-import re
 import getarg
 
 p = getarg.Parser("grep", "0.1.0", "Search through files and print lines which match a regular expression", ["Cade Brown <cade@kscript.org>"])
 
-p.pos("expr", "Expression to use", str)
-p.pos("files", "List of files to output", os.path, -1)
+p.pos("expr", "Expression to use")
+p.pos("files", "List of files to output", -1, os.path)
 p.flag("recurse", ['-r', '--recurse'], "Recursively search subdirectories")
 p.flag("all", ['-a', '--all'], "Search through all files, including hidden directories")
 
 args = p.parse()
 
 # Compile the regular expression that is being searched
-pat = re.compile(args.expr)
+pat = regex(args.expr)
 
 func search(p) {
     # Ignore hidden files
@@ -30,7 +29,7 @@ func search(p) {
     }
 
     if p.isdir() {
-        (ds, fs) = p.listdir()
+       # (ds, fs) = p.listdir()
         # Check files
         for f in fs {
             search(p / f)

@@ -76,6 +76,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 /* Computes assignment, from the TOS (which should alrea)
  */
 static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, ks_ast lhs, ks_ast rhs, ks_ast par) {
+    int i;
 
     if (lhs->kind == KS_AST_NAME) {
         EMITO(KSB_STORE, lhs->val);
@@ -86,6 +87,14 @@ static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, 
         LEN--;
         META(par->tok);
 
+    } else if (lhs->kind == KS_AST_ELEM) {
+        for (i = 0; i < lhs->args->len; ++i) {
+            if (!COMPILE((ks_ast)lhs->args->elems[i])) return false;
+        }
+        EMITI(KSB_DUPI, -lhs->args->len-1);
+        EMITI(KSB_SETELEMS, 1 + lhs->args->len);
+        LEN += 1 - lhs->args->len;
+        META(par->tok);
     } else {
         KS_THROW_SYNTAX(fname, src, par->tok, "Can't assign to the left hand side");
         return false;
@@ -155,6 +164,15 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         LEN -= 1;
         META(v->tok);
 
+    } else if (k == KS_AST_ASSERT) {
+        assert(NSUB == 1);
+        if (!COMPILE(SUB(0))) return false;
+        assert((LEN - ssl) == 1);
+        ks_str msg = ks_tok_str(src, SUB(0)->tok);
+        EMITO(KSB_ASSERT, msg);
+        KS_DECREF(msg);
+        LEN -= 1;
+        META(v->tok);
     } else if (k == KS_AST_IMPORT) {
         EMITO(KSB_IMPORT, v->val);
         LEN += 1;
@@ -233,15 +251,17 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             return false;
         }
 
+        ks_int t = ks_int_new((ks_cint)vararg_idx);
         ks_tuple newinfo = ks_tuple_new(5, (kso[]){
             info->elems[0],
             info->elems[1],
             info->elems[2],
             info->elems[3],
-            (kso)ks_int_new((ks_cint)vararg_idx)
+            (kso)t
         });
+        KS_DECREF(t);
 
-        ks_code body_bc = ks_compile((ks_str)info->elems[1], src, body, code);
+        ks_code body_bc = ks_compile((ks_str)info->elems[1], src, body, NULL);
         if (!body_bc) {
             KS_DECREF(newinfo);
             return NULL;
@@ -568,6 +588,31 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         LEN = ssl;
 
     /** Handle Special Operators **/
+    } else if (k == KS_AST_COND) {
+        assert(NSUB == 3 && "ternary operator requires 3 children");
+
+        /* First, compile the actual expression */
+        if (!COMPILE(SUB(0))) return false;
+
+        int sj_l = BC_N;
+        EMITI(KSB_JMPF, -1);
+        LEN -= 1;
+        int sj_f = BC_N;
+
+        if (!COMPILE(SUB(1))) return false;
+
+        int tj_l = BC_N;
+        EMITI(KSB_JMP, -1);
+        int tj_f = BC_N;
+
+        /* If false, jump directly to here */
+        PATCH(sj_l, sj_f, BC_N);
+        LEN -= 1;
+
+        if (!COMPILE(SUB(2))) return false;
+
+        /* If true, skip over the falsey */
+        PATCH(tj_l, tj_f, BC_N);
 
     } else if (k == KS_AST_BOP_QUESQUES) {
         /* Short circuiting OR operator */

@@ -6,6 +6,8 @@
 #include <ks/compiler.h>
 #include <ks/getarg.h>
 
+/* Variables currently being used */
+static ks_dict vars = NULL;
 
 /* Compile and run generically */
 static kso do_gen(ks_str fname, ks_str src) {
@@ -22,6 +24,20 @@ static kso do_gen(ks_str fname, ks_str src) {
     ks_free(toks);
     if (!prog) {
         return NULL;
+    }
+
+    while (prog->kind == KS_AST_BLOCK && prog->args->len == 1) {
+        ks_ast ch = (ks_ast)prog->args->elems[0];
+        KS_INCREF(ch);
+        KS_DECREF(prog);
+        prog = ch;
+    }
+
+    /* Check if we should print */
+    bool do_print = false;
+    if (ks_ast_is_expr(prog->kind)) {
+        do_print = true;
+        prog = ks_ast_newn(KS_AST_RET, 1, &prog, NULL, prog->tok);
     }
 
     /* Compile the AST into a bytecode object which can be executed */
@@ -47,10 +63,16 @@ static kso do_gen(ks_str fname, ks_str src) {
 
     */
 
+    ks_ssize_t sz_w = ksos_stdout->sz_w;
+
     /* Execute the program, which should return the value */
-    kso res = kso_call((kso)code, 0, NULL);
+    kso res = kso_call_ext((kso)code, 0, NULL, ksg_inter_vars, NULL);
     KS_DECREF(code);
     if (!res) return NULL;
+
+    if (sz_w == ksos_stdout->sz_w && do_print) {
+        ks_printf("%S\n", res);
+    } 
 
     return res;
 }
@@ -58,6 +80,7 @@ static kso do_gen(ks_str fname, ks_str src) {
 /* Do expression with '-e' */
 static bool do_e(ks_str src) {
     ks_str fname = ks_fmt("<expr>");
+
 
     kso res = do_gen(fname, src);
     KS_DECREF(fname);
@@ -81,6 +104,23 @@ static bool do_f(ks_str fname) {
     return true;
 }
 
+/** Action **/
+
+static KS_FUNC(import) {
+    ks_str name;
+    KS_ARGS("name:*", &name, kst_str);
+
+    ks_module m = ks_import(name);
+    if (!m) {
+        return NULL;
+    }
+
+    ks_dict_set(ksg_inter_vars, (kso)name, (kso)m);
+    KS_DECREF(m);
+
+    return KSO_NONE;
+}
+
 
 int main(int argc, char** argv) {
     if (!ks_init()) return 1;
@@ -94,9 +134,14 @@ int main(int argc, char** argv) {
 
     ksga_Parser p = ksga_Parser_new("ks", "kscript interpreter, commandline interface", "0.0.1", "Cade Brown <cade@kscript.org>");
 
+    kso on_import = ksf_wrap(import_, "on_import(name)", "Imports a module name to the global interpreter vars");
+
+    ksga_opt(p, "import", "Imports a module name before running anything", "-i,--import", on_import, KSO_NONE);
     ksga_opt(p, "expr", "Compiles and runs an expression", "-e,--expr", NULL, KSO_NONE);
     ksga_opt(p, "code", "Compiles and runs code", "-c,--code", NULL, KSO_NONE);
     ksga_pos(p, "args", "File to run and arguments given to it", NULL, -1);
+
+    KS_DECREF(on_import);
 
     ks_dict args = ksga_parse(p, ksos_argv);
     kso_exit_if_err();

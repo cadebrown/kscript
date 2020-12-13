@@ -152,7 +152,6 @@ bool kso_len(kso ob, ks_ssize_t* val) {
     assert(false);
 }
 
-
 bool kso_get_ci(kso ob, ks_cint* val) {
     if (kso_issub(ob->type, kst_int)) {
         ks_int obi = (ks_int)ob;
@@ -167,9 +166,18 @@ bool kso_get_ci(kso ob, ks_cint* val) {
 
         KS_THROW(kst_OverflowError, "'%T' object was too large to convert to a C-style integer", ob);
         return false;
+    } else if (ob->type->i__integral) {
+
+        kso t = kso_call(ob->type->i__integral, 1, &ob);
+        if (!t) return NULL;
+
+        bool res = kso_get_ci(t, val);
+
+        KS_DECREF(t);
+        return res;
     }
 
-    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style integer");
+    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style integer", ob);
     return false;
 }
 bool kso_get_ui(kso ob, ks_uint* val) {
@@ -188,7 +196,7 @@ bool kso_get_ui(kso ob, ks_uint* val) {
         return false;
     }
     
-    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style integer");
+    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style integer", ob);
     return false;
 }
 bool kso_get_cf(kso ob, ks_cfloat* val) {
@@ -210,7 +218,7 @@ bool kso_get_cf(kso ob, ks_cfloat* val) {
         return res;
     }
     
-    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style float");
+    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style float", ob);
     return false;
 }
 bool kso_get_cc(kso ob, ks_ccomplex* val) {
@@ -242,7 +250,7 @@ bool kso_get_cc(kso ob, ks_ccomplex* val) {
         return res;
     }
     
-    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style complex float");
+    KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style complex float", ob);
     return false;
 }
 
@@ -347,7 +355,18 @@ ks_dict kso_try_getattr_dict(kso obj) {
 kso kso_getattr(kso ob, ks_str attr) {
     ksos_thread th = ksos_thread_get();
 
-    if (ob->type->i__getattr != kst_object->i__getattr) {
+    if (kso_issub(ob->type, kst_type) && ob->type->i__getattr == kst_type->i__getattr) {
+
+        kso res = ks_type_get((ks_type)ob, attr);
+        if (res) {
+            return res;
+        } else if (kso_issub(th->exc->type, kst_AttrError)) {
+            kso_catch_ignore();
+        } else {
+            return NULL;
+        }
+
+    } else if (ob->type->i__getattr != kst_object->i__getattr) {
         /* Attempt to resolve it */
         kso res = kso_call(ob->type->i__getattr, 2, (kso[]){ ob, (kso)attr });
         if (res) {
@@ -535,8 +554,43 @@ kso kso_getelems(int n_keys, kso* keys) {
     return NULL;
 }
 bool kso_setelems(int n_keys, kso* keys) {
-    assert(n_keys > 0);
-    assert(false);
+    assert(n_keys > 1);
+    kso ob = keys[0];
+    if (kso_issub(ob->type, kst_list) && ob->type->i__setelem == kst_list->i__setelem) {
+        if (n_keys != 3) {
+            KS_THROW(kst_ArgError, "Expected 3 arguments to element indexing operation");
+            return NULL;
+        }
+        ks_list lob = (ks_list)ob;
+
+        ks_cint idx;
+        if (!kso_get_ci(keys[1], &idx)) {
+            return NULL;
+        }
+        if (idx < 0) idx += lob->len;
+        if (idx < 0 || idx >= lob->len) {
+            KS_THROW_INDEX(ob, keys[1]);
+            return NULL;
+        }
+        
+        KS_INCREF(keys[2]);
+        KS_DECREF(lob->elems[idx]);
+        lob->elems[idx] = keys[2];
+
+        return true;
+    } else if (kso_issub(ob->type, kst_dict) && ob->type->i__setelem == kst_dict->i__setelem) {
+        if (n_keys != 2) {
+            KS_THROW(kst_ArgError, "Expected 3 arguments to element indexing operation");
+            return NULL;
+        }
+        return ks_dict_set((ks_dict)ob, keys[1], keys[2]);
+
+    } else if (ob->type->i__setelem) {
+        return kso_call(ob->type->i__setelem, n_keys, keys);
+    }
+
+    KS_THROW(kst_TypeError, "'%T' object did not support element indexing assignment", ob);
+    return NULL;
 }
 bool kso_delelems(int n_keys, kso* keys) {
     assert(n_keys > 0);
@@ -544,12 +598,19 @@ bool kso_delelems(int n_keys, kso* keys) {
 }
 
 
-
-
 kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame closure) {
     ksos_thread th = ksos_thread_get();
     assert(th != NULL);
     int i, j, k;
+
+    if (func == (kso)kst_type) {
+        if (nargs == 1) {
+            return KS_NEWREF(args[0]->type);
+        } else {
+            KS_THROW(kst_Error, "Calling 'type()' should take only 1 argument");
+            return NULL;
+        }
+    }
 
     kso res = NULL;
     if (kso_issub(func->type, kst_func) && func->type->i__call == kst_func->i__call) {

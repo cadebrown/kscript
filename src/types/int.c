@@ -209,6 +209,20 @@ static KS_TFUNC(T, new) {
         ks_cfloat x;
         if (!kso_get_cf(obj, &x)) return NULL;
         return (kso)ks_int_newft(tp, x);
+    } else if (kso_is_int(obj)) {
+        ks_int v = kso_int(obj);
+        if (!v) return NULL;
+
+        if (kso_issub(v->type, tp)) return (kso)v;
+
+        ks_int r = KSO_NEW(ks_int, tp);
+
+        mpz_init(r->val);
+        mpz_set(r->val, v->val);
+
+        KS_DECREF(v);
+
+        return (kso)r;
     }
 
     KS_THROW_CONV(obj->type, tp);

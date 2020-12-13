@@ -212,6 +212,11 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             ks_list_push(stk, stk->elems[stk->len - 1]);
         VMD_OP_END
 
+        VMD_OPA(KSB_DUPI)
+            assert(arg < 0);
+            ks_list_push(stk, stk->elems[stk->len + arg]);
+        VMD_OP_END
+
         VMD_OPA(KSB_LOAD)
             name = (ks_str)VC(arg);
             assert(name->type == kst_str);
@@ -275,7 +280,16 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             ks_list_pushu(stk, V);
         VMD_OP_END
 
+        VMD_OPA(KSB_SETELEMS)
+            ARGS_FROM_STK(arg);
+            if (!kso_setelems(arg, args)) {
+                DECREF_ARGS(arg);
+                goto thrown;
+            }
 
+            ks_list_push(stk, args[arg - 1]);
+            DECREF_ARGS(arg);
+        VMD_OP_END
 
         VMD_OPA(KSB_CALL)
             assert(arg >= 1);
@@ -312,6 +326,8 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             kso fbc = ks_list_pop(stk);
             assert(fbc && fbc->type == kst_code);
             ks_func fnew = ks_func_new_k(fbc, (ks_tuple)finfo->elems[2], 0, NULL, va_idx, (ks_str)finfo->elems[1], (ks_str)finfo->elems[3]);
+            KS_INCREF((kso)frame);
+            fnew->bfunc.closure = (kso)frame;
             KS_DECREF(fbc);
 
             ks_list_pushu(stk, (kso)fnew);
@@ -400,6 +416,21 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             goto thrown;
         VMD_OP_END
 
+        VMD_OPA(KSB_ASSERT)
+            res = ks_list_pop(stk);
+            if (!kso_truthy(res, &truthy)) {
+                KS_DECREF(res);
+                goto thrown;
+            }
+
+            KS_DECREF(res);
+            if (!truthy) {
+                KS_THROW(kst_AssertError, "Assertion failed: '%S'", VC(arg));
+                goto thrown;
+            }
+        VMD_OP_END
+
+
         VMD_OP(KSB_FINALLY_END)
             if (th->exc) goto thrown;
         VMD_OP_END
@@ -418,7 +449,7 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             if (!V) {
                 if (th->exc->type == kst_OutOfIterException) {
                     kso_catch_ignore();
-                    KS_DECREF(stk->elems[--stk->len]);
+                    ks_list_popu(stk);
                 } else {
                     goto thrown;
                 }
@@ -433,7 +464,7 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             if (!V) {
                 if (th->exc->type == kst_OutOfIterException) {
                     kso_catch_ignore();
-                    KS_DECREF(stk->elems[--stk->len]);
+                    ks_list_popu(stk);
                     pc += arg;
                 } else {
                     goto thrown;
@@ -566,6 +597,17 @@ kso _ks_exec(ks_code bc, ks_type _in) {
         T_UOP(KSB_UOP_POS, pos)
         T_UOP(KSB_UOP_NEG, neg)
         T_UOP(KSB_UOP_SQIG, sqig)
+
+
+        VMD_OP(KSB_UOP_NOT)
+            L = ks_list_pop(stk);
+            if (!kso_truthy(L, &truthy)) {
+                KS_DECREF(L);
+                goto thrown;
+            }
+            KS_DECREF(L);
+            ks_list_push(stk, KSO_BOOL(!truthy));
+        VMD_OP_END
 
 
         VMD_OP(KSB_BOP_IN)

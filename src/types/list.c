@@ -208,6 +208,60 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    int nargs;
+    kso* args;
+    KS_ARGS("tp:* *args", &tp, kst_type, &nargs, &args);
+
+    ks_list self = KSO_NEW(ks_list, tp);
+
+    self->len = self->_max_len = 0;
+    self->elems = NULL;
+
+    return (kso)self;
+}
+
+static KS_TFUNC(T, init) {
+    ks_list self;
+    kso objs = KSO_NONE;
+    KS_ARGS("self:* ?objs", &self, kst_list, &objs);
+
+    ks_list_clear(self);
+
+    if (!ks_list_pushall(self, objs)) {
+        return NULL;
+    }
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, len) {
+    ks_list self;
+    KS_ARGS("self:*", &self, kst_list);
+
+    return (kso)ks_int_newu(self->len);
+}
+
+
+static KS_TFUNC(T, add) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    ks_list res = ks_list_new(0, NULL);
+
+    if (!ks_list_pushall(res, L)) {
+        KS_DECREF(res);
+        return NULL;
+    }
+
+    if (!ks_list_pushall(res, R)) {
+        KS_DECREF(res);
+        return NULL;
+    }
+    return (kso)res;
+}
+
 
 /** Iterator **/
 
@@ -254,6 +308,10 @@ void _ksi_list() {
 
     _ksinit(kst_list, kst_object, T_NAME, sizeof(struct ks_list_s), -1, "List of references to other objects, which is mutable\n\n    Internally, a 'list' is not a linked-list-like data structure, but closer to an array. Specifically, it is an array of references, so children are not copied or duplicated, only a reference is made to them", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
+        {"__init",               ksf_wrap(T_init_, T_NAME ".__init(self, objs=none)", "")},
+        {"__len",                ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"__iter",               KS_NEWREF(kst_list_iter)},
+        {"__add",                ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
     ));
 }

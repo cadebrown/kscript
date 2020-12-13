@@ -157,6 +157,11 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
                         s = ks_str_new(ARG(i)->len_b - key->len_b - 1, ARG(i)->data + key->len_b + 1);
                         i++;
                         had = true;
+                    } else if (ARG(i)->len_b > key->len_b && ks_str_eq_c(key, ARG(i)->data, key->len_b)) {
+                        /* Joined argument without anything */
+                        s = ks_str_new(ARG(i)->len_b - key->len_b, ARG(i)->data + key->len_b);
+                        i++;
+                        had = true;
                     }
                 }
                 if (had) {
@@ -168,11 +173,23 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
                         return NULL;
                     } else {
                         /* Actually process argument */
+                        if (a.trans != KSO_NONE) {
+                            kso ns = kso_call(a.trans, 1, (kso[]){ (kso)s });
+                            if (!ns) {
+                                KS_DECREF(res);
+                                KS_DECREF(pos);
+                                KS_DECREF(s);
+                                ks_free(flag_ct);
+                                return NULL;
+                            }
+                            KS_DECREF(s);
+                            s = (ks_str)ns;
+                        }
                         bool has;
                         if (!ks_dict_has_h(res, (kso)a.name, a.name->v_hash, &has)) {
                             assert(false);
                         }
-                        if (has) {
+                        if (has && (a.trans == KSO_NONE || kso_issub(a.trans->type, kst_type))) {
                             KS_THROW(kst_Error, "Option %R (%R) was given multiple times (only allowed once)", a.name, a.opts);
                             KS_DECREF(res);
                             KS_DECREF(pos);

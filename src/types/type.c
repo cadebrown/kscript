@@ -77,6 +77,67 @@ ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, const 
 
     return self;
 }
+
+ks_type ks_type_template(ks_type base, int nargs, kso* args) {
+    if (base->i__template == NULL || base->i__template->len == 0) {
+        KS_THROW(kst_TemplateError, "'%R' cannot be templated", base);
+        return NULL;
+    } else if (nargs == 0) {
+        KS_THROW(kst_TemplateError, "'%R' cannot be templated, no template parameters given", base);
+        return NULL;
+    } else if (base->i__template->len != nargs) {
+        KS_THROW(kst_TemplateError, "'%R' cannot be templated, wrong number of parameters (expected %i, but got %i)", base, (int)base->i__template->len, nargs);
+        return NULL;
+    }
+
+    bool any_not_none = false;
+    int i;
+    for (i = 0; i < base->i__template->len; ++i) {
+        if (base->i__template->elems[i] == KSO_NONE) {
+        } else {
+            any_not_none = true;
+        }
+    }
+
+    if (any_not_none) {
+        KS_THROW(kst_TemplateError, "'%R' cannot be templated, it is already a template (try getting '.__base' for the template class)", base);
+        return NULL;
+    }
+
+
+    /* Template cache */
+    static ks_dict my_tcache = NULL;
+    if (my_tcache == NULL) my_tcache = ks_dict_new(NULL);
+
+    /* Create template arguments */
+    ks_tuple ta = ks_tuple_new(nargs, args);
+
+    /* Try cache for key */
+    ks_tuple key = ks_tuple_new(2, (kso[]){ (kso)base, (kso)ta });
+    
+    ks_type cv = (ks_type)ks_dict_get(my_tcache, (kso)key);
+    if (cv) {
+        return cv;
+    }
+
+    kso_catch_ignore();
+
+    /* Now, create it */
+    ks_str name = ks_fmt("%R[%J]", base, ", ", nargs, args);
+    cv = ks_type_new(name->data, base, 0, 0, "", KS_IKV(
+        {"__template", (kso)ta},
+    ));
+    KS_DECREF(name);
+
+    /* Store in cache */
+    ks_dict_set(my_tcache, (kso)key, (kso)cv);
+
+    KS_DECREF(key);
+
+    return cv;
+}
+
+
 kso ks_type_get(ks_type self, ks_str attr) {
     kso res = ks_dict_get_ih(self->attr, (kso)attr, attr->v_hash);
     if (res) return res;
@@ -110,6 +171,25 @@ bool ks_type_set_c(ks_type self, const char* attr, kso val) {
     return res;
 }
 
+/* Type Functions */
+
+static KS_TFUNC(T, free) {
+    ks_type self;
+    KS_ARGS("self:*", &self, kst_type);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, getelem) {
+    ks_type self;
+    int nargs;
+    kso* args;
+    KS_ARGS("self:* *args", &self, kst_type, &nargs, &args);
+
+    return (kso)ks_type_template(self, nargs, args);
+}
 
 /* Export */
 
@@ -118,6 +198,7 @@ ks_type kst_type = &tp;
 
 void _ksi_type() {
     _ksinit(kst_type, kst_object, T_NAME, sizeof(struct ks_type_s), offsetof(struct ks_type_s, attr), "Represents a type, which is a descriptor of objects which are instances of the type", KS_IKV(
-
+        {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *args)", "")},
     ));
 }

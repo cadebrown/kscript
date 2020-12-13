@@ -90,7 +90,7 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
                     }
                     continue;
                 } else if (strncmp(fmt, "cfloat", 6) == 0) {
-                    fmt += 4;
+                    fmt += 6;
 
                     if (!kso_get_cf(cargin, (ks_cfloat*)cargto)) {
                         kso_catch_ignore();

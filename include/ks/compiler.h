@@ -274,6 +274,9 @@ enum {
     /* Throw statement (throw args[0]) */
     KS_AST_THROW,
 
+    /* Assert statement (assert args[0]) */
+    KS_AST_ASSERT,
+
 
     /** Blocks **/
 
@@ -468,6 +471,12 @@ enum {
      */
     KSB_DUP,
 
+    /* DUP i
+     *
+     * Duplicates 'stk[i]', most of the time negative, which means from the top
+     */
+    KSB_DUPI,
+
     /* LOAD idx
      * 
      * Loads 'vc[idx]' (as a dynamic name) and pushes the result on to 'stk'
@@ -584,6 +593,12 @@ enum {
      * Pop off the last item on 'stk' and throw it up the call stack (must be an 'Exception' or subtype)
      */
     KSB_THROW,
+
+    /* ASSERT
+     *
+     * Pop off the last item on 'stk' and assert that it is truthy
+     */
+    KSB_ASSERT,
 
     /* FOR_START
      *

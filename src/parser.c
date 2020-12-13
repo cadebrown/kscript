@@ -193,6 +193,9 @@ enum {
     /* Do not consume any 'in' tokens at the highest level */
     PF_NO_IN  = 0x01,
 
+    /* Do not consume any 'as' tokens at the highest level */
+    PF_NO_AS  = 0x02,
+
 };
 
 /** Utilities **/
@@ -241,6 +244,7 @@ RULE(ATOM);
 RULE(EXPR);
 RULE(E0);
 RULE(E1);
+RULE(E1p);
 RULE(E2);
 RULE(E3);
 RULE(E4);
@@ -332,6 +336,18 @@ RULE(STMT) {
 
             return ks_ast_newn(KS_AST_THROW, 1, &sub, NULL, t);
         }
+    } else if (k == KS_TOK_ASSERT) {
+        EAT();
+
+        ks_ast sub = SUB(EXPR);
+        if (!sub) return NULL;
+
+        if (!SUB(N)) {
+            KS_DECREF(sub);
+            return NULL;
+        }
+
+        return ks_ast_newn(KS_AST_ASSERT, 1, &sub, NULL, t);
 
     } else if (k == KS_TOK_IMPORT) {
         EAT();
@@ -534,7 +550,7 @@ RULE(STMT) {
         while (TOK.kind == KS_TOK_CATCH) {
             ks_tok t = EAT();
         
-            ks_ast tp = SUB(EXPR);
+            ks_ast tp = SUBF(EXPR, (flags & PF_NO_AS));
             if (!tp) {
                 KS_DECREF(res);
                 return NULL;
@@ -697,15 +713,17 @@ RULE(E0) {
     #undef E0_CASE
 }
 
+
+
 RULE(E1) {
-    ks_ast res = SUB(E2);
+    ks_ast res = SUB(E1p);
     if (!res) return NULL;
 
     if (TOK.kind == KS_TOK_IF) {
         /* Conditional expression */
         EAT();
         SKIP_N();
-        ks_ast cond = SUB(E2);
+        ks_ast cond = SUB(E1p);
         if (!cond) {
             KS_DECREF(res);
             return NULL;
@@ -725,8 +743,29 @@ RULE(E1) {
 
             return ks_ast_newn(KS_AST_COND, 3, (ks_ast[]){ cond, res, other }, NULL, KS_TOK_MAKE_EMPTY());
         } else {
-            return ks_ast_newn(KS_AST_COND, 2, (ks_ast[]){ cond, res, ast_none }, NULL, KS_TOK_MAKE_EMPTY());
+            return ks_ast_newn(KS_AST_COND, 3, (ks_ast[]){ cond, res, ast_none }, NULL, KS_TOK_MAKE_EMPTY());
         }
+    }
+    return res;
+}
+
+
+/* 'E2 (as E1p)* */
+RULE(E1p) {
+    ks_ast res = SUB(E2);
+    if (!res) return NULL;
+
+    while (TOK.kind == KS_TOK_AS && !(flags & PF_NO_AS)) {
+        /* Conditional expression */
+        EAT();
+        SKIP_N();
+        ks_ast other = SUB(E2);
+        if (!other) {
+            KS_DECREF(res);
+            return NULL;
+        }
+
+        res = ks_ast_newn(KS_AST_CALL, 2, (ks_ast[]){ other, res }, NULL, res->tok);
     }
     return res;
 }
@@ -1005,7 +1044,7 @@ RULE(E14) {
 
         res->tok = ks_tok_combo(res->tok, EAT());
 
-    } else if (TOK_EQ(TOK, "func")) {
+    } else if (TOK_EQ(TOK, "func") && (toks[toki+1].kind == KS_TOK_LBRC || toks[toki+1].kind == KS_TOK_LPAR || toks[toki+1].kind == KS_TOK_NAME)) {
         res = ks_ast_new(KS_AST_FUNC, 0, NULL, NULL, EAT());
         ks_str fname = NULL;
         if (TOK.kind == KS_TOK_NAME) {
@@ -1106,7 +1145,6 @@ RULE(E14) {
             KS_DECREF(res);
             KS_DECREF(fname);
             KS_DECREF(sig);
-            KS_DECREF(lp);
             return NULL;
         }
 
@@ -1123,7 +1161,7 @@ RULE(E14) {
         });
 
 
-    } else if (TOK_EQ(TOK, "type")) {
+    } else if (TOK_EQ(TOK, "type") && (toks[toki+1].kind == KS_TOK_LBRC || toks[toki+1].kind == KS_TOK_NAME)) {
         res = ks_ast_new(KS_AST_TYPE, 0, NULL, NULL, EAT());
         ks_str tname = NULL;
         if (TOK.kind == KS_TOK_NAME) {
@@ -1170,9 +1208,59 @@ RULE(E14) {
         if (!res) return NULL;
     }
 
+
     /* Should have been handled by now */
     assert(res != NULL);
-    
+
+    if (res->kind == KS_AST_NAME || res->kind == KS_AST_TUPLE) {
+        if (TOK.kind == KS_TOK_RARW) {
+            /* Lambda */
+            tt = EAT();
+
+            ks_ast expr = SUB(EXPR);
+            if (!expr) {
+                KS_DECREF(res);
+                return NULL;
+            }
+            expr = ks_ast_newn(KS_AST_RET, 1, &expr, NULL, expr->tok);
+            if (res->kind == KS_AST_NAME) {
+                res = ks_ast_newn(KS_AST_TUPLE, 1, &res, NULL, res->tok);
+            }
+            
+            ksio_StringIO sio = ksio_StringIO_new();
+            ksio_add(sio, "<lambda>(");
+
+            ks_list lp = ks_list_new(0, NULL);
+
+            int i;
+            for (i = 0; i < res->args->len; ++i) {
+                if (i > 0) ksio_add(sio, ", ");
+                ks_ast s = (ks_ast)res->args->elems[i];
+
+                if (s->kind == KS_AST_NAME) {
+                    ks_list_push(lp, s->val);
+                } else {
+                    ks_list_push(lp, ((ks_ast)s->args->elems[0])->val);
+                }
+                ks_str ss = ks_tok_str(src, s->tok);
+                ksio_add(sio, "%S", ss);
+                KS_DECREF(ss);
+            }
+            ksio_add(sio, ")");
+
+            ks_tuple vt = ks_tuple_newn(4, (kso[]){
+                (kso)ks_str_new(-1, "<lambda>"),
+                (kso)ksio_StringIO_getf(sio),
+                (kso)ks_tuple_new(lp->len, lp->elems),
+                (kso)ks_str_new(-1, "")
+            });
+
+            KS_DECREF(lp);
+
+            res = ks_ast_newn(KS_AST_FUNC, 2, (ks_ast[]){ res, expr }, (kso)vt, tt);
+        }
+    }
+
     while (!DONE) {
         if (TOK.kind == KS_TOK_DOT) {
             /* Attribute reference */
@@ -1277,6 +1365,10 @@ RULE(ATOM) {
             res = ks_ast_newn(KS_AST_NAME, 0, NULL, (kso)v, t);
         }
         return res;
+    } else if (TOK.kind == KS_TOK_DOTDOTDOT) {
+
+        return ks_ast_newn(KS_AST_CONST, 0, NULL, KSO_DOTDOTDOT, EAT());
+
     } else if (TOK.kind == KS_TOK_INT) {
         ks_tok t = EAT();
         ks_int v = ks_int_news(t.epos - t.spos, src->data + t.spos, 0);

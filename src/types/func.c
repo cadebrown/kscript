@@ -135,7 +135,16 @@ static KS_TFUNC(T, free) {
     if (self->is_cfunc) {
 
     } else {
+        int i;
+        for (i = 0; i < self->bfunc.n_pars; ++i) {
+            KS_DECREF(self->bfunc.pars[i].name);
+            if (self->bfunc.pars[i].defa) KS_DECREF(self->bfunc.pars[i].defa);
+        }
+        ks_free(self->bfunc.pars);
 
+        KS_DECREF(self->bfunc.bc);
+
+        if (self->bfunc.closure) KS_DECREF(self->bfunc.closure);
     }
 
     KSO_DEL(self);

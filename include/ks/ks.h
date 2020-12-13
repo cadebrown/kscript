@@ -224,6 +224,7 @@ KS_API extern ks_type
     kst_slice,
     kst_list,
     kst_tuple,
+    kst_tuple_named,
     kst_set,
     kst_dict,
     kst_names,
@@ -259,6 +260,7 @@ KS_API extern ks_type
         kst_ImportError,
 
         kst_TypeError,
+          kst_TemplateError,
         kst_NameError,
         kst_AttrError,
         kst_KeyError,
@@ -676,6 +678,10 @@ KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
  */
 KS_API ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, const char* doc, struct ks_ikv* ikv);
 
+/* Template a type, with the given arguments
+ */
+KS_API ks_type ks_type_template(ks_type base, int nargs, kso* args);
+
 /* Return a type attribute
  */
 KS_API kso ks_type_get(ks_type self, ks_str attr);
@@ -684,6 +690,14 @@ KS_API kso ks_type_get(ks_type self, ks_str attr);
  */
 KS_API bool ks_type_set(ks_type self, ks_str attr, kso val);
 KS_API bool ks_type_set_c(ks_type self, const char* attr, kso val);
+
+
+/* Construct a new 'number' object from a C-style string
+ *
+ * This will construct an 'int', 'float', or 'complex' (with precedence in that order)
+ */
+KS_API ks_number ks_number_news(const char* src, ks_ssize_t len_b, int base);
+
 
 /* Create a new integer
  */

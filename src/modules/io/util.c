@@ -341,6 +341,8 @@ static bool add_str(ksio_BaseIO self, kso obj) {
         return add_str(self, (kso)((ks_type)obj)->i__fullname);
     } else if (obj == KSO_NONE) {
         return ksio_addbuf(self, 4, "none");
+    } else if (obj == KSO_DOTDOTDOT) {
+        return ksio_addbuf(self, 3, "...");
     } else if (obj->type == kst_bool) {
         return ksio_add(self, obj == KSO_TRUE ? "true" : "false");
     } else if (kso_isinst(obj, kst_enum) && obj->type->i__str == kst_enum->i__str) {
@@ -430,6 +432,8 @@ static bool add_repr(ksio_BaseIO self, kso obj) {
         return add_str(self, (kso)((ks_type)obj)->i__fullname);
     } else if (obj == KSO_NONE) {
         return ksio_addbuf(self, 4, "none");
+    } else if (obj == KSO_DOTDOTDOT) {
+        return ksio_addbuf(self, 3, "...");
     } else if (obj->type == kst_bool) {
         return ksio_add(self, obj == KSO_TRUE ? "true" : "false");
     } else if (kso_isinst(obj, kst_enum) && obj->type->i__str == kst_enum->i__str) {

@@ -52,13 +52,105 @@ static ks_cfloat i_mpz_div_d(mpz_t n, mpz_t d) {
 
 /* C-API */
 
+ks_number ks_number_news(const char* src, ks_ssize_t len_b, int base) {
+    if (len_b < 0) len_b = strlen(src);
 
+    int i = len_b - 1;
+
+    while (i > 0 && src[i] == ')') i--;
+
+    // detect complex numbers
+    bool isComplex = i >= 0 && src[i] == 'i' || src[i] == 'I';
+    if (isComplex) {
+
+        ks_ccomplex v;
+        if (!ks_ccomplex_from_str(src, len_b, &v)) {
+            return NULL;
+        }
+        return (kso)ks_complex_new(v);
+    }
+
+    if (base == 0) {
+        if (len_b < 2) base = 10;
+        else if (src[0] == '0') {
+            /**/ if (src[1] == 'b' || src[1] == 'B') base = 2;
+            else if (src[1] == 'o' || src[1] == 'O') base = 8;
+            else if (src[1] == 'x' || src[1] == 'X') base = 16;
+            else if (src[1] == 'd' || src[1] == 'D') base = 10;
+        }
+    }
+
+    if (base == 0) base = 10;
+
+    /*  */
+    bool isFloat = false;
+    for (i = 0; i < len_b && !isFloat; ++i) {
+        if (src[i] == '.' || (base == 10 && (src[i] == 'e' || src[i] == 'E'))) isFloat = true;
+    }
+
+    if (isFloat) {
+        ks_cfloat v;
+        if (!ks_cfloat_from_str(src, len_b, &v)) return NULL;
+        return (kso)ks_float_new(v);
+    } else {
+        return (kso)ks_int_news(len_b, src, base);
+    }
+}
 
 /* Type Functions */
 
 
 /** Unary Operators **/
 
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso obj = KSO_NONE;
+    KS_ARGS("tp:* ?obj", &tp, kst_type, &obj);
+
+    if (kso_issub(obj->type, kst_type)) return KS_NEWREF(obj);
+
+    if (tp != kst_number) {
+        KS_THROW(kst_Error, "Derived type of 'number' (%R) did not define '__new()' method", tp);
+        return NULL;
+    }
+
+   if (obj == KSO_NONE) {
+        return (kso)ks_int_new(0);
+    } else if (kso_issub(obj->type, tp)) {
+        return KS_NEWREF(obj);
+    } else if (kso_issub(obj->type, kst_str)) {
+        return (kso)ks_number_news(((ks_str)obj)->data, ((ks_str)obj)->len_b, 0);
+    }
+
+    KS_THROW_CONV(obj->type, tp);
+    return NULL;
+}
+static KS_TFUNC(T, bool) {
+    kso V;
+    KS_ARGS("V", &V);
+
+    if (kso_is_complex(V)) {
+        ks_ccomplex Vc;
+        if (!kso_get_cc(V, &Vc)) return NULL;
+
+        return KSO_BOOL(!KS_CC_EQRI(Vc, 0, 0));
+    } else if (kso_is_float(V)) {
+        ks_cfloat Vf;
+        if (!kso_get_cf(V, &Vf)) return NULL;
+        return KSO_BOOL(Vf != 0);
+    } else if (kso_is_int(V)) {
+        ks_int Vi, R = NULL;
+        if (!(Vi = kso_int(V))) return NULL;
+
+        bool res = ks_int_cmp_c(Vi, 0) != 0;
+        KS_DECREF(Vi);
+
+        return KSO_BOOL(res);
+    }
+
+    return KSO_UNDEFINED;
+}
 
 static KS_TFUNC(T, abs) {
     kso V;
@@ -693,6 +785,8 @@ static bool i_num_cmp(kso L, kso R, int* res) {
         }
 
         *res = mpz_cmp(Li->val, Ri->val);
+        KS_DECREF(Li);
+        KS_DECREF(Ri);
 
         return true;
     }
@@ -847,6 +941,8 @@ ks_type kst_number = &tp;
 void _ksi_number() {
     _ksinit(kst_number, kst_object, T_NAME, sizeof(struct kso_s), -1, "Abstract base type of other numeric quantities\n\n   Defines operators for different types of numbers, but cannot be instantiated directly (see types 'int', 'float', 'complex' for examples)", KS_IKV(
 
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(self, obj=none)", "")},
+        {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__pos",                  ksf_wrap(T_pos_, T_NAME ".__pos(self)", "")},
         {"__neg",                  ksf_wrap(T_neg_, T_NAME ".__neg(self)", "")},
         {"__sqig",                 ksf_wrap(T_sqig_, T_NAME ".__sqig(self)", "")},
@@ -866,7 +962,7 @@ void _ksi_number() {
         {"__binand",               ksf_wrap(T_binand_, T_NAME ".__binand(L, R)", "")},
 
         {"__lt",                   ksf_wrap(T_lt_, T_NAME ".__lt(L, R)", "")},
-        {"__gt",                   ksf_wrap(T_ge_, T_NAME ".__gt(L, R)", "")},
+        {"__gt",                   ksf_wrap(T_gt_, T_NAME ".__gt(L, R)", "")},
         {"__le",                   ksf_wrap(T_le_, T_NAME ".__le(L, R)", "")},
         {"__ge",                   ksf_wrap(T_ge_, T_NAME ".__ge(L, R)", "")},
         {"__eq",                   ksf_wrap(T_eq_, T_NAME ".__eq(L, R)", "")},

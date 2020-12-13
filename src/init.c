@@ -49,10 +49,10 @@ static ks_module
 bool ks_init() {
     if (has_init) return true;
 
-
     kst_func->ob_sz = sizeof(struct ks_func_s);
     kst_func->ob_attr = offsetof(struct ks_func_s, attr);
     kst_str->ob_sz = sizeof(struct ks_str_s);
+    kst_tuple->ob_sz = sizeof(struct ks_tuple_s);
 
     /* Initialize types */
 
@@ -86,6 +86,7 @@ _KS_DO_SPEC(_KSACT)
         _ksi_complex();
 
     _ksi_none();
+    _ksi_dotdotdot();
     _ksi_undefined();
 
     _ksi_str();
@@ -93,6 +94,9 @@ _KS_DO_SPEC(_KSACT)
     _ksi_regex();
 
     _ksi_range();
+
+    _ksi_map();
+    _ksi_filter();
     
     _ksi_set();
     _ksi_dict();
@@ -153,6 +157,7 @@ _KS_DO_SPEC(_KSACT)
 
         {"logger",                 (kso)kst_logger},
 
+        {"number",                 (kso)kst_number},
         {"int",                    (kso)kst_int},
         {"enum",                   (kso)kst_enum},
         {"bool",                   (kso)kst_bool},
@@ -170,6 +175,9 @@ _KS_DO_SPEC(_KSACT)
         {"dict",                   (kso)kst_dict},
         {"graph",                  (kso)kst_graph},
 
+        {"map",                    (kso)kst_map},
+        {"filter",                 (kso)kst_filter},
+
         /* Exception Types */
         {"Exception", (kso)kst_Exception},
         {"OutOfIterException", (kso)kst_OutOfIterException},
@@ -178,6 +186,7 @@ _KS_DO_SPEC(_KSACT)
         {"SyntaxError", (kso)kst_SyntaxError},
         {"ImportError", (kso)kst_ImportError},
         {"TypeError", (kso)kst_TypeError},
+        {"TemplateError", (kso)kst_TemplateError},
         {"NameError", (kso)kst_NameError},
         {"AttrError", (kso)kst_AttrError},
         {"KeyError", (kso)kst_KeyError},

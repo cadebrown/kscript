@@ -740,6 +740,8 @@ struct ks_type_s {
     /* Strings representing the shallow name and full name (including modules, subtypes, etc) */
     ks_str i__name, i__fullname;
 
+    /* Template arguments for the type */
+    ks_tuple i__template;
 
     /** Constructors/Destructors **/
 
@@ -805,6 +807,7 @@ struct ks_type_s {
     m(__base) \
     m(__name) \
     m(__fullname) \
+    m(__template) \
     m(__new) \
     m(__init) \
     m(__free) \

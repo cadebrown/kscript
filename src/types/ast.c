@@ -57,7 +57,7 @@ bool ks_ast_is_expr(int kind) {
     if (kind == KS_AST_CONST || kind == KS_AST_NAME) return true;
     if (KS_AST_BOP__FIRST <= kind && kind <= KS_AST_BOP__LAST) return true;
     if ((KS_AST_UOP__FIRST <= kind && kind <= KS_AST_UOP__LAST)) return true;
-    if (kind == KS_AST_ATTR || kind == KS_AST_ELEM || kind == KS_AST_CALL || kind == KS_AST_RICHCMP) return true;
+    if (kind == KS_AST_ATTR || kind == KS_AST_ELEM || kind == KS_AST_CALL || kind == KS_AST_RICHCMP || kind == KS_AST_COND) return true;
 
     if (kind == KS_AST_TYPE || kind == KS_AST_FUNC) return true;
     if (kind == KS_AST_LIST || kind == KS_AST_TUPLE || kind == KS_AST_SET || kind == KS_AST_DICT) return true;
