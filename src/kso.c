@@ -737,7 +737,7 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame clos
             } else {
                 /* Standard calling */
                 if (f->bfunc.n_req == f->bfunc.n_pars && nargs != f->bfunc.n_req) {
-                    KS_THROW(kst_ArgError, "Expected at least %i arguments, but got %i", f->bfunc.n_req, nargs);
+                    KS_THROW(kst_ArgError, "Expected %i arguments, but got %i", f->bfunc.n_req, nargs);
                 } else if (nargs < f->bfunc.n_req || nargs > f->bfunc.n_pars) {
                     KS_THROW(kst_ArgError, "Expected between %i and %i arguments, but got %i", f->bfunc.n_req, f->bfunc.n_pars, nargs);
                 } else {
@@ -926,7 +926,22 @@ kso kso_next(kso ob) {
             return NULL;
         }
         while (!it->of->ents[it->pos].key) it->pos++;
-
+        if (it->pos >= it->of->len_ents) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+        return KS_NEWREF(it->of->ents[it->pos++].key);
+    } else if (kso_issub(ob->type, kst_dict_iter) && ob->type->i__next == kst_dict_iter->i__next) {
+        ks_dict_iter it = (ks_dict_iter)ob;
+        if (it->pos >= it->of->len_ents) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+        while (!it->of->ents[it->pos].key) it->pos++;
+        if (it->pos >= it->of->len_ents) {
+            KS_OUTOFITER();
+            return NULL;
+        }
         return KS_NEWREF(it->of->ents[it->pos++].key);
     } else if (kso_issub(ob->type, kst_range_iter) && ob->type->i__next == kst_range_iter->i__next) {
         /* Range iterator */

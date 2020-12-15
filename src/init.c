@@ -153,6 +153,9 @@ _KS_DO_SPEC(_KSACT)
     ksg_globals = ks_dict_new(KS_IKV(
         {"__config", KS_NEWREF(ksg_config)},
         {"__argv", KS_NEWREF(ksos_argv)},
+        {"__stdin", KS_NEWREF(ksos_stdin)},
+        {"__stdout", KS_NEWREF(ksos_stdout)},
+        {"__stderr", KS_NEWREF(ksos_stderr)},
 
         {"object",                 (kso)kst_object},
 

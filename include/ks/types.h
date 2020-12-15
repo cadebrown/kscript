@@ -654,6 +654,19 @@ typedef struct ks_dict_s {
 }* ks_dict;
 
 
+/* 'dict.__iter' iterator type */
+typedef struct ks_dict_iter_s {
+    KSO_BASE
+
+    ks_dict of;
+
+    /* Current position (in ents) */
+    ks_cint pos;
+
+}* ks_dict_iter;
+
+
+
 /* 'names' - attribute-based namespace
  *
  */

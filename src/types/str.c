@@ -462,6 +462,35 @@ static KS_TFUNC(T, find) {
 
     return (kso)ks_int_new(ks_str_find(self, sub, start, end, NULL));
 }
+
+static KS_TFUNC(T, replace) {
+    ks_str self;
+    ks_str sub, by;
+    KS_ARGS("self:* sub:* by:*", &self, kst_str, &sub, kst_str, &by, kst_str);
+
+    /* General search/replace */
+    ksio_StringIO sio = ksio_StringIO_new();
+
+    ks_size_t i = 0, j = 0;
+    for (i = 0; i <= self->len_b - sub->len_b; ) {
+        if (memcmp(self->data + i, sub->data, sub->len_b) == 0) {
+            /* Add literal */
+            ksio_addbuf(sio, i - j, self->data + j);
+            /* Found substring, so emit the replaced by */
+            ksio_addbuf(sio, by->len_b, by->data);
+
+            /* Skip over it */
+            j = i += sub->len_b;
+        } else {
+            i++;
+        }
+    }
+    i = self->len_b;
+    ksio_addbuf(sio, i - j, self->data + j);
+    return (kso)ksio_StringIO_getf(sio);
+}
+
+
 static KS_TFUNC(T, split) {
     ks_str self;
     ks_str by;
@@ -495,6 +524,8 @@ static KS_TFUNC(T, trim) {
 
     return (kso)ks_str_new(pr - pl, self->data + pl);
 }
+
+
 
 
 static KS_TFUNC(T, mod) {
@@ -621,6 +652,7 @@ void _ksi_str() {
         {"split",                ksf_wrap(T_split_, T_NAME ".split(self, by)", "Splits a string on a given input")},
         
         {"find",                 ksf_wrap(T_find_, T_NAME ".find(self, sub, start=none, end=none)", "Find a substring within 'self[start:end]'")},
+        {"replace",              ksf_wrap(T_replace_, T_NAME ".replace(self, sub, by)", "Replace instances of 'sub' with 'by'")},
 
         {"trim",                 ksf_wrap(T_trim_, T_NAME ".trim(self)", "Trims the left and right sides of 'self' of spaces, and returns what is left")},
         

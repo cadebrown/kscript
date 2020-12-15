@@ -5,6 +5,7 @@
 #include <ks/impl.h>
 
 #define T_NAME "dict"
+#define TI_NAME T_NAME ".__iter"
 
 
 
@@ -575,17 +576,56 @@ static KS_TFUNC(T, contains) {
 }
 
 
+/** Iterator **/
+
+static KS_TFUNC(TI, free) {
+    ks_dict_iter self;
+    KS_ARGS("self:*", &self, kst_dict_iter);
+
+    KS_DECREF(self->of);
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(TI, new) {
+    ks_type tp;
+    ks_dict of;
+    KS_ARGS("tp:* of:*", &tp, kst_type, &of, kst_dict);
+
+    ks_dict_iter self = KSO_NEW(ks_dict_iter, tp);
+
+    KS_INCREF(of);
+    self->of = of;
+
+    self->pos = 0;
+
+    return (kso)self;
+}
+
 /* Export */
 
 static struct ks_type_s tp;
 ks_type kst_dict = &tp;
 
+static struct ks_type_s tp_iter;
+ks_type kst_dict_iter = &tp_iter;
+
 void _ksi_dict() {
+
+    _ksinit(kst_dict_iter, kst_object, TI_NAME, sizeof(struct ks_dict_s), -1, "", KS_IKV(
+        {"__free",               ksf_wrap(TI_free_, TI_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(TI_new_, TI_NAME ".__new(tp, of)", "")},
+    ));
+
     _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, "Dictionaries, sometimes called associative arrays, are mappings between keys and values. The keys and values may be any objects, the only requirement is that keys are hashable. And, for keys which hash equally and compare equally, there is only one key stored\n\n    Entries are ordered by first insertion of the key, which is reset upon deletion\n\n    SEE: https://en.wikipedia.org/wiki/Associative_array", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"__contains",             ksf_wrap(T_contains_, T_NAME ".__contains(self, key)", "")},
+
+        {"__iter",               KS_NEWREF(kst_dict_iter)},
+        
     ));
     
     kst_dict->i__hash = NULL;
