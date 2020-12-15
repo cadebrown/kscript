@@ -10,7 +10,6 @@
 
 /* C-API */
 
-
 kso ksffi_wrap(ks_type tp, void* val) {
     if (tp == kst_none || (kso)tp == KSO_NONE) {
         KS_THROW(kst_TypeError, "Cannot create value from 'void' type (perhaps your pointer is a 'void*')", tp);

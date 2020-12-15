@@ -72,6 +72,18 @@ static KS_FUNC(hash) {
     return (kso)ks_int_newu(res);
 }
 
+static KS_FUNC(abs) {
+    kso obj;
+    KS_ARGS("obj", &obj);
+
+    if (obj->type->i__abs) {
+        return kso_call(obj->type->i__abs, 1, &obj);
+    }
+
+    KS_THROW_METH(obj, "__abs");
+    return NULL;
+}
+
 
 static KS_FUNC(len) {
     kso obj;
@@ -153,6 +165,39 @@ static KS_FUNC(next) {
     return kso_next(obj);
 }
 
+static KS_FUNC(issub) {
+    ks_type tp;
+    kso of;
+    KS_ARGS("tp:* of", &tp, kst_type, &of);
+
+    if (kso_issub(of->type, kst_type)) {
+        return KSO_BOOL(kso_issub(tp, (ks_type)of));
+    } else if (kso_issub(of->type, kst_tuple)) {
+        ks_tuple tup = (ks_tuple)of;
+        ks_cint i;
+        for (i = 0; i < tup->len; ++i) {
+            ks_type ofi = (ks_type)tup->elems[i];
+            if (!kso_issub(ofi->type, kst_type)) {
+                KS_THROW(kst_TypeError, "Expected 'of' to be either a type or tuple of types, but got '%T' object (which didn't have types in it)", of);
+                return NULL;
+            }
+            if (kso_issub(tp, ofi)) return KSO_TRUE;
+        }
+        return KSO_FALSE;
+    }
+
+    KS_THROW(kst_TypeError, "Expected 'of' to be either a type or tuple of types, but got '%T' object", of);
+    return NULL;
+
+}
+
+static KS_FUNC(isinst) {
+    kso obj;
+    kso of;
+    KS_ARGS("obj of", &obj, &of);
+
+    return issub_(2, (kso[]){ (kso)obj->type, of });
+}
 
 
 void _ksi_funcs() {
@@ -165,10 +210,14 @@ void _ksi_funcs() {
     F(print, "print(*args)", "Prints out all the arguments to 'os.stdout', seperated by spaces, and followed by a newline")
 
     F(hash, "hash(obj)", "Computes the hash of an object, which is an integer\n\n    Delegates to 'type(obj).__hash(obj)'");
+    F(abs, "abs(obj)", "Computes absolute value of an object\n\n    Delegates to 'type(obj).__abs(obj)'");
     F(len, "len(obj)", "Computes the length of an object, which is normally the number of elements in a collection\n\n    Delegates to 'type(obj).__hash(obj)'");
     F(repr, "repr(obj)", "Computes the string representation of an object, which aims to be a string that can either be executed and result in the same value, or give as much information as possible\n\n    Delegates to 'type(obj).__repr(obj)'");
 
     F(pow, "pow(L, R, M=none)", "Computes exponentiation (i.e. 'L ** R'), or modular exponentiation ('L ** R % m'), if 'M' is given")
+
+    F(issub, "issub(tp, of)", "Computes whether 'tp' was a subtype (or the same type) as 'of', which is either a type, or tuple of types")
+    F(isinst, "isinst(obj, of)", "Equivalent to 'issub(type(obj), of)'")
 
     F(chr, "chr(ord)", "Convert an ordinal (i.e. an integral codepoint) into a length-1 string");
     F(ord, "ord(chr)", "Convert a length-1 string into an ordinal (i.e. an integral codepoint)");

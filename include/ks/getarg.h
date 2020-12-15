@@ -30,6 +30,10 @@ typedef struct ksga_Parser_s {
     /* Help message. If NULL, it will be generated automatically when it is needed */
     ks_str help;
 
+    /* If true, then stop parsing options at the first positional argument */
+    bool stop_at_pos;
+
+
     /* Number of flags */
     int n_flag;
 

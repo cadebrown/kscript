@@ -25,6 +25,11 @@ _KS_DO_SPEC(_KSACT)
     _ksv_r
 ;
 
+
+ks_int
+    _ksint_0, _ksint_1
+;
+
 ks_tuple
     _ksv_emptytuple
 ;
@@ -34,9 +39,8 @@ ks_dict
     ksg_inter_vars,
     ksg_globals
 ;
-
-ks_int
-    _ksint_0, _ksint_1
+ks_list
+    ksg_path
 ;
 
 static ks_module
@@ -93,6 +97,7 @@ _KS_DO_SPEC(_KSACT)
     _ksi_bytes();
     _ksi_regex();
 
+    _ksi_slice();
     _ksi_range();
 
     _ksi_map();
@@ -168,6 +173,7 @@ _KS_DO_SPEC(_KSACT)
         {"bytes",                  (kso)kst_bytes},
         {"regex",                  (kso)kst_regex},
 
+        {"slice",                  (kso)kst_slice},
         {"range",                  (kso)kst_range},
         {"list",                   (kso)kst_list},
         {"tuple",                  (kso)kst_tuple},
@@ -211,11 +217,14 @@ _KS_DO_SPEC(_KSACT)
         {"pow", (kso)ksf_pow},
 
         {"hash", (kso)ksf_hash},
+        {"abs", (kso)ksf_abs},
         {"len", (kso)ksf_len},
         {"repr", (kso)ksf_repr},
 
         {"iter", (kso)ksf_iter},
         {"next", (kso)ksf_next},
+        {"issub", (kso)ksf_issub},
+        {"isinst", (kso)ksf_isinst},
     
         {"chr", (kso)ksf_chr},
         {"ord", (kso)ksf_ord},
@@ -223,6 +232,12 @@ _KS_DO_SPEC(_KSACT)
     ));
 
     kst_type->refs = KS_REFS_INF;
+
+    ksg_path = ks_list_new(0, NULL);
+
+    /* Current position */
+    ks_list_pushu(ksg_path, (kso)ks_str_new(-1, "."));
+
 
     return has_init = true;
 }

@@ -7,6 +7,7 @@
  */
 #include <ks/impl.h>
 #include <ks/compiler.h>
+#include <ks/ucd.h>
 
 
 /** Utilities **/
@@ -302,7 +303,23 @@ RULE(STMT) {
     int k = t.kind;
 
     /* Check lookahead and see if it is a special construct */
-    if (k == KS_TOK_RET) {
+    if (k == KS_TOK_BREAK) {
+        EAT();
+
+        if (!SUB(N)) {
+            return NULL;
+        }
+
+        return ks_ast_newn(KS_AST_BREAK, 0, NULL, NULL, t);
+    } else if (k == KS_TOK_CONT) {
+        EAT();
+
+        if (!SUB(N)) {
+            return NULL;
+        }
+
+        return ks_ast_newn(KS_AST_CONT, 0, NULL, NULL, t);
+    } else if (k == KS_TOK_RET) {
         EAT();
 
         if (TOK.kind == KS_TOK_SEMI || TOK.kind == KS_TOK_EOF || TOK.kind == KS_TOK_N) {
@@ -355,9 +372,29 @@ RULE(STMT) {
             KS_THROW_SYNTAX(fname, src, TOK, "Expected a valid module name for 'import' statement");
             return NULL;
         }
-        ks_tok tt = EAT();
+        ksio_StringIO sio = ksio_StringIO_new();
+        ks_tok tt = TOK;
 
-        return ks_ast_newn(KS_AST_IMPORT, 0, NULL, (kso)ks_tok_str(src, tt), ks_tok_combo(t, tt));
+        ks_str s = ks_tok_str(src, EAT());
+        ksio_add(sio, "%S", s);
+        KS_DECREF(s);
+
+
+        while (TOK.kind == KS_TOK_DOT) {
+            EAT();
+
+            if (TOK.kind != KS_TOK_NAME) {
+                KS_THROW_SYNTAX(fname, src, TOK, "Expected a valid module name for 'import' statement");
+                return NULL;
+            }
+            tt = TOK;
+
+            s = ks_tok_str(src, EAT());
+            ksio_add(sio, ".%S", s);
+            KS_DECREF(s);
+        }
+
+        return ks_ast_newn(KS_AST_IMPORT, 0, NULL, (kso)ksio_StringIO_getf(sio), ks_tok_combo(t, tt));
         
     } else if (k == KS_TOK_IF) {
         EAT();
@@ -1411,14 +1448,151 @@ RULE(E14) {
                 bool is_va = tt.kind == KS_TOK_MUL;
                 if (is_va) EAT();
 
-                ks_ast sub = SUB(EXPR);
-                if (!sub) {
-                    KS_DECREF(res);
-                    return NULL;
+                /* Try and parse slice or expression */
+                ks_ast sub[3] = { NULL, NULL, NULL };
+                bool is_sl = false;
+                ks_tok ttt = TOK;
+                if (TOK.kind == KS_TOK_COL) {
+                    EAT();
+                    is_sl = true;
+                    KS_INCREF(ast_none);
+                    sub[0] = ast_none;
+
+                    if (TOK.kind == KS_TOK_COL) {
+                        EAT();
+                        KS_INCREF(ast_none);
+                        sub[1] = ast_none;
+
+                        if (TOK.kind == KS_TOK_RPAR || TOK.kind == KS_TOK_RBRC || TOK.kind == KS_TOK_RBRK || TOK.kind == KS_TOK_COM) {
+                            /* end: '::' */
+                            KS_INCREF(ast_none);
+                            sub[2] = ast_none;
+                        } else {
+                            /* end: '::e' */
+                            sub[2] = SUB(EXPR);
+                            if (!sub[2]) {
+                                KS_DECREF(res);
+                                KS_DECREF(sub[0]);
+                                KS_DECREF(sub[1]);
+                                return NULL;
+                            }
+                        }
+                    } else {
+                        sub[1] = SUB(EXPR);
+                        if (!sub[1]) {
+                            KS_DECREF(res);
+                            KS_DECREF(sub[0]);
+                            return NULL;
+                        }
+                        if (TOK.kind == KS_TOK_COL) {
+                            EAT();
+                            if (TOK.kind == KS_TOK_RPAR || TOK.kind == KS_TOK_RBRC || TOK.kind == KS_TOK_RBRK || TOK.kind == KS_TOK_COM) {
+                                /* end: ':e:' */
+                                KS_INCREF(ast_none);
+                                sub[2] = ast_none;
+                            } else {
+                                /* end: ':e:e' */
+                                sub[2] = SUB(EXPR);
+                                if (!sub[2]) {
+                                    KS_DECREF(res);
+                                    KS_DECREF(sub[0]);
+                                    KS_DECREF(sub[1]);
+                                    return NULL;
+                                }
+                            }
+                        } else {
+                            /* end: '::' */
+                            KS_INCREF(ast_none);
+                            sub[2] = ast_none;
+                        }
+                    }
+                } else {
+                    sub[0] = SUB(EXPR);
+                    if (!sub[0]) {
+                        KS_DECREF(res);
+                        return NULL;
+                    }
+
+                    if (TOK.kind == KS_TOK_COL) {
+                        EAT();
+                        is_sl = true;
+
+                        if (TOK.kind == KS_TOK_COL) {
+                            EAT();
+                            KS_INCREF(ast_none);
+                            sub[1] = ast_none;
+
+
+                            if (TOK.kind == KS_TOK_RPAR || TOK.kind == KS_TOK_RBRC || TOK.kind == KS_TOK_RBRK || TOK.kind == KS_TOK_COM) {
+                                /* end: 'e::' */
+                                KS_INCREF(ast_none);
+                                sub[2] = ast_none;
+
+                            } else {
+                                /* end: 'e::e' */
+                                sub[2] = SUB(EXPR);
+                                if (!sub[2]) {
+                                    KS_DECREF(res);
+                                    KS_DECREF(sub[0]);
+                                    KS_DECREF(sub[1]);
+                                    return NULL;
+                                }
+                            }
+                        } else {
+                            if (TOK.kind == KS_TOK_RPAR || TOK.kind == KS_TOK_RBRC || TOK.kind == KS_TOK_RBRK || TOK.kind == KS_TOK_COM) {
+                                /* end: 'e:' */
+                                KS_INCREF(ast_none);
+                                sub[1] = ast_none;
+                                KS_INCREF(ast_none);
+                                sub[2] = ast_none;
+
+                            } else {
+                                sub[1] = SUB(EXPR);
+                                if (!sub[1]) {
+                                    KS_DECREF(res);
+                                    KS_DECREF(sub[0]);
+                                    return NULL;
+                                }
+
+                                if (TOK.kind == KS_TOK_COL) {
+                                    EAT();
+
+                                    if (TOK.kind == KS_TOK_RPAR || TOK.kind == KS_TOK_RBRC || TOK.kind == KS_TOK_RBRK || TOK.kind == KS_TOK_COM) {
+                                        /* end: 'e:e:' */
+                                        KS_INCREF(ast_none);
+                                        sub[2] = ast_none;
+
+                                    } else {
+                                        /* end: 'e:e:e' */
+                                        sub[2] = SUB(EXPR);
+                                        if (!sub[2]) {
+                                            KS_DECREF(res);
+                                            KS_DECREF(sub[0]);
+                                            KS_DECREF(sub[1]);
+                                            return NULL;
+                                        }
+                                    }
+                                } else {
+                                    /* end: 'e:e:' */
+                                    KS_INCREF(ast_none);
+                                    sub[2] = ast_none;
+                                }
+                            }
+                        }
+                    } else {
+                        /* Not a slice */
+                    }
                 }
 
-                if (is_va) sub = ks_ast_newn(KS_AST_UOP_STAR, 1, (ks_ast[]){ sub }, NULL, tt);
-                ks_ast_pushn(res, sub);
+                ks_ast rs = NULL;
+                if (is_sl) {
+                    rs = ks_ast_newn(KS_AST_SLICE, 3, sub, NULL, ttt);
+                } else {
+                    rs = sub[0];
+                }
+
+                if (is_va) rs = ks_ast_newn(KS_AST_UOP_STAR, 1, (ks_ast[]){ rs }, NULL, tt);
+                ks_ast_pushn(res, rs);
 
                 SKIP_N();
                 if (TOK.kind == KS_TOK_COM) {
@@ -1475,6 +1649,24 @@ RULE(ATOM) {
         ks_cfloat v;
         if (!ks_cfloat_from_str(src->data + t.spos, ep - t.spos, &v)) return NULL;
         return ks_ast_newn(KS_AST_CONST, 0, NULL, ep == t.epos ? (kso)ks_float_new(v) : (kso)ks_complex_newre(0, v), t);
+    } else if (TOK.kind == KS_TOK_REGEX) {
+        /* Regex literal */
+        ks_tok t = EAT();
+
+        /* Whether its a triple quoted literal */
+        bool is3 = (t.epos - t.spos) > 3  && strncmp(src->data + t.spos, "```", 3) == 0;
+        ks_str s = ks_str_new(t.epos - t.spos - (is3?6:2), src->data + t.spos + (is3?3:1));
+
+        ks_regex v = ks_regex_new(s);
+        if (!v) {
+            KS_DECREF(s);
+            return NULL;
+        }
+        KS_DECREF(s);
+
+        return ks_ast_newn(KS_AST_CONST, 0, NULL, (kso)v, t);
+
+
     } else if (TOK.kind == KS_TOK_STR) {
         ks_tok t = EAT();
         /* Parse string literal */
@@ -1523,7 +1715,7 @@ RULE(ATOM) {
             else if (c == 'x') {
                 /* \xHH, single byte */
                 int ct = 0;
-                ks_ucp v;
+                ks_ucp v = 0;
                 while (ct < 2) {
                     c = s[i + ct];
                     int d;
@@ -1548,7 +1740,7 @@ RULE(ATOM) {
             } else if (c == 'u') {
                 /* \uHHHH, codepoint */
                 int ct = 0;
-                ks_ucp v;
+                ks_ucp v = 0;
                 while (ct < 4) {
                     c = s[i + ct];
                     int d;
@@ -1566,15 +1758,14 @@ RULE(ATOM) {
                     ++ct;
                 }
                 i += ct;
-
                 /* Decode and add */
-                int n;
+                int n = 0;
                 KS_UCP_TO_UTF8(utf8, n, v);
                 ksio_addbuf(aio, n, utf8);
             } else if (c == 'U') {
                 /* \uHHHHHHHH, codepoint */
                 int ct = 0;
-                ks_ucp v;
+                ks_ucp v = 0;
                 while (ct < 8) {
                     c = s[i + ct];
                     int d;
@@ -1621,18 +1812,17 @@ RULE(ATOM) {
                 }
                 i++;
 
-                assert(false);
-
-                /*
                 struct ksucd_info info;
-                v = ksucd_lookup(&info, len, s+pos);
-                if (v == KSUCD_ERR) {
+                ks_ucp v = ksucd_lookup(&info, en-sn, s+sn);
+                if (v < 1) {
                     KS_DECREF(sio);
                     KS_THROW_SYNTAX(fname, src, t, "Unknown unicode character: '%.*s'", t.epos - t.spos, s + t.spos);
                     return NULL;
                 }
-                */
-
+                /* Decode and add */
+                int n;
+                KS_UCP_TO_UTF8(utf8, n, v);
+                ksio_addbuf(aio, n, utf8);
             } else {
                 KS_THROW_SYNTAX(fname, src, t, "Unexpected escape sequence '\\%c'", c);
                 KS_DECREF(sio);

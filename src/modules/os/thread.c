@@ -7,6 +7,10 @@
 
 #define T_NAME "os.thread"
 
+#ifndef KS_HAVE_pthreads
+#warning Building kscript without pthread support, so threading is disabled
+#endif
+
 
 /* Internals */
 
@@ -21,7 +25,7 @@ static ks_set active_threads = NULL;
 static pthread_key_t this_thread_key;
 
 
-#ifdef KS_HAVE_PTHREADS
+#ifdef KS_HAVE_pthreads
 
 /* Initialize and begin pthreads-specific */
 static void* init_thread_pthreads(void* _self) {
@@ -56,7 +60,7 @@ ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
     if (name) {
         KS_INCREF(name);
     } else {
-        name = ks_fmt("<thread @ %p>", self);
+        name = ks_fmt("%p", self);
     }
 
     self->name = name;
@@ -82,7 +86,7 @@ ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
 
 ksos_thread ksos_thread_get() {
     ksos_thread res = NULL;
-    #ifdef KS_HAVE_PTHREADS
+    #ifdef KS_HAVE_pthreads
     res = (ksos_thread)pthread_getspecific(this_thread_key);
     #else
 
@@ -94,7 +98,7 @@ bool ksos_thread_start(ksos_thread self) {
     if (self->is_active || self->is_queue) return true;
     self->is_queue = true;
 
-    #if defined(KS_HAVE_PTHREADS)
+    #if defined(KS_HAVE_pthreads)
 
     /* Start pthread up */
     /*if (!ks_set_add(active_threads, (kso)self)) {
@@ -118,7 +122,7 @@ bool ksos_thread_start(ksos_thread self) {
 bool ksos_thread_join(ksos_thread self) {
     if (!self->is_active && !self->is_queue) return true;
 
-    #if defined(KS_HAVE_PTHREADS)
+    #if defined(KS_HAVE_pthreads)
 
     /* unlock temporarily to allow other thread to finish */
     KS_GIL_UNLOCK();
@@ -195,7 +199,7 @@ void _ksi_os_thread() {
     ksg_main_thread = ksos_thread_new(ksost_thread, tmp, NULL, _ksv_emptytuple);
     KS_DECREF(tmp);
 
-    #ifdef KS_HAVE_PTHREADS
+    #ifdef KS_HAVE_pthreads
 
     /* Create a per-thread keyed variable */
     int stat = pthread_key_create(&this_thread_key, NULL);
@@ -207,7 +211,7 @@ void _ksi_os_thread() {
     /* Set the variable for this thread */
     pthread_setspecific(this_thread_key, (void*)ksg_main_thread);
 
-    #endif /* KS_HAVE_PTHREADS */
+    #endif /* KS_HAVE_pthreads */
 
 
 

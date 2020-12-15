@@ -24,7 +24,7 @@ bool ksio_is_open(ksio_BaseIO self, bool* out) {
         return true;
     }
 
-    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was open");
+    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was open", self);
     return false;
 }
 
@@ -38,7 +38,7 @@ bool ksio_is_eof(ksio_BaseIO self, bool* out) {
         return true;
     }
 
-    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was at EOF");
+    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was at EOF", self);
     return false;
 }
 
@@ -52,7 +52,7 @@ bool ksio_is_r(ksio_BaseIO self, bool* out) {
         return true;
     }
 
-    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was readable");
+    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was readable", self);
     return false;
 }
 
@@ -65,7 +65,8 @@ bool ksio_is_w(ksio_BaseIO self, bool* out) {
         return true;
     }
 
-    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was writeable");
+
+    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was writeable", self);
     return false;
 }
 
@@ -106,7 +107,6 @@ bool ksio_is_str(ksio_BaseIO self, bool* out) {
     KS_DECREF(rt);
     return true;
 }
-
 
 ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data) {
     bool good;
@@ -316,8 +316,12 @@ bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
 bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
     if (sz_b < 0) sz_b = strlen(data);
     bool good;
-    if (!ksio_is_open(self, &good)) return -1;
+
+    if (!ksio_is_open(self, &good)) {    
+        return -1;
+    }
     if (!good) {
+
         KS_THROW(kst_IOError, "'%T' object is not open", self);
         return -1;
     }
@@ -332,7 +336,6 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
     //    return -1;
     }
 
-
     if (kso_issub(self->type, ksiot_FileIO)) {
         ksio_FileIO fio = (ksio_FileIO)self;
 
@@ -344,7 +347,7 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
     
         if (sz_b != real_sz) {
             KS_THROW(kst_IOError, "Failed to write to file: output was truncated (attempted %l bytes, only wrote %l)", (ks_cint)sz_b, (ks_cint)real_sz);
-            return false;
+            return -1;
         }
 
         fio->sz_w += real_sz;
@@ -369,8 +372,8 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
         return sz_b;
     }
 
-
     KS_THROW(kst_IOError, "Don't know how to write str to '%T' object", self);
+
     return -1;
 }
 
@@ -390,6 +393,7 @@ static KS_TFUNC(T, bool) {
 static KS_TFUNC(T, close) {
     ksio_BaseIO self;
     KS_ARGS("self:*", &self, ksiot_BaseIO);
+
 
     KS_THROW(kst_TypeError, "'%T' did not implement the 'close()' method of 'io.BaseIO'", self);
     return NULL;
@@ -412,6 +416,20 @@ static KS_TFUNC(T, write) {
     KS_THROW(kst_TypeError, "'%T' did not implement the 'write()' method of 'io.BaseIO'", self);
     return NULL;
 }
+
+static KS_TFUNC(T, getattr) {
+    ksio_BaseIO self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, ksiot_BaseIO, &attr, kst_str);
+
+    if (ks_str_eq_c(attr, "restype", 7)) {
+        return (kso)ksio_rtype(self);
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
+
 
 
 /** Iterable type **/
@@ -523,7 +541,10 @@ void _ksi_io_BaseIO() {
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__iter",                 KS_NEWREF(ksiot_BaseIO_iter)},
 
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},
+        {"close",                  ksf_wrap(T_close_, T_NAME ".close(self)", "Closes the stream")},
     ));
 }

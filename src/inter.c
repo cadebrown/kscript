@@ -13,7 +13,7 @@
 #include <ks/os.h>
 #include <ks/compiler.h>
 
-#if defined(KS_HAVE_READLINE)
+#if defined(KS_HAVE_readline)
 
 /* Use GNU readline */
 #include <readline/readline.h>
@@ -22,7 +22,7 @@
 #else
 
 /* Fallback (TODO: make even better) */
-#warning Building without 'readline', so limited interactivity
+#warning Building kscript without 'readline', so limited interactivity and line editing features
 
 #endif
 
@@ -157,7 +157,7 @@ static void complete(ks_list out, const char* text) {
 }
 
 
-#ifdef KS_HAVE_READLINE
+#ifdef KS_HAVE_readline
 
 
 /* Generates matches
@@ -220,7 +220,7 @@ static void handle_sigint(int signum) {
 
     code->len_b = code->len_c = 0;
 
-    #ifdef KS_HAVE_READLINE
+    #ifdef KS_HAVE_readline
 
     /* Regenerate prompt and clear text */
     rl_on_new_line();
@@ -267,7 +267,7 @@ bool ks_inter() {
         if (is_tty_stdin) {
             update_prompts();
 
-            #if defined(KS_HAVE_READLINE)
+            #if defined(KS_HAVE_readline)
     
             rl_attempted_completion_function = my_rl_complete;
             
@@ -312,7 +312,7 @@ bool ks_inter() {
 
                 char* prompt = code->len_b == 0 ? prompt0->data : prompt1->data;
 
-                #ifdef KS_HAVE_READLINE
+                #ifdef KS_HAVE_readline
                 /* Use GNU readline, which will allow for more sophisticated features from input */
                 KS_GIL_UNLOCK();
                 char* rl_res = readline(prompt);

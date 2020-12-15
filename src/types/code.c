@@ -230,6 +230,7 @@ static KS_TFUNC(T, dis) {
         OPI(KSB_CALL)
         OP(KSB_CALLV)
 
+        OP(KSB_SLICE)
         OPI(KSB_LIST)
         OPI(KSB_LIST_PUSHN)
         OP(KSB_LIST_PUSHI)

@@ -44,6 +44,9 @@ bool kso_truthy(kso ob, bool* out) {
         *out = mpz_cmp_si(obi->val, 0) != 0;
         return true;
         #endif
+    } else if (kso_issub(ob->type, kst_none) || kso_issub(ob->type, kst_undefined)) {
+        *out = false;
+        return true;
     } else if (kso_issub(ob->type, kst_float) && ob->type->i__bool == kst_float->i__bool) {
         ks_float obf = (ks_float)ob;
         *out = obf->val != 0;
@@ -460,30 +463,85 @@ kso kso_getelems(int n_keys, kso* keys) {
         }
         ks_str lob = (ks_str)ob;
 
-        ks_cint idx;
-        if (!kso_get_ci(keys[1], &idx)) {
-            return NULL;
-        }
-        if (idx < 0) idx += lob->len_c;
-        if (idx < 0 || idx >= lob->len_c) {
-            KS_THROW_INDEX(ob, keys[1]);
-            return NULL;
-        }
-        if (KS_STR_IS_ASCII(lob)) {
-            return (kso)ks_str_new(1, lob->data + idx);
-        } else {
-            /* Seek to position */
-            int c = 0, b = 0, lb = 0;
-            while (c < idx) {
-                /* Parse single character */
-                lb = b;
-                do {
-                    b++;
-                } while (b < lob->len_b && (((unsigned char*)lob->data)[b] & 0x80) != 0);
-                c++;
+        if (kso_issub(keys[1]->type, kst_slice)) {
+            ks_cint first, last, delta;
+            if (!ks_slice_get_citer((ks_slice)keys[1], lob->len_c, &first, &last, &delta)) return NULL;
+
+            /* Check for specific cases */
+            if (first == last) return (kso)ks_str_new(0, NULL);
+            ks_cint len = (last - first) / delta;
+
+            if (delta == 1 && KS_STR_IS_ASCII(lob)) {
+                /* Direct substring */
+                return (kso)ks_str_new(len, lob->data + first);
             }
 
-            return (kso)ks_str_new(b - lb, lob->data + lb);
+            if (delta == 1) {
+                /* Find range of bytes */
+                int pb = 0, pc = 0;
+
+                while (pc < first) {
+                    pc++;
+                    pb++;
+                    while (KS_UCP_IS_CONT(lob->data[pb])) pb++;
+                }
+
+                int spb = pb;
+
+                while (pc < last) {
+                    pc++;
+                    pb++;
+                    while (KS_UCP_IS_CONT(lob->data[pb])) pb++;
+                }
+
+                return (kso)ks_str_new(pb - spb, lob->data + spb);
+
+            } else {
+                /* Now, build up a string */
+                ksio_StringIO sio = ksio_StringIO_new();
+                struct ks_str_citer cit = ks_str_citer_make(lob);
+
+                /* Build the string */
+                ks_str_citer_seek(&cit, first);
+                ks_cint ct = first;
+
+                do {
+                    int lbyi = cit.cbyi;
+                    ks_str_citer_next(&cit);
+                    ksio_addbuf(sio, cit.cbyi - lbyi, lob->data + lbyi);
+                    ks_str_citer_seek(&cit, cit.cchi + delta - 1);
+                    ct += delta;
+                } while (ct != last);
+
+                return (kso)ksio_StringIO_getf(sio);
+            }
+
+        } else {
+            ks_cint idx;
+            if (!kso_get_ci(keys[1], &idx)) {
+                return NULL;
+            }
+            if (idx < 0) idx += lob->len_c;
+            if (idx < 0 || idx >= lob->len_c) {
+                KS_THROW_INDEX(ob, keys[1]);
+                return NULL;
+            }
+            if (KS_STR_IS_ASCII(lob)) {
+                return (kso)ks_str_new(1, lob->data + idx);
+            } else {
+                /* Seek to position */
+                int c = 0, b = 0, lb = 0;
+                while (c < idx) {
+                    /* Parse single character */
+                    lb = b;
+                    do {
+                        b++;
+                    } while (b < lob->len_b && (((unsigned char*)lob->data)[b] & 0x80) != 0);
+                    c++;
+                }
+
+                return (kso)ks_str_new(b - lb, lob->data + lb);
+            }
         }
     } else if (kso_issub(ob->type, kst_bytes) && ob->type->i__getelem == kst_bytes->i__getelem) {
         if (n_keys != 2) {
@@ -510,17 +568,31 @@ kso kso_getelems(int n_keys, kso* keys) {
         }
         ks_list lob = (ks_list)ob;
 
-        ks_cint idx;
-        if (!kso_get_ci(keys[1], &idx)) {
-            return NULL;
-        }
-        if (idx < 0) idx += lob->len;
-        if (idx < 0 || idx >= lob->len) {
-            KS_THROW_INDEX(ob, keys[1]);
-            return NULL;
-        }
+        if (kso_issub(keys[1]->type, kst_slice)) {
+            ks_cint first, last, delta;
+            if (!ks_slice_get_citer((ks_slice)keys[1], lob->len, &first, &last, &delta)) {
+                return NULL;
+            }
+            ks_list res = ks_list_new(0, NULL);
+            ks_cint i;
+            for (i = first; i != last; i += delta) {
+                ks_list_push(res, lob->elems[i]);
+            }
 
-        return KS_NEWREF(lob->elems[idx]);
+            return (kso)res;
+        } else {
+            ks_cint idx;
+            if (!kso_get_ci(keys[1], &idx)) {
+                return NULL;
+            }
+            if (idx < 0) idx += lob->len;
+            if (idx < 0 || idx >= lob->len) {
+                KS_THROW_INDEX(ob, keys[1]);
+                return NULL;
+            }
+
+            return KS_NEWREF(lob->elems[idx]);
+        }
     } else if (kso_issub(ob->type, kst_tuple) && ob->type->i__getelem == kst_tuple->i__getelem) {
         if (n_keys != 2) {
             KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");
@@ -579,7 +651,7 @@ bool kso_setelems(int n_keys, kso* keys) {
 
         return true;
     } else if (kso_issub(ob->type, kst_dict) && ob->type->i__setelem == kst_dict->i__setelem) {
-        if (n_keys != 2) {
+        if (n_keys != 3) {
             KS_THROW(kst_ArgError, "Expected 3 arguments to element indexing operation");
             return NULL;
         }
@@ -686,6 +758,8 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame clos
         /* Calling a bytecode should just execute it */
         ksos_frame frame = ksos_frame_new(func);
         ks_list_push(th->frames, (kso)frame);
+        if (closure) KS_INCREF(closure);
+        frame->closure = closure;
 
         if (locals) {
             KS_INCREF(locals);

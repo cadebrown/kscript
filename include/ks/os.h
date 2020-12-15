@@ -198,7 +198,7 @@ typedef struct ksos_thread_s {
     }* handlers;
 
 
-#ifdef KS_HAVE_PTHREADS
+#ifdef KS_HAVE_pthreads
 
     /* pthreads internal */
     pthread_t pth_;
@@ -221,7 +221,7 @@ typedef struct ksos_mutex_s {
     int _waitct;
 
 
-#ifdef KS_HAVE_PTHREADS
+#ifdef KS_HAVE_pthreads
 
     /* pthreads internal */
     pthread_mutex_t pm_;

@@ -12,7 +12,7 @@ import getarg
 p = getarg.Parser("fib", "0.1.0", "Generate fibonacci numbers", ["Cade Brown <brown.cade@gmail.com>"])
 
 p.flag("largest", ["--largest"], "If this flag is set, only print the largest number")
-p.pos("N", "The number of fibonacci numbers to calculate", int, 1, none, 20)
+p.pos("N", "The number of fibonacci numbers to calculate", 1, int)
 
 args = p.parse()
 

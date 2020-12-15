@@ -16,7 +16,7 @@ ksos_mutex ksos_mutex_new(ks_type tp) {
     self->owned_by = NULL;
     self->_waitct = 0;
 
-    #ifdef KS_HAVE_PTHREADS
+    #ifdef KS_HAVE_pthreads
 
     /* Internal mutex */
     pthread_mutex_init(&self->pm_, NULL);
@@ -33,7 +33,7 @@ void ksos_mutex_lock(ksos_mutex self) {
 
     self->_waitct++;
 
-    #ifdef KS_HAVE_PTHREADS
+    #ifdef KS_HAVE_pthreads
 
     /* Lock using the pthreads library */
     pthread_mutex_lock(&self->pm_);
@@ -59,7 +59,7 @@ bool ksos_mutex_trylock(ksos_mutex self) {
 
     bool res = false;
 
-    #ifdef KS_HAVE_PTHREADS
+    #ifdef KS_HAVE_pthreads
 
     if (pthread_mutex_trylock(&self->pm_) == 0) {
         /* We locked it successfully */
@@ -85,7 +85,7 @@ bool ksos_mutex_trylock(ksos_mutex self) {
 
 void ksos_mutex_unlock(ksos_mutex self) {
 
-    #ifdef KS_HAVE_PTHREADS
+    #ifdef KS_HAVE_pthreads
     /* Unlock using the pthreads library */
     pthread_mutex_unlock(&self->pm_);
 

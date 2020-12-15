@@ -7,6 +7,14 @@
 
 #define T_NAME "float"
 
+/* Precision (in digits) for regular and scientific output */
+#define F_PREC_REG (KS_CFLOAT_DIG/2-2)
+#define F_PREC_SCI (KS_CFLOAT_DIG-2)
+
+/* Absolute value at which numbers are printed in scientific format as opposed to regular */
+#define A_SCI_BIG 1.0e10
+#define A_SCI_SML 1.0e-10
+
 
 /* Internals */
 
@@ -370,6 +378,38 @@ static KS_TFUNC(T, new) {
     return NULL;
 }
 
+static KS_TFUNC(T, isnan) {
+    ks_float self;
+    KS_ARGS("self:*", &self, kst_float);
+
+    return KSO_BOOL(self->val != self->val);
+}
+
+static KS_TFUNC(T, str) {
+    ks_float self;
+    KS_ARGS("self:*", &self, kst_float);
+
+    /* Determine printing mode */
+    ks_cfloat a_v = fabs(self->val);
+    bool sci = a_v > 0 && (a_v >= A_SCI_BIG || a_v <= A_SCI_SML);
+
+    char tmp[256];
+    
+    int sz = ks_cfloat_to_str(tmp, sizeof(tmp) - 1, self->val, sci, sci ? F_PREC_SCI : F_PREC_REG, 10);
+    if (sz >= sizeof(tmp) - 1) {
+        char* atmp = ks_malloc(sz + 5);
+        int asz = ks_cfloat_to_str(atmp, sz+4, self->val, sci, sci ? F_PREC_SCI : F_PREC_REG, 10);
+        //assert(sz == asz);
+        ks_str res = ks_str_new(asz, atmp);
+        ks_free(atmp);
+        return (kso)res;
+    }
+
+    return (kso)ks_str_new(sz, tmp);
+}
+
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -379,8 +419,20 @@ ks_type kst_float = &tp;
 ks_float ksg_nan, ksg_inf;
 
 void _ksi_float() {
+    kst_float->ob_sz = sizeof(struct ks_float_s);
     _ksinit(kst_float, kst_number, T_NAME, sizeof(struct ks_float_s), -1, "Floating point (real) number, which is a quanitity represented by a 'double' in C\n\n    SEE: https://en.wikipedia.org/wiki/Floating-point_arithmetic", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, obj=non, base=10)", "")},
+        {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
+
+        {"isnan",                  ksf_wrap(T_isnan_, T_NAME ".isnan(self)", "Calculate whether a float is NaN (i.e. Not-A-Number)")},
+
+        /* Constants */
+        {"EPS",                    (kso)ks_float_new(KS_CFLOAT_EPS)},
+        {"MIN",                    (kso)ks_float_new(KS_CFLOAT_MIN)},
+        {"MAX",                    (kso)ks_float_new(KS_CFLOAT_MAX)},
+        {"DIG",                    (kso)ks_int_new(KS_CFLOAT_DIG)},
+
     ));
 
     ksg_nan = ks_float_new(KS_CFLOAT_NAN);

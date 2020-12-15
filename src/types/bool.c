@@ -13,6 +13,17 @@
 
 /* Type Functions */
 
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso obj = KSO_FALSE;
+    KS_ARGS("tp:* ?obj", &tp, kst_type, &obj);
+
+    bool g;
+    if (!kso_truthy(obj, &g)) return NULL;
+
+    return KSO_BOOL(g);
+}
+
 static KS_TFUNC(T, free) {
     ks_bool self;
     KS_ARGS("self:*", &self, kst_bool);
@@ -48,6 +59,7 @@ void _ksi_bool() {
 
     _ksinit(kst_bool, kst_enum, T_NAME, sizeof(struct ks_enum_s), -1, "Boolean value, which takes on one of two values: (true, yes, 1) or (false, no, 0). Treated as an integer with that value when used in arithmetic expressions", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(self)", "")},
         {"false",                  KS_NEWREF(ksg_false)},
         {"true",                   KS_NEWREF(ksg_true)},
     ));

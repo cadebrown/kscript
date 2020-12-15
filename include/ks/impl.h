@@ -90,7 +90,6 @@ void _ksi_ffi_ptr();
 void _ksi_ffi_ints();
 void _ksi_ffi_floats();
 
-
 ks_module _ksi_nx();
 ks_module _ksi_re();
 ks_module _ksi_gram();

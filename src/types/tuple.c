@@ -89,6 +89,20 @@ static KS_TFUNC(T, free) {
 }
 
 
+static KS_TFUNC(T, bool) {
+    ks_tuple self;
+    KS_ARGS("self:*", &self, kst_tuple);
+
+    return (kso)KSO_BOOL(self->len != 0);
+}
+
+static KS_TFUNC(T, len) {
+    ks_tuple self;
+    KS_ARGS("self:*", &self, kst_tuple);
+
+    return (kso)ks_int_newu(self->len);
+}
+
 
 /* Export */
 
@@ -97,6 +111,8 @@ ks_type kst_tuple = &tp;
 
 void _ksi_tuple() {
     _ksinit(kst_tuple, kst_object, T_NAME, sizeof(struct ks_tuple_s), -1, "Like 'list', but immutable", KS_IKV(
-        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
+        {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
     ));
 }

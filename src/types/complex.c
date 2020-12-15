@@ -252,6 +252,20 @@ static KS_TFUNC(T, str) {
 }
 
 
+static KS_TFUNC(T, getattr) {
+    ks_complex self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, kst_complex, &attr, kst_str);
+
+    if (ks_str_eq_c(attr, "real", 4) || ks_str_eq_c(attr, "re", 2)) {
+        return (kso)ks_float_new(self->val.re);
+    } else if (ks_str_eq_c(attr, "imag", 4) || ks_str_eq_c(attr, "im", 2)) {
+        return (kso)ks_float_new(self->val.im);
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
 /* Export */
 
 static struct ks_type_s tp;
@@ -262,5 +276,6 @@ void _ksi_complex() {
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none, imag=none)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
     ));
 }

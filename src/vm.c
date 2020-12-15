@@ -221,6 +221,14 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             ks_list_push(stk, stk->elems[stk->len + arg]);
         VMD_OP_END
 
+        VMD_OP(KSB_RCR)
+            L = stk->elems[stk->len - 2];
+            R = stk->elems[stk->len - 1];
+            ks_list_push(stk, R);
+            stk->elems[stk->len - 3] = R;
+            stk->elems[stk->len - 2] = L;
+        VMD_OP_END
+
         VMD_OPA(KSB_LOAD)
             name = (ks_str)VC(arg);
             assert(name->type == kst_str);
@@ -315,6 +323,16 @@ kso _ks_exec(ks_code bc, ks_type _in) {
         VMD_OP_END
 
         /** Constructors **/
+        VMD_OP(KSB_SLICE)
+            stk->len -= 3;
+            V = stk->elems[stk->len];
+            L = stk->elems[stk->len+1];
+            R = stk->elems[stk->len+2];
+            ks_list_pushu(stk, (kso)ks_slice_new(kst_slice, V, L, R));
+            KS_DECREF(V);
+            KS_DECREF(L);
+            KS_DECREF(R);
+        VMD_OP_END
 
         VMD_OPA(KSB_LIST)
             stk->len -= arg;

@@ -25,6 +25,32 @@ struct compiler {
     /* Length of the stack */
     int len_stk;
 
+    /* Number of break-able loops present (while,for) */
+    int loop_n;
+
+    /* Array of loops */
+    struct compiler_loop {
+        
+        /* Number of control-flow-actions (CFAs) */
+        int cfa_n;
+
+        /* List of actions */
+        struct compiler_loop_action {
+
+            /* Location at which the instruction is */
+            int loc;
+
+            /* Location from which the instruction is jumping from
+            * (always 'loc+5')
+            */
+            int from;
+
+            /* Whether it should continue (else break) */
+            bool is_cont;
+
+        }* cfa;
+
+    }* loop;
 };
 
 /* Compile an AST recursively, yielding the success boolean */
@@ -184,6 +210,34 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             META(v->tok);
         }
 
+    } else if (k == KS_AST_BREAK) {
+        assert(NSUB == 0);
+
+        if (co->loop_n <= 0) {
+            KS_THROW_SYNTAX(fname, src, v->tok, "Unexpected 'break' outside of a loop");
+            return false;
+        }
+
+        struct compiler_loop* loop = &co->loop[co->loop_n - 1];
+
+        i = loop->cfa_n++;
+        loop->cfa = ks_zrealloc(loop->cfa, sizeof(*loop->cfa), loop->cfa_n);
+
+        /* Dummy values now */
+        int l = BC_N;
+        EMITI(KSB_JMP, -1);
+        int f = BC_N;
+
+        loop->cfa[i] = (struct compiler_loop_action) {
+            l,
+            f,
+            false
+        };
+
+    } else if (k == KS_AST_CONT) {
+        assert(NSUB == 0);
+
+
     } else if (k == KS_AST_RET) {
         assert(NSUB == 1);
         if (!COMPILE(SUB(0))) return false;
@@ -213,8 +267,16 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         EMITO(KSB_IMPORT, v->val);
         LEN += 1;
         META(v->tok);
- 
-        EMITO(KSB_STORE, v->val);
+
+        ks_str name = (ks_str)v->val;
+        int ip = 0;
+        while (ip < name->len_b && name->data[ip] != '.') {
+            ip++;
+        }
+        ks_str toname = ks_str_new(ip, name->data);
+
+        EMITO(KSB_STORE, toname);
+        KS_DECREF(toname);
         EMIT(KSB_POPU);
         LEN -= 1;
 
@@ -224,6 +286,16 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             CLEAR(ssl);
         }
         META(v->tok);
+    } else if (k == KS_AST_SLICE) {
+        assert(NSUB == 3);
+        if (!COMPILE(SUB(0))) return false;
+        if (!COMPILE(SUB(1))) return false;
+        if (!COMPILE(SUB(2))) return false;
+
+        EMIT(KSB_SLICE);
+        META(v->tok);
+        LEN += 1 - 3;
+
     } else if (k == KS_AST_LIST) {
         for (i = 0; i < NSUB; ++i) {
             if (SUB(i)->kind == KS_AST_UOP_STAR) {
@@ -541,8 +613,16 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         int jc_f = BC_N;
         LEN -= 1;
 
-        int body_l = BC_N;
 
+        /* Add loop */
+        int st_i = co->loop_n++;
+        co->loop = ks_zrealloc(co->loop, sizeof(*co->loop), co->loop_n);
+
+        co->loop[st_i].cfa_n = 0;
+        co->loop[st_i].cfa = NULL;
+
+
+        int body_l = BC_N;
         if (!COMPILE(SUB(1))) return false;
         CLEAR(ssl);
 
@@ -554,6 +634,11 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         LEN -= 1;
 
         PATCH(jc2_l, jc2_f, body_l);
+
+        /* Pop off the loops */
+        int cfa_n = co->loop[st_i].cfa_n;
+        struct compiler_loop_action* cfa = co->loop[st_i].cfa;
+        co->loop_n--;
 
         if (NSUB == 3) {
 
@@ -575,6 +660,15 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             PATCH(jc_l, jc_f, BC_N);
 
         }
+
+        /* Fill in break/cont */
+        int i;
+        for (i = 0; i < cfa_n; ++i) {
+            struct compiler_loop_action* a = &cfa[i];
+
+            PATCH(a->loc, a->from, a->is_cont ? body_l : BC_N);
+        }
+        ks_free(cfa);
 
         LEN = ssl;
 
@@ -613,6 +707,14 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         int body_l = BC_N;
 
+        /* Add loop */
+        int st_i = co->loop_n++;
+        co->loop = ks_zrealloc(co->loop, sizeof(*co->loop), co->loop_n);
+
+        co->loop[st_i].cfa_n = 0;
+        co->loop[st_i].cfa = NULL;
+
+
         if (!COMPILE(SUB(2))) return false;
         CLEAR(ssl+1);
 
@@ -622,6 +724,12 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         int jc2_f = BC_N;
 
         PATCH(jc2_l, jc2_f, jc_f);
+
+
+        /* Pop off the loops */
+        int cfa_n = co->loop[st_i].cfa_n;
+        struct compiler_loop_action* cfa = co->loop[st_i].cfa;
+        co->loop_n--;
 
         if (NSUB == 4) {
 
@@ -643,6 +751,14 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             PATCH(jc_l, jc_f, BC_N);
 
         }
+        /* Fill in break/cont */
+        int i;
+        for (i = 0; i < cfa_n; ++i) {
+            struct compiler_loop_action* a = &cfa[i];
+
+            PATCH(a->loc, a->from, a->is_cont ? body_l : BC_N);
+        }
+        ks_free(cfa);
 
         LEN = ssl;
     } else if (k == KS_AST_TRY) {
@@ -850,6 +966,78 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         if (!assign(co, fname, src, code, SUB(0), SUB(1), v)) return false;
 
+
+    } else if (k == KS_AST_RICHCMP) {
+        /* Rich comparison chaining */
+        ks_tuple cmps = (ks_tuple)v->val;
+        assert(cmps && cmps->type == kst_tuple && cmps->len >= 1);
+        assert (NSUB == cmps->len + 1);
+
+        /* Always emit first child */
+        if (!COMPILE(SUB(0))) return false;
+
+        /* False-jumps from, locs */
+        int fjs_n = NSUB - 1;
+        int* fjs_f = ks_zmalloc(sizeof(*fjs_f), fjs_n), * fjs_l = ks_zmalloc(sizeof(*fjs_f), fjs_n);
+
+        for (i = 1; i < NSUB; ++i) {
+            /* On every iteration, we will have:
+             * | c[i-1]
+             * To start with
+             */
+
+            /* Emit current child so we have:
+             * | c[i-1] c[i]
+             */
+            if (!COMPILE(SUB(i))) {
+                ks_free(fjs_f);
+                ks_free(fjs_l);
+                return false;
+            }
+            EMIT(KSB_RCR);
+            LEN += 1;
+
+            /* Now, compare via the current child
+             */
+            ks_cint cmp_ast_kind;
+            if (!kso_get_ci(cmps->elems[i - 1], &cmp_ast_kind)) {
+                ks_free(fjs_f);
+                ks_free(fjs_l);
+                return false;
+            }
+
+            /* Perform comparison */
+            EMIT(cmp_ast_kind);
+            LEN += 1 - 2;
+
+            /* Short circuit if given false */
+            fjs_l[i - 1] = BC_N;
+            EMITI(KSB_JMPF, -1);
+            fjs_f[i - 1] = BC_N;
+            LEN -= 1;
+
+        }
+
+        /* At the very end, we should put on a 'true' and then reach sync point */
+        EMIT(KSB_POPU);
+        EMITO(KSB_PUSH, KSO_TRUE);
+        int tj_l = BC_N;
+        EMITI(KSB_JMP, -1);
+        int tj_f = BC_N;
+
+        /* Fill in jumps */
+        for (i = 0; i < fjs_n; ++i) {
+            PATCH(fjs_l[i], fjs_f[i], BC_N);
+        }
+
+        EMIT(KSB_POPU);
+        EMITO(KSB_PUSH, KSO_FALSE);
+
+        PATCH(tj_l, tj_f, BC_N);
+
+        ks_free(fjs_f);
+        ks_free(fjs_l);
+
     } else if (KS_AST_BOP__FIRST <= k && k <= KS_AST_BOP__LAST) {
         assert(NSUB == 2 && "binary operator requires 2 children");
         /* Binary operator */
@@ -892,10 +1080,15 @@ ks_code ks_compile(ks_str fname, ks_str src, ks_ast prog, ks_code from) {
 
     struct compiler co;
     co.len_stk = 0;
+    co.loop_n = 0;
+    co.loop = NULL;
     if (!compile(&co, fname, src, res, prog)) {
+        ks_free(co.loop);
         KS_DECREF(res);
         return NULL;
     }
+
+    ks_free(co.loop);
 
     /* Default of 'ret none' */
     ks_code_emito(res, KSB_PUSH, KSO_NONE);

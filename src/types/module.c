@@ -17,6 +17,7 @@ ks_module ks_module_new(const char* name, const char* source, const char* doc, s
         {"__name",                 (kso)ks_str_new(-1, name)},
         {"__src",                  (kso)ks_str_new(-1, source)},
         {"__doc",                  (kso)ks_str_new(-1, doc)},
+        {"__par",                  (kso)ks_str_new(-1, "")},
     ));
 
     ks_dict_merge_ikv(self->attr, ikv);
@@ -53,7 +54,28 @@ static KS_TFUNC(T, str) {
 
     return (kso)res;
 }
+static KS_TFUNC(T, getattr) {
+    ks_module self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, kst_module, &attr, kst_str);
 
+    kso res = ks_dict_get_ih(self->attr, (kso)attr, attr->v_hash);
+    if (res) {
+        return res;
+    } else {
+        /* Attempt to import submodule */
+        ks_module submod = ks_import_sub(self, attr);
+        if (!submod) {
+            kso_catch_ignore();
+            KS_THROW_ATTR(self, attr);
+            return NULL;
+        } else {
+            ks_dict_set_h(self->attr, (kso)attr, attr->v_hash, (kso)submod);
+            return (kso)submod;
+        }
+    }
+
+}
 
 /* Export */
 
@@ -65,5 +87,6 @@ void _ksi_module() {
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__getattr",            ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
     ));
 }

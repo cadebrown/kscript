@@ -460,6 +460,12 @@ static KS_TFUNC(T, init) {
 
     return KSO_NONE;
 }
+static KS_TFUNC(T, bool) {
+    ks_set self;
+    KS_ARGS("self:*", &self, kst_set);
+
+    return (kso)KSO_BOOL(self->len_real != 0);
+}
 
 static KS_TFUNC(T, len) {
     ks_set self;
@@ -517,7 +523,7 @@ void _ksi_set() {
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, objs=none)", "")},
-
+        {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"__iter",                 KS_NEWREF(kst_set_iter)},
     ));

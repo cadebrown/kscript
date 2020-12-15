@@ -91,7 +91,11 @@ typedef struct ksio_StringIO_s {
 typedef ksio_StringIO ksio_BytesIO;
 
 
+
 /** Unicode Translation **/
+
+/* Yields whether or not a byte is a continuation byte in UTF8 */
+#define KS_UCP_IS_CONT(_bt) (((_bt) & 0xC0) == 0x80)
 
 /* Decodes a single character from UTF8 source
  *
@@ -239,7 +243,6 @@ KS_API ksio_BytesIO ksio_BytesIO_new();
  */
 KS_API ks_bytes ksio_BytesIO_get(ksio_BytesIO self);
 KS_API ks_bytes ksio_BytesIO_getf(ksio_BytesIO self);
-
 
 
 /** Misc. Utils **/

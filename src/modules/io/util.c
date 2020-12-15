@@ -353,8 +353,8 @@ static bool add_str(ksio_BaseIO self, kso obj) {
         return true;
     } else if (kso_isinst(obj, kst_int) && obj->type->i__str == kst_int->i__str) {
         return add_O_int(self, (ks_int)obj);
-    } else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
-        return add_float(self, ((ks_float)obj)->val, 10, SBFIELD_DEFAULT);
+    /*} else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
+        return add_float(self, ((ks_float)obj)->val, 10, SBFIELD_DEFAULT);*/
     } else if (kso_isinst(obj, kst_list) && obj->type->i__str == kst_list->i__str) {
         return add_O_list(self, (ks_list)obj);
     } else if (kso_isinst(obj, kst_tuple) && obj->type->i__str == kst_tuple->i__str) {
@@ -444,8 +444,8 @@ static bool add_repr(ksio_BaseIO self, kso obj) {
         return true;
     } else if (kso_isinst(obj, kst_int) && obj->type->i__repr == kst_int->i__repr) {
         return add_O_int(self, (ks_int)obj);
-    } else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
-        return add_float(self, ((ks_float)obj)->val, 10, SBFIELD_DEFAULT);
+    /*} else if (kso_isinst(obj, kst_float) && obj->type->i__str == kst_float->i__str) {
+        return add_float(self, ((ks_float)obj)->val, 10, SBFIELD_DEFAULT);*/
     } else if (kso_isinst(obj, kst_list) && obj->type->i__str == kst_list->i__str) {
         return add_O_list(self, (ks_list)obj);
     } else if (kso_isinst(obj, kst_tuple) && obj->type->i__str == kst_tuple->i__str) {

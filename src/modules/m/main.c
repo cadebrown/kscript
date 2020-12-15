@@ -512,7 +512,7 @@ static KS_TFUNC(m, choose) {
     mpz_t res;
     mpz_init(res);
     
-    #ifdef KS_HAVE_GMP
+    #ifdef KS_HAVE_gmp
     mpz_bin_ui(res, zin->val, ck);
     #else
     /* assume miniGMP */

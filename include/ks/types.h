@@ -264,6 +264,47 @@ struct ks_str_s {
 
 };
 
+
+/* ks_str_citer - C-iterator for processing single codepoints in a string; Source code is in `types/str.c`
+ * you use it like:
+ * ```
+ * struct ks_str_citer cit = ks_str_citer_make(str_obj);
+ * ks_unich ch;
+ * while (!cit.done) {
+ *   ch = ks_str_citer_next(&cit);
+ *   if (cit.err) {
+ *     // handle error
+ *     break; 
+ *   }
+ *   if (ch == 'a') { // ... }
+ *   else {
+ *   // ERR, whatever you want 
+ *   }
+ * }
+ * ```
+ * No cleanup is neccessary, and no extra memory is taken
+ */
+struct ks_str_citer {
+
+    /* String object being iterated */
+    ks_str self;
+
+    /* Whether or not it is done */
+    bool done;
+
+    /* Error */
+    int err;
+
+    /* Current character and bytes */
+    int cchi;
+    int cbyi;
+
+    /* Last byte index */
+    int lcbyi;
+
+};
+
+
 /* Tell whether a string contains ASCII-only data (i.e. bytes==characters) */
 #define KS_STR_IS_ASCII(_str) ((_str)->len_b == (_str)->len_c)
 
@@ -327,6 +368,43 @@ enum {
 
 };
 
+/* NFA node definition
+ */
+struct ks_regex_nfa {
+
+    /* Kind of NFA node, see 'KS_REGEX_NFA_*' values */
+    int kind;
+
+    /* Outgoing edges to other states, or -1 if they don't exist */
+    int to0, to1;
+
+    union {
+
+        /* For 'KS_REGEX_NFA_UCP' */
+        ks_ucp ucp;
+
+
+        /* For 'KS_REGEX_NFA_ANY' and 'KS_REGEX_NFA_NOT' */
+        struct {
+
+            /* Bitset of whether the set contains a byte. Only valid
+                *   for ASCII characters, and bytes when in binary mode
+                */
+            bool* has_byte;
+
+            /* Bitset of whether the set contains all characters within
+                *   a categoriy. Indexes are 'ksucd_cat'
+                */
+            bool* has_cat;
+
+            /* Array of unicode characters in the set (TODO: hashtable?) */
+            int n_ext;
+            ks_ucp* ext;
+
+        } set;
+
+    };
+};
 
 /* 'regex' - regular expression pattern, which can be used to match strings
  *
@@ -343,47 +421,34 @@ typedef struct ks_regex_s {
     int n_states;
 
     /* Array of states in the regular expression */
-    struct ks_regex_nfa {
-
-        /* Kind of NFA node, see 'KS_REGEX_NFA_*' values */
-        int kind;
-
-        /* Outgoing edges to other states, or -1 if they don't exist */
-        int to0, to1;
-
-        union {
-
-            /* For 'KS_REGEX_NFA_UCP' */
-            ks_ucp ucp;
-
-
-            /* For 'KS_REGEX_NFA_ANY' and 'KS_REGEX_NFA_NOT' */
-            struct {
-
-                /* Bitset of whether the set contains a byte. Only valid
-                 *   for ASCII characters, and bytes when in binary mode
-                 */
-                bool* has_byte;
-
-                /* Bitset of whether the set contains all characters within
-                 *   a categoriy. Indexes are 'ksucd_cat'
-                 */
-                bool* has_cat;
-
-                /* Array of unicode characters in the set (TODO: hashtable?) */
-                int n_ext;
-                ks_ucp* ext;
-
-            } set;
-
-        };
-
-    }* states;
+    struct ks_regex_nfa* states;
 
     /* Initial and final states of the regular expression */
     int s0, sf;
 
 }* ks_regex;
+
+/* NFA simulator (level 0)
+ *
+ * This is only valid for Regular expressions which are truly describing regular languages -- Backreferences, recursion, etc
+ *   can't be used. But, for truly regular languages it is very fast
+ * 
+ * Essentially, we simulate the NFA many states at once. When adding a state, we only add it if it is unique.
+ * 
+ */
+typedef struct {
+
+    int n_states;
+    struct ks_regex_nfa* states;
+
+    /* 'cur[i]' tells whether state 'i' is active */
+    bool* cur;
+
+    /* Ping-Pong buffer of the next states */
+    bool* next;
+
+} ks_regex_sim0;
+
 
 
 /* 'range' - (immutable) integral range
@@ -427,6 +492,16 @@ typedef struct ks_range_iter_s {
     } _ci;
 
 }* ks_range_iter;
+
+/* 'slice' - Slice indexer
+ *
+ */
+typedef struct ks_slice_s {
+    KSO_BASE
+
+    kso start, end, step;
+
+}* ks_slice;
 
 /* 'list' - collection of objects
  *

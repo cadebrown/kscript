@@ -133,6 +133,7 @@ int main(int argc, char** argv) {
     }
 
     ksga_Parser p = ksga_Parser_new("ks", "kscript interpreter, commandline interface", "0.0.1", "Cade Brown <cade@kscript.org>");
+    p->stop_at_pos = true;
 
     kso on_import = ksf_wrap(import_, "on_import(name)", "Imports a module name to the global interpreter vars");
 

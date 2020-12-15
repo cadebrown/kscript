@@ -124,7 +124,7 @@
  * Adds support for true threads, mutexes, and so forth
  *
  */
-#ifdef KS_HAVE_PTHREADS
+#ifdef KS_HAVE_pthreads
  #include <pthread.h>
 #endif
 
@@ -133,7 +133,7 @@
  * Adds support for (faster) large integer components
  *
  */
-#ifdef KS_HAVE_GMP
+#ifdef KS_HAVE_gmp
  #define KS_INT_GMP
  #define KS_INT_FULLGMP
  #include <gmp.h>
@@ -202,6 +202,10 @@ KS_API extern ks_dict
     ksg_globals,
     ksg_config,
     ksg_inter_vars
+;
+
+KS_API extern ks_list
+    ksg_path
 ;
 
 KS_API extern ks_type
@@ -592,6 +596,10 @@ KS_API void kso_exit_if_err();
  */
 KS_API ks_module ks_import(ks_str name);
 
+/* Import submodule
+ */
+KS_API ks_module ks_import_sub(ks_module of, ks_str sub);
+
 /* Run the interactive shell
  */
 KS_API bool ks_inter();
@@ -793,6 +801,52 @@ KS_API ks_bytes ks_bytes_newn(ks_ssize_t len_b, char* data);
  */
 KS_API ks_regex ks_regex_new(ks_str expr);
 
+/* Initialize a 'sim0'
+ */
+KS_API void ks_regex_sim0_init(ks_regex_sim0* sim, int n_states, struct ks_regex_nfa* states);
+
+/* Free resources created by a 'sim0'
+ */
+KS_API void ks_regex_sim0_free(ks_regex_sim0* sim);
+
+/* Add a state to the simulator
+ */
+KS_API void ks_regex_sim0_addcur(ks_regex_sim0* sim, int s);
+KS_API void ks_regex_sim0_addnext(ks_regex_sim0* sim, int s);
+
+/* Apply a single character to the simulator
+ * Returns the number of states it is in now
+ */
+KS_API int ks_regex_sim0_step(ks_regex_sim0* sim, ks_ucp c);
+
+/* Special steppers for epsilon transitions */
+KS_API int ks_regex_sim0_step_linestart(ks_regex_sim0* sim);
+KS_API int ks_regex_sim0_step_lineend(ks_regex_sim0* sim);
+
+
+/* Returns whether the regex matches exactly
+ */
+KS_API bool ks_regex_exact(ks_regex self, ks_str str);
+
+/* Returns whether the regex matched anywhere
+ */
+KS_API bool ksre_Regex_matches(ks_regex self, ks_str str);
+
+
+
+
+/* Create new 'slice'
+ */
+KS_API ks_slice ks_slice_new(ks_type tp, kso start, kso end, kso step);
+
+
+/* Get C-style iterator indices
+ *
+ * if (!ks_slice_getci(slice, array_len, &first, &last, &delta)
+ * for (i = first; i != last; i += delta) { ... do operation ... }
+ */
+KS_API bool ks_slice_get_citer_c(ks_cint start, ks_cint end, ks_cint step, ks_cint len, ks_cint* first, ks_cint* last, ks_cint* delta);
+KS_API bool ks_slice_get_citer(ks_slice self, ks_cint len, ks_cint* first, ks_cint* last, ks_cint* delta);
 
 /* Create new 'range'
  */
@@ -1044,7 +1098,6 @@ KS_API bool ks_logger_clog(ks_logger self, int level, const char* file, const ch
 KS_API ks_Exception ks_Exception_new_c(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, ...);
 KS_API ks_Exception ks_Exception_new_cv(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, va_list ap);
 
-
 /* Create a new module
  */
 KS_API ks_module ks_module_new(const char* name, const char* source, const char* doc, struct ks_ikv* ikv);
@@ -1181,6 +1234,16 @@ KS_API kso ks_uop_sqig(kso V);
 
 /*  */
 KS_API kso ks_contains(kso L, kso R);
+
+
+/*** C-style string iterator ***/
+
+
+KS_API struct ks_str_citer ks_str_citer_make(ks_str self);
+KS_API ks_ucp ks_str_citer_next(struct ks_str_citer* cit);
+KS_API ks_ucp ks_str_citer_peek(struct ks_str_citer* cit);
+KS_API ks_ucp ks_str_citer_peek_n(struct ks_str_citer* cit, int n);
+KS_API bool ks_str_citer_seek(struct ks_str_citer* cit, ks_ssize_t idx);
 
 /*** Internal Functions ***/
 

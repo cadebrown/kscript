@@ -943,6 +943,7 @@ void _ksi_number() {
 
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(self, obj=none)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
+        {"__abs",                  ksf_wrap(T_abs_, T_NAME ".__abs(self)", "")},
         {"__pos",                  ksf_wrap(T_pos_, T_NAME ".__pos(self)", "")},
         {"__neg",                  ksf_wrap(T_neg_, T_NAME ".__neg(self)", "")},
         {"__sqig",                 ksf_wrap(T_sqig_, T_NAME ".__sqig(self)", "")},

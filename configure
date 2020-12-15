@@ -53,11 +53,12 @@ case $1 in
         echo "  --prefix V              Sets the prefix that the software should install to (default: /usr/local)"
         echo "  --dest-dir V            Destination locally to install to (but is not kept for runtime) (default: )"
         echo ""
-        echo "  --ucd-ascii             If given, then only use ASCII characters in the unicode database"
+        echo "  --ucd-ascii             If given, then only use ASCII characters in the unicode database (makes the build smaller)"
         echo ""
         echo "  --with-gmp V            Whether or not to use GMP for integers (default: auto)"
         echo "  --with-readline V       Whether or not to use Readline for line-editing (default: auto)"
         echo "  --with-pthreads V       Whether or not to use pthreads (Posix-threads) for threading interface (default: auto)"
+        echo "  --with-ffi V            Whether or not to use ffi from libffi (Foreign Function Interface) for C-function interop (default: auto)"
         echo "  --with-fftw3 V          Whether or not to use FFTW3 for Fast-Fourier-Transforms (default: auto)"
         echo ""
         echo "Any questions, comments, or concerns can be sent to:"
@@ -835,19 +836,6 @@ echo "" >> $T
 echo "/* Optional Dependencies */" >> $T
 echo "" >> $T
 
-
-if [ "x$HAVE_pthreads" = 'xon' ]; then
-    echo "#define KS_HAVE_PTHREADS" >> $T
-fi
-if [ "x$HAVE_gmp" = 'xon' ]; then
-    echo "#define KS_HAVE_GMP" >> $T
-fi
-if [ "x$HAVE_readline" = 'xon' ]; then
-    echo "#define KS_HAVE_READLINE" >> $T
-fi
-if [ "x$HAVE_fftw3" = 'xon' ]; then
-    echo "#define KS_HAVE_FFTW3" >> $T
-fi
 
 echo "" >> $T
 echo "" >> $T

@@ -25,6 +25,8 @@ ksga_Parser ksga_Parser_new(const char* name, const char* doc, const char* versi
     self->authors = ks_str_split_c(authors, "\n");
     self->help = NULL;
 
+    self->stop_at_pos = false;
+
     self->n_flag = self->n_opt = self->n_pos = 0;
 
     self->flag = NULL;
@@ -215,6 +217,13 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
         } else {
             /* Assume a positional argument */
             ks_list_push(pos, (kso)ARG(i++));
+
+            /* Add the rest to positional arguments */
+            if (self->stop_at_pos) {
+                while (i < args->len) {
+                    ks_list_push(pos, (kso)ARG(i++));
+                }
+            }
         }
     }
 
@@ -470,41 +479,6 @@ ks_str ksga_help(ksga_Parser self) {
 
 /* Type functions */
 
-static KS_TFUNC(T, new) {
-    ks_type tp;
-    ks_str name, version, doc;
-    kso authors;
-    KS_ARGS("tp:* name:* version:* doc:* authors", &tp, kst_type, &name, kst_str, &version, kst_str, &doc, kst_str, &authors);
-    
-    ks_list la = NULL;
-    if (kso_issub(authors->type, kst_str)) {
-        la = ks_list_new(0, NULL);
-        ks_list_push(la, authors);
-    } else {
-        la = ks_list_newi(authors);
-    }
-    if (!la) return NULL;
-
-    ksga_Parser self = KSO_NEW(ksga_Parser, tp);
-
-    self->n_pos = self->n_opt = self->n_flag = 0;
-    self->pos = NULL;
-    self->opt = NULL;
-    self->flag = NULL;
-
-    KS_INCREF(name);
-    self->name = name;
-    KS_INCREF(version);
-    self->version = version;
-    KS_INCREF(doc);
-    self->doc = doc;
-
-    self->authors = la;
-
-    return (kso)self;
-}
-
-
 static KS_TFUNC(T, free) {
     ksga_Parser self;
     KS_ARGS("self:*", &self, ksgat_Parser);
@@ -544,6 +518,46 @@ static KS_TFUNC(T, free) {
 
     return KSO_NONE;
 }
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    ks_str name, version, doc;
+    kso authors;
+    KS_ARGS("tp:* name:* version:* doc:* authors", &tp, kst_type, &name, kst_str, &version, kst_str, &doc, kst_str, &authors);
+    
+    ks_list la = NULL;
+    if (kso_issub(authors->type, kst_str)) {
+        la = ks_list_new(0, NULL);
+        ks_list_push(la, authors);
+    } else {
+        la = ks_list_newi(authors);
+    }
+    if (!la) return NULL;
+
+    ksga_Parser self = KSO_NEW(ksga_Parser, tp);
+    self->stop_at_pos = false;
+
+    self->n_pos = self->n_opt = self->n_flag = 0;
+    self->pos = NULL;
+    self->opt = NULL;
+    self->flag = NULL;
+
+    KS_INCREF(name);
+    self->name = name;
+    KS_INCREF(version);
+    self->version = version;
+    KS_INCREF(doc);
+    self->doc = doc;
+
+    self->authors = la;
+    
+    /* Add defaults */
+    ksga_flag(self, "_help", "Prints this help/usage message and then exits", "-h,--help", action_help);
+    ksga_flag(self, "_version", "Prints the version information and then exits", "--version", action_version);
+
+    return (kso)self;
+}
+
 
 static KS_TFUNC(T, flag) {
     ksga_Parser self;
@@ -676,7 +690,7 @@ static KS_TFUNC(T, on_version) {
     ks_str name, opt;
     KS_ARGS("self:* name:* opt:*", &parser, ksgat_Parser, &name, kst_str, &opt, kst_str);
 
-    ksio_add((ksio_BaseIO)ksos_stderr, "%S", parser->version);
+    ksio_add((ksio_BaseIO)ksos_stderr, "%S\n", parser->version);
 
     /* Exit peacefully */
     exit(0);

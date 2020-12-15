@@ -6,6 +6,7 @@
  */
 #include <ks/impl.h>
 #include <ks/compiler.h>
+#include <ks/ucd.h>
 
 
 /** Internals/Utilities **/
@@ -27,13 +28,11 @@ static bool is_name_s(ks_ucp c) {
         if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_') return true;
     } else {
         /* TODO: unicode */
-        /* 
         struct ksucd_info info;
-        ksucd_cp cp = ksucd_get_info(&info, c);
-        if (cp != KSUCD_ERR) {
+        ks_ucp cp = ksucd_get_info(&info, c);
+        if (cp > 0) {
             if (info.cat_gen >= 0 && info.cat_gen <= ksucd_cat_L) return true;
-        }*/
-
+        }
     }
     return false;
 }
@@ -130,6 +129,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
 
     int sz = src->len_b;
     ks_ucp c = 0;
+    char utf8[5];
 
     /* Output (along with '*toks') */
     ks_ssize_t n_toks = 0, max_n_toks = 0;
@@ -155,23 +155,30 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
     /* Advance one character */
     #define ADV() do { \
         if (pos >= sz) break; \
-        pos++; \
         if (c == '\n') { \
             line++; \
             col = 0; \
         } else { \
             col++; \
         } \
+        int _n = 0; \
+        KS_UCP_FROM_UTF8(c, (src->data + pos), _n); \
+        pos += _n; \
         _UPDATEC(); \
     } while (0)
 
     #define _UPDATEC() do { \
-        c = src->data[pos]; \
+        int _n = 0; \
+        KS_UCP_FROM_UTF8(c, (src->data + pos), _n); \
+        if (_n < 1) { \
+            bad = MAKE(KS_TOK_MANY); \
+            KS_THROW_SYNTAX(fname, src, bad, "Bad characters in string"); \
+            return -1; \
+        } \
     } while (0)
 
     /* Get whether the next part of the input is a given C string */
     #define NEXTIS(_cstr) (strncmp(src->data + pos, _cstr, sizeof(_cstr) - 1) == 0)
-
 
     _UPDATEC();
     while (pos < sz) {
@@ -339,7 +346,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
                 } else {
                     ADV();
                 }
-                EMIT(MAKE(KS_TOK_STR));
+                EMIT(MAKE(KS_TOK_REGEX));
             } else {
                 bad = MAKE(KS_TOK_MANY);
                 KS_THROW_SYNTAX(fname, src, bad, "No end to string");
@@ -444,7 +451,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
     /*
     int i;
     for (i = 0; i < n_toks; ++i) {
-        printf("toks[%i]: '%.*s'\n", i, toks[i].epos - toks[i].spos, src->data + toks[i].spos);
+        printf("toks[%i]: (%i) '%.*s'\n", i, toks[i].kind, toks[i].epos - toks[i].spos, src->data + toks[i].spos);
     }
     */
 

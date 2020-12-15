@@ -216,6 +216,7 @@ enum {
     KS_AST_NAME,
 
     /** Constructors **/
+    KS_AST_SLICE,
     KS_AST_LIST,
     KS_AST_TUPLE,
     KS_AST_SET,
@@ -477,6 +478,14 @@ enum {
      */
     KSB_DUPI,
 
+    /* RCR
+     * Rich-CMP-Rotate
+     * Transform like:
+     * | A B
+     * | B A B
+     */
+    KSB_RCR,
+
     /* LOAD idx
      * 
      * Loads 'vc[idx]' (as a dynamic name) and pushes the result on to 'stk'
@@ -533,6 +542,12 @@ enum {
     KSB_CALLV,
 
     /** Constructors **/
+
+    /* SLICE
+     *
+     * Pops off the last 3 objects and creates a slice from them
+     */
+    KSB_SLICE,
 
     /* LIST num
      *

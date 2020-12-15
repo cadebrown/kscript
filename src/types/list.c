@@ -247,6 +247,14 @@ static KS_TFUNC(T, init) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, bool) {
+    ks_list self;
+    KS_ARGS("self:*", &self, kst_list);
+
+    return (kso)KSO_BOOL(self->len != 0);
+}
+
+
 static KS_TFUNC(T, len) {
     ks_list self;
     KS_ARGS("self:*", &self, kst_list);
@@ -271,6 +279,40 @@ static KS_TFUNC(T, add) {
         return NULL;
     }
     return (kso)res;
+}
+static KS_TFUNC(T, push) {
+    ks_list self;
+    int nargs;
+    kso* args;
+    KS_ARGS("self:* *args", &self, kst_list, &nargs, &args);
+
+    if (!ks_list_pusha(self, nargs, args)) return NULL;
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, pop) {
+    ks_list self;
+    ks_cint num = 1;
+    KS_ARGS("self:* ?num:cint", &self, kst_list, &num);
+
+    if (num > self->len) {
+        KS_THROW(kst_Error, "Attempted to pop more items than existed in list");
+        return NULL;
+    }
+
+    if (num < 0) {
+        KS_THROW(kst_Error, "'num' must be positive or 0");
+        return NULL;
+    }
+
+    if (_nargs == 1) {
+        return (kso)ks_list_pop(self);
+    } else {
+        ks_list res = ks_list_newn(num, self->elems + self->len - num);
+        self->len -= num;
+        return (kso)res;
+    }
 }
 
 
@@ -321,9 +363,13 @@ void _ksi_list() {
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
         {"__init",               ksf_wrap(T_init_, T_NAME ".__init(self, objs=none)", "")},
+        {"__bool",               ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"__iter",               KS_NEWREF(kst_list_iter)},
         {"__add",                ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
+
+        {"push",                 ksf_wrap(T_push_, T_NAME ".push(self, *args)", "Pushes any number of arguments on to the end of the list")},
+        {"pop",                  ksf_wrap(T_pop_, T_NAME ".pop(self, num=1)", "Pops the given number of arguments off of the end of the list")},
     ));
 
     kst_list->i__hash = NULL;

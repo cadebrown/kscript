@@ -17,7 +17,6 @@
 
 /* Internals */
 
-
 /* Regular Expression syntax:
  *
  * REGEX       : TERM ('|' TERM)*
@@ -528,6 +527,221 @@ ks_regex ks_regex_new(ks_str expr) {
 }
 
 
+
+
+/* High level interface */
+
+bool ks_regex_exact(ks_regex self, ks_str str) {
+    ks_regex_sim0 sim;
+    ks_regex_sim0_init(&sim, self->n_states, self->states);
+
+    int i;
+
+    /* Start at the initial state */
+    ks_regex_sim0_addcur(&sim, self->s0);
+
+    ks_regex_sim0_step_linestart(&sim);
+
+
+    /* Step through input */
+    const char* p = str->data;
+    while (*p) {
+        ks_regex_sim0_step(&sim, *p);
+        p++;
+    }
+
+    /* Check if a valid end state */
+    ks_regex_sim0_step_lineend(&sim);
+
+    bool res = sim.cur[self->sf];
+    ks_regex_sim0_free(&sim);
+    return res;
+}
+
+bool ks_regex_matches(ks_regex self, ks_str str) {
+    ks_regex_sim0 sim;
+    ks_regex_sim0_init(&sim, self->n_states, self->states);
+
+    int i;
+    ks_regex_sim0_addcur(&sim, self->s0);
+    ks_regex_sim0_step_linestart(&sim);
+
+
+    /* Step through input */
+    const char* p = str->data;
+    while (*p) {
+        ks_regex_sim0_step(&sim, *p);
+        if (sim.cur[self->sf]) {
+            ks_regex_sim0_free(&sim);
+            return true;
+        }
+        p++;
+        ks_regex_sim0_addcur(&sim, self->s0);
+    }
+    
+    ks_regex_sim0_addcur(&sim, self->s0);
+    ks_regex_sim0_step_lineend(&sim);
+
+    bool res = sim.cur[self->sf];
+    ks_regex_sim0_free(&sim);
+    return res;
+}
+
+
+
+/* sim0 */
+
+
+void ks_regex_sim0_init(ks_regex_sim0* sim, int n_states, struct ks_regex_nfa* states) {
+    sim->n_states = n_states;
+    sim->states = states;
+
+    sim->cur = ks_zmalloc(sizeof(*sim->cur), n_states);
+    sim->next = ks_zmalloc(sizeof(*sim->next), n_states);
+
+    int i;
+    for (i = 0; i < n_states; ++i) sim->cur[i] = sim->next[i] = false;
+
+}
+
+void ks_regex_sim0_free(ks_regex_sim0* sim) {
+    ks_free(sim->cur);
+    ks_free(sim->next);
+}
+
+static void add_state(ks_regex_sim0* sim, bool* ptr, int s) {
+    if (s < 0 || ptr[s]) return;
+    ptr[s] = true;
+    if (sim->states[s].kind == KS_REGEX_NFA_EPS) {
+        add_state(sim, ptr, sim->states[s].to0);
+        add_state(sim, ptr, sim->states[s].to1);
+        return;
+    }
+}
+
+void ks_regex_sim0_addcur(ks_regex_sim0* sim, int s) {
+    add_state(sim, sim->cur, s);
+}
+void ks_regex_sim0_addnext(ks_regex_sim0* sim, int s) {
+    add_state(sim, sim->next, s);
+}
+
+int ks_regex_sim0_step_linestart(ks_regex_sim0* sim) {
+    int i, j, ct = 0;
+    for (i = 0; i < sim->n_states; ++i) sim->next[i] = sim->cur[i];
+    for (i = 0; i < sim->n_states; ++i) {
+        if (sim->cur[i]) {
+            struct ks_regex_nfa* s = &sim->states[i];
+            bool good = false;
+
+            /* Check classes */
+            if (s->kind == KS_REGEX_NFA_LINESTART) {
+                ks_regex_sim0_addnext(sim, s->to0);
+                ct++;
+            }
+        }
+    }
+
+    /* Now, swap 'next' and 'cur' */
+    void* t = sim->cur;
+    sim->cur = sim->next;
+    sim->next = t;
+
+    return ct;
+}
+int ks_regex_sim0_step_lineend(ks_regex_sim0* sim) {
+    int i, j, ct = 0;
+    for (i = 0; i < sim->n_states; ++i) sim->next[i] = sim->cur[i];
+    for (i = 0; i < sim->n_states; ++i) {
+        if (sim->cur[i]) {
+            struct ks_regex_nfa* s = &sim->states[i];
+            bool good = false;
+
+            /* Check classes */
+            if (s->kind == KS_REGEX_NFA_LINEEND) {
+                ks_regex_sim0_addnext(sim, s->to0);
+                ct++;
+            }
+        }
+    }
+
+    /* Now, swap 'next' and 'cur' */
+    void* t = sim->cur;
+    sim->cur = sim->next;
+    sim->next = t;
+
+    return ct;
+}
+
+/* Apply a single character to the simulator
+ */
+int ks_regex_sim0_step(ks_regex_sim0* sim, ks_ucp c) {
+    int i, j, ct = 0;
+    for (i = 0; i < sim->n_states; ++i) sim->next[i] = false;
+    for (i = 0; i < sim->n_states; ++i) {
+        if (sim->cur[i]) {
+            struct ks_regex_nfa* s = &sim->states[i];
+            bool good = false;
+
+            /* Check classes */
+            if (s->kind == KS_REGEX_NFA_ANY) {
+                if (c < 256) {
+                    good = s->set.has_byte[c];
+                } else {
+                    for (j = 0; j < s->set.n_ext; ++j) {
+                        if (c == s->set.ext[j]) {
+                            good = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (good) {
+                    ct++;
+                    ks_regex_sim0_addnext(sim, s->to0);
+                }
+            } else if (s->kind == KS_REGEX_NFA_NOT) {
+                if (c < 256) {
+                    good = s->set.has_byte[c];
+                } else {
+                    for (j = 0; j < s->set.n_ext; ++j) {
+                        if (c == s->set.ext[j]) {
+                            good = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!good) {
+                    ct++;
+                    ks_regex_sim0_addnext(sim, s->to0);
+                }
+            } else if (s->kind == KS_REGEX_NFA_UCP) {
+                if (s->ucp == c) {
+                    ct++;
+                    ks_regex_sim0_addnext(sim, s->to0);
+                }
+            } else if (s->kind == KS_REGEX_NFA_CAT) {
+                struct ksucd_info info;
+                ks_ucp cp = ksucd_get_info(&info, c);
+                if (cp > 0) {
+                    if (s->set.has_cat[info.cat_gen]) {
+                        ct++;
+                        ks_regex_sim0_addnext(sim, s->to0);
+                    }
+                }
+            }
+        }
+    }
+
+    /* Now, swap 'next' and 'cur' */
+    void* t = sim->cur;
+    sim->cur = sim->next;
+    sim->next = t;
+
+    return ct;
+}
+
 /* Type Functions */
 
 static KS_TFUNC(T, free) {
@@ -560,7 +774,6 @@ static KS_TFUNC(T, str) {
 
     return (kso)ks_fmt("%T(%R)", self, self->expr);
 }
-
 
 static KS_TFUNC(T, graph) {
     ks_regex self;
@@ -613,6 +826,28 @@ static KS_TFUNC(T, graph) {
     return (kso)res;
 }
 
+
+static KS_TFUNC(T, exact) {
+    ks_regex self;
+    ks_str src;
+    KS_ARGS("self:* src:*", &self, kst_regex, &src, kst_str);
+
+    bool res = ks_regex_exact(self, src);
+
+    return KSO_BOOL(res);
+}
+
+static KS_TFUNC(T, matches) {
+    ks_regex self;
+    ks_str src;
+    KS_ARGS("self:* src:*", &self, kst_regex, &src, kst_str);
+
+    bool res = ks_regex_matches(self, src);
+
+    return KSO_BOOL(res);
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -627,6 +862,8 @@ void _ksi_regex() {
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__graph",              ksf_wrap(T_graph_, T_NAME ".__graph(self)", "")},
+        {"exact",                ksf_wrap(T_exact_, T_NAME ".exact(self, src)", "Calculate whether the regular expression matches the string exactly")},
+        {"matches",              ksf_wrap(T_matches_, T_NAME ".matches(self, src)", "Calculate whether the regular expression matches the string anywhere (this returns a bool)")},
 
     ));
 }

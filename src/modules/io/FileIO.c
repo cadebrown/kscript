@@ -191,7 +191,7 @@ static KS_TFUNC(T, write) {
         /* Write bytes */
         ks_bytes vm = kso_bytes(msg);
         if (!vm) return NULL;
-        if (!ksio_writeb((ksio_BaseIO)self, vm->len_b, vm->data)) {
+        if (ksio_writeb((ksio_BaseIO)self, vm->len_b, vm->data) < 0) {
             KS_DECREF(vm);
             return NULL;
         }
@@ -199,8 +199,10 @@ static KS_TFUNC(T, write) {
     } else {
         /* Write string */
         ks_str vm = ks_fmt("%S", msg);
-        if (!vm) return NULL;
-        if (!ksio_writes((ksio_BaseIO)self, vm->len_b, vm->data)) {
+        if (!vm) {
+            return NULL;
+        }
+        if (ksio_writes((ksio_BaseIO)self, vm->len_b, vm->data) < 0) {
             KS_DECREF(vm);
             return NULL;
         }
@@ -208,8 +210,6 @@ static KS_TFUNC(T, write) {
     }
     return KSO_NONE;
 }
-
-
 
 
 /* Export */
