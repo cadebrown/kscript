@@ -245,6 +245,15 @@ KS_API ksos_path ksos_path_new(ks_ssize_t len_b, const char* data, kso root);
  */
 KS_API ksos_path ksos_path_new_o(kso ob);
 
+/* Joins together 'map(os.path, paths)'
+ */
+KS_API ksos_path ksos_path_join(kso* paths, int len);
+
+/* Returns the parent of a path object.
+ *  If len(self.parts) == 0, ret os.path('..')
+ */
+KS_API ksos_path ksos_path_parent(kso self);
+
 
 /* Return whether 'path' exists, and set '*res' to whether it does
  */
@@ -259,23 +268,19 @@ KS_API bool ksos_path_isdir(kso path, bool* res);
 /* Calculate whether 'path' is a symbolic link */
 KS_API bool ksos_path_islink(kso path, bool* res);
 
-
-/* Returns the parent of a path object.
- *  If len(self.parts) == 0, ret os.path('..')
- */
-KS_API ksos_path ksos_path_parent(kso self);
+/* Return a list of directories and files in a given directory */
+KS_API bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files);
 
 /* Attempts to resolve 'path' to an absolute path */
 KS_API ksos_path ksos_path_real(kso path);
 
+/* Attempts to create a directory. If 'parents' is given, then parents are created as well */
+KS_API bool ksos_path_mkdir(kso path, int mode, bool parents);
 
-/* Joins together 'map(os.path, paths)'
+/* Attempts to remove a path (file or directory). If 'children' is given, then children are recursively 
+ *   removed as well (otherwise, non-empty directories throw errors) 
  */
-KS_API ksos_path ksos_path_join(kso* paths, int len);
-
-/* Return a list of directories and files in a given directory */
-KS_API bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files);
-
+KS_API bool ksos_path_rm(kso path, bool children);
 
 
 /* Create a new thread
@@ -338,8 +343,12 @@ KS_API bool ksos_mutex_trylock(ksos_mutex self);
 /* Performs a C-style 'stat' on a path object
  */
 KS_API bool ksos_stat(kso path, struct ksos_cstat* out);
-KS_API bool ksos_fstat(int fd, struct ksos_cstat* out);
 KS_API bool ksos_lstat(kso path, struct ksos_cstat* out);
+KS_API bool ksos_fstat(int fd, struct ksos_cstat* out);
+
+/* Changes the current working direcotory to a given path
+ */
+KS_API bool ksos_chdir(kso path);
 
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found

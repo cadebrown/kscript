@@ -115,82 +115,6 @@ ksos_path ksos_path_new_o(kso ob) {
     return ksos_path_new_ot(ksost_path, ob);
 }
 
-bool ksos_path_exists(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        kso_catch_ignore();
-        *res = false;
-        return true;
-    } else {
-        *res = true;
-        return true;
-    }
-}
-
-bool ksos_path_isfile(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        return false;
-    }
-
-    *res = KSOS_CSTAT_ISFILE(st);
-    return true;
-}
-
-bool ksos_path_isdir(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        return false;
-    }
-
-    *res = KSOS_CSTAT_ISDIR(st);
-    return true;
-}
-
-bool ksos_path_islink(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        return false;
-    }
-
-    *res = KSOS_CSTAT_ISLINK(st);
-    return true;
-}
-
-ksos_path ksos_path_parent(kso self) {
-    ks_str tmp = ks_str_new(2, "..");
-    ksos_path res = ksos_path_join((kso[]){ (kso)self, (kso)tmp }, 2);
-    KS_DECREF(tmp);
-    return res;
-}
-
-ksos_path ksos_path_real(kso path) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
-
-    #ifdef KS_HAVE_realpath
-    char* cr = realpath(s->data, NULL);
-    if (cr) {
-        ksos_path res = ksos_path_new(-1, cr, KSO_NONE);
-        free(cr);
-        KS_DECREF(s);
-        return res;
-    } else {
-        KS_DECREF(s);
-        KS_THROW(kst_OSError, "Failed to determine real path for '%S': %s", path, strerror(errno));
-        return NULL;
-    }
-    #else
-    KS_THROW(kst_OSError, "Failed to determine real path for '%S': platform did not provide a 'realpath()' function", path);
-    KS_DECREF(s);
-    return NULL;
-    #endif
-
-    assert(false);
-    return NULL;
-}
-
-
 ksos_path ksos_path_join(kso* paths, int len) {
     if (len == 0) {
         return ksos_path_new(-1, "", KSO_NONE);
@@ -238,9 +162,21 @@ ksos_path ksos_path_join(kso* paths, int len) {
     return res;
 }
 
+ksos_path ksos_path_parent(kso self) {
+    ks_str tmp = ks_str_new(2, "..");
+    ksos_path res = ksos_path_join((kso[]){ (kso)self, (kso)tmp }, 2);
+    KS_DECREF(tmp);
+    return res;
+}
+
+
+/* Filesystem operations */
+
 bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
     ks_str sp = get_spath(path);
     if (!sp) return false;
+
+    /* TODO: Windows version */
 
     /* TODO: check OS encoding */
     DIR* dp = opendir(sp->data);
@@ -291,6 +227,267 @@ bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
     return true;
 }
 
+
+bool ksos_path_exists(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        kso_catch_ignore();
+        *res = false;
+        return true;
+    } else {
+        *res = true;
+        return true;
+    }
+}
+
+bool ksos_path_isfile(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        return false;
+    }
+
+    *res = KSOS_CSTAT_ISFILE(st);
+    return true;
+}
+
+bool ksos_path_isdir(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        return false;
+    }
+
+    *res = KSOS_CSTAT_ISDIR(st);
+    return true;
+}
+
+bool ksos_path_islink(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        return false;
+    }
+
+    *res = KSOS_CSTAT_ISLINK(st);
+    return true;
+}
+
+
+ksos_path ksos_path_real(kso path) {
+    ks_str s = get_spath(path);
+    if (!s) return NULL;
+
+#ifdef KS_HAVE_realpath
+    char* cr = realpath(s->data, NULL);
+    if (cr) {
+        ksos_path res = ksos_path_new(-1, cr, KSO_NONE);
+        free(cr);
+        KS_DECREF(s);
+        return res;
+    } else {
+        KS_DECREF(s);
+        KS_THROW(kst_OSError, "Failed to determine real path for '%S': %s", path, strerror(errno));
+        return NULL;
+    }
+#else
+    KS_THROW(kst_OSError, "Failed to determine real path for '%S': platform did not provide a 'realpath()' function", path);
+    KS_DECREF(s);
+    return NULL;
+#endif
+
+    assert(false);
+    return NULL;
+}
+
+
+bool ksos_path_mkdir(kso path, int mode, bool parents) {
+    ks_str sp = get_spath(path);
+    if (!sp) return false;
+
+#ifdef KS_HAVE_mkdir
+    int rc = 0, rcerr = 0;
+    if (parents) {
+        /* Build parents */
+        char* tmp = ks_malloc(sp->len_b + 1);
+        memcpy(tmp, sp->data, sp->len_b + 1);
+
+        if (tmp[sp->len_b - 1] == '/') tmp[sp->len_b - 1] = '\0';
+        char* p;
+        for (p = tmp + 1; *p; p++) {
+            if (*p == '/') {
+                *p = '\0';
+
+                if ((rc = mkdir(tmp, mode)) != 0) {
+                    if (errno != EEXIST) {
+                        /* Had other error, so stop*/
+                        rcerr = errno;
+                        break;
+                    }
+                }
+
+                *p = '/';
+            }
+        }
+
+        ks_free(tmp);
+        if (rc == 0) {
+            /* No error, try final mkdir */
+            rc = mkdir(sp->data, mode);
+            rcerr = errno;
+        }
+
+    } else {
+        /* Just attempt the one */
+        rc = mkdir(sp->data, mode);
+        rcerr = errno;
+    }
+
+    if (rc == 0) {
+        return true;
+    } else {
+        KS_THROW(kst_OSError, "Failed to mkdir %R: %s", sp, strerror(rcerr));
+        return false;
+    }
+
+#elif defined(KS_HAVE__mkdir)
+    int rc = 0, rcerr = 0;
+    if (parents) {
+        /* Build parents */
+        char* tmp = ks_malloc(sp->len_b + 1);
+        memcpy(tmp, sp->data, sp->len_b + 1);
+
+        if (tmp[sp->len_b - 1] == '/') tmp[sp->len_b - 1] = '\0';
+        char* p;
+        for (p = tmp + 1; *p; p++) {
+            if (*p == '/') {
+                *p = '\0';
+
+                if ((rc = _mkdir(tmp)) != 0) {
+                    if (errno != EEXIST) {
+                        /* Had other error, so stop*/
+                        rcerr = errno;
+                        break;
+                    }
+                }
+
+                *p = '/';
+            }
+        }
+
+        ks_free(tmp);
+        if (rc == 0) {
+            /* No error, try final mkdir */
+            rc = _mkdir(sp->data);
+            rcerr = errno;
+        }
+
+    } else {
+        /* Just attempt the one */
+        rc = _mkdir(sp->data);
+        rcerr = errno;
+    }
+
+    if (rc == 0) {
+        return true;
+    } else {
+        KS_THROW(kst_OSError, "Failed to mkdir %R: %s", sp, strerror(rcerr));
+        return false;
+    }
+#else
+    KS_THROW(kst_OSError, "Failed to mkdir %R: platform did not provide a 'mkdir()' function", path);
+    KS_DECREF(s);
+    return NULL;
+#endif
+
+    assert(false);
+    return NULL;
+}
+
+bool ksos_path_rm(kso path, bool children) {
+    ks_str sp = get_spath(path);
+    if (!sp) return false;
+
+#ifdef KS_HAVE_remove
+
+    int rc = 0, rcerr = 0;
+    if (children) {
+        /* Remove children */
+
+        kso walk = kso_call((kso)ksost_path_walk, 1, (kso[]){ (kso)sp });
+        if (!walk) {
+            KS_DECREF(sp);
+            return NULL;
+        }
+        /* Iterate through elements of the walk */
+        ks_cit it = ks_cit_make(walk);
+        kso ob;
+        while ((ob = ks_cit_next(&it)) != NULL && !rc) {
+            ks_tuple base_dirs_files = (ks_tuple)ob;
+            assert(kso_issub(base_dirs_files->type, kst_tuple) && base_dirs_files->len == 3);
+
+            kso base = base_dirs_files->elems[0];
+            ks_list files = (ks_list)base_dirs_files->elems[2];
+            assert(files->type == kst_list);
+
+            /* Now, remove 'base/file' for each file in files */
+            int i;
+            for (i = 0; i < files->len; ++i) {
+                ks_str tmps = ks_fmt("%S/%S", base, files->elems[i]);
+                if (!tmps) {
+                    it.exc = true;
+                    break;
+                }
+                rc = remove(tmps->data);
+                rcerr = errno;
+                KS_DECREF(tmps);
+                if (rc != 0) {
+                    break;
+                }
+            }
+
+            /* Now, remove the base */
+            if (rc == 0 && !it.exc) {
+                ks_str tmps = ks_fmt("%S", base);
+                if (!tmps) {
+                    it.exc = true;
+                    break;
+                }
+                rc = remove(tmps->data);
+                rcerr = errno;
+                KS_DECREF(tmps);
+                if (rc != 0) {
+                    break;
+                }
+            }
+
+            KS_DECREF(ob);
+        }
+
+        KS_DECREF(walk);
+        ks_cit_done(&it);
+        if (it.exc) {
+            KS_DECREF(sp);
+            return NULL;
+        }
+
+    } else {
+        rc = remove(sp->data);
+        rcerr = errno;
+    }
+
+    if (rc == 0) {
+        return true;
+    } else {
+        KS_THROW(kst_OSError, "Failed to rm %R: %s", sp, strerror(rcerr));
+        return false;
+    }
+
+#else
+
+    KS_THROW(kst_OSError, "Failed to rm %R: platform did not provide a 'remove()' function", sp);
+    KS_DECREF(sp);
+    return NULL;
+#endif
+
+}
 
 /* Type Functions */
 
@@ -426,6 +623,7 @@ static KS_TFUNC(T, isdir) {
 
     return KSO_BOOL(res);
 }
+
 static KS_TFUNC(T, islink) {
     kso self;
     KS_ARGS("self", &self);
@@ -448,6 +646,27 @@ static KS_TFUNC(T, listdir) {
         (kso)dirs,
         (kso)files
     });
+}
+static KS_TFUNC(T, mkdir) {
+    kso self;
+    ks_cint mode = 0775;
+    bool parents = false;
+    KS_ARGS("self ?mode:cint ?parents:bool", &self, &mode, &parents);
+
+    if (!ksos_path_mkdir(self, mode, parents)) return NULL;
+    else {
+        return KSO_NONE;
+    }
+}
+static KS_TFUNC(T, rm) {
+    kso self;
+    bool children = false;
+    KS_ARGS("self ?children:bool", &self, &children);
+
+    if (!ksos_path_rm(self, children)) return NULL;
+    else {
+        return KSO_NONE;
+    }
 }
 
 
@@ -475,7 +694,7 @@ static KS_TFUNC(TW, free) {
 static KS_TFUNC(TW, new) {
     ks_type tp;
     kso of;
-    bool topdown = true;
+    bool topdown = false;
     KS_ARGS("tp:* of ?topdown:bool", &tp, kst_type, &of, &topdown);
 
     ksos_path p = ksos_path_new_o(of);
@@ -607,7 +826,7 @@ void _ksi_os_path() {
 
     _ksinit(ksost_path_walk, kst_object, TW_NAME, sizeof(struct ksos_path_walk_s), -1, "Recursive iterator through directory entries", KS_IKV(
         {"__free",                 ksf_wrap(TW_free_, TW_NAME ".__free(self)", "")},
-        {"__new",                  ksf_wrap(TW_new_, TW_NAME ".__new(tp, src='', topdown=true)", "")},
+        {"__new",                  ksf_wrap(TW_new_, TW_NAME ".__new(tp, src='', topdown=false)", "")},
        // {"__repr",                 ksf_wrap(TW_repr_, TW_NAME ".__repr(self)", "")},
 
         {"__next",                 ksf_wrap(TW_next_, TW_NAME ".__next(self)", "")},
@@ -632,8 +851,11 @@ void _ksi_os_path() {
         {"isfile",                 ksf_wrap(T_isfile_, T_NAME ".isfile(self)", "Computes whether 'self' is a regular file")},
         {"isdir",                  ksf_wrap(T_isdir_, T_NAME ".isdir(self)", "Computes whether 'self' is a directory")},
         {"islink",                 ksf_wrap(T_islink_, T_NAME ".islink(self)", "Computes whether 'self' is a symbolic link")},
-
         {"listdir",                ksf_wrap(T_listdir_, T_NAME ".listdir(self)", "Computes a tuple '(dirs, files)' of a given directory")},
+        {"mkdir",                  ksf_wrap(T_mkdir_, T_NAME ".mkdir(self, mode=0o775, parents=false)", "Create a directory")},
+        {"rm",                     ksf_wrap(T_rm_, T_NAME ".rm(self, children=false)", "Remove a file from the OS")},
+
+
         {"walk",                   KS_NEWREF(ksost_path_walk)},
 
     ));

@@ -241,6 +241,21 @@ _KS_DO_SPEC(_KSACT)
     /* Current position */
     ks_list_pushu(ksg_path, (kso)ks_str_new(-1, "."));
 
+    /*  */
+    ks_str key = ks_str_new(-1, "KSPATH");
+    ks_str val = (ks_str)ksos_getenv(key, NULL);
+    KS_DECREF(key);
+    if (val) {
+        /* Given variable */
+        ks_list parts = ks_str_split_c(val->data, ":");
+        ks_list_pushall(ksg_path, (kso)parts);
+        KS_DECREF(parts);
+
+        KS_DECREF(val);
+    } else {
+        kso_catch_ignore();
+    }
+
 
     return has_init = true;
 }

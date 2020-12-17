@@ -33,7 +33,7 @@ bool ksos_stat(kso path, struct ksos_cstat* out) {
     #ifdef KS_HAVE_stat
     int rs = stat(s->data, &out->v_stat);
     if (rs != 0) {
-        KS_THROW(kst_OSError, "Failed to stat %R: %s", s, strerror(errno));
+        KS_THROW(kst_OSError, "Failed to stat: %s", s, strerror(errno));
         KS_DECREF(s);
         return NULL;
     }
@@ -56,7 +56,7 @@ bool ksos_fstat(int fd, struct ksos_cstat* out) {
         return NULL;
     }
     #else
-    KS_THROW(kst_PlatformWarning, "Failed to fstat %R: The platform had no 'fstat()' function");
+    KS_THROW(kst_PlatformWarning, "Failed to fstat: The platform had no 'fstat()' function");
     KS_DECREF(s);
     return NULL;
     #endif
@@ -75,7 +75,7 @@ bool ksos_lstat(kso path, struct ksos_cstat* out) {
         return NULL;
     }
     #else
-    KS_THROW(kst_PlatformWarning, "Failed to lstat %R: The platform had no 'lstat()' function");
+    KS_THROW(kst_PlatformWarning, "Failed to lstat: The platform had no 'lstat()' function", path);
     KS_DECREF(s);
     return NULL;
     #endif
@@ -117,7 +117,6 @@ bool ksos_setenv(ks_str name, ks_str val) {
         return true;
     }
 }
-
 
 /* Module Functions */
 

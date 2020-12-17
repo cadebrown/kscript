@@ -10,6 +10,7 @@ static ks_dict cache = NULL;
 
 
 static ks_module import_place(kso from, ks_str parname, ks_str name) {
+
     ks_str fn = ks_fmt("%S/%S", from, name);
     if (!fn) {
         return NULL;
@@ -89,9 +90,13 @@ static ks_module import_place(kso from, ks_str parname, ks_str name) {
         /* Execute the program, which should return the value */
         kso res = kso_call_ext((kso)code, 0, NULL, mod->attr, NULL);
         KS_DECREF(code);
-        if (!res) return NULL;
+        if (!res) {
+            KS_DECREF(mod);
+            return NULL;
+        }
 
         KS_DECREF(res);
+
 
         return mod;
     } else {
@@ -113,6 +118,7 @@ static ks_module import_base(ks_str name) {
 
         bool g;
         if (ksos_path_isdir((kso)fn, &g)) {
+
             /* Boom it exists */
             ksos_path rp = ksos_path_real((kso)fn);
             ks_str rps = NULL;
@@ -124,6 +130,7 @@ static ks_module import_base(ks_str name) {
                 rps = ks_fmt("%S", rp);
                 KS_DECREF(rp);
             }
+
             ks_module mod = ks_module_new(name->data, rps->data, "", KS_IKV(
             ));
 

@@ -267,9 +267,9 @@ check_clib() {
         # compile and run it
         echo "$5" > $_check_c
         if [ "x$CHECKTO" = 'x' ]; then
-            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o && $_check_o
+            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o
         else
-            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 2>> $CHECKTO -o $_check_o && $_check_o
+            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 2>> $CHECKTO -o $_check_o
         fi
         if [ $? -eq 0 ]; then
             echo "  :: Succeeded"
@@ -391,9 +391,9 @@ int main(int argc, char** argv) {
 }
 " > $_check_c
     if [ "x$CHECKTO" = 'x' ]; then
-       $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+       $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o
     else
-       $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
+       $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
     fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
@@ -448,9 +448,9 @@ int main(int argc, char** argv) {
 }
 " > $_check_c
     if [ "x$CHECKTO" = 'x' ]; then
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o
     else
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO && $_check_o
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
@@ -539,9 +539,9 @@ int main(int argc, char** argv) {
 }
 " > $_check_c
     if [ "x$CHECKTO" = 'x' ]; then
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o
     else
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
+        $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
     fi
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
@@ -625,7 +625,13 @@ check_func "stat" "i" "s,&st"
 check_func "lstat" "i" "s,&st"
 check_func "fstat" "i" "s,&st"
 
+check_func "mkdir" "i" "s,i"
+check_func "remove" "i" "s"
+check_func "_mkdir" "i" "s"
+
 check_func "realpath" "s" "s,NULL"
+
+check_func "opendir" "i" "s,&st"
 
 check_func "clock" "c" ""
 check_func "time" "t" "&t"

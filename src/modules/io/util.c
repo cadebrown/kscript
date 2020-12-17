@@ -303,7 +303,6 @@ static bool add_O_path(ksio_BaseIO self, ksos_path val) {
         if (!ksio_add((ksio_BaseIO)sio, ".")) {
             KS_DECREF(sio);
             return false;
-
         }
     } else {
         if (val->root != KSO_NONE) if (!ksio_add((ksio_BaseIO)sio, "%S", val->root)) {
@@ -320,7 +319,10 @@ static bool add_O_path(ksio_BaseIO self, ksos_path val) {
             }
         }
     }
-
+    /* If empty, default to '.' */
+    if (sio->len_b - pos == 0) {
+        ksio_add((ksio_BaseIO)sio, ".");
+    }
     val->str_ = ks_str_new(sio->len_b - pos, sio->data);
     if ((ksio_BaseIO)sio != self) {
         ksio_addbuf(self, val->str_->len_b, val->str_->data);

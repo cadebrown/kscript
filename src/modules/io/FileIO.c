@@ -105,7 +105,7 @@ static KS_TFUNC(T, free) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
 
-    KS_DECREF(self->fname);
+    if (self->fname) KS_DECREF(self->fname);
     
     if (self->do_close && self->is_open && self->fp) {
         fclose(self->fp);
