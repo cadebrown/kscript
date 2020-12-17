@@ -201,6 +201,26 @@ ks_ccomplex ksm_cpow(ks_ccomplex x, ks_ccomplex y) {
         }
         /* 0 ** y == 0 */
         return KS_CC_MAKE(0, 0);
+    } else if (x.im == 0 && y.im == 0) {
+        return KS_CC_MAKE(pow(x.re, y.re), 0);
+    } else if (x.re == 0 && y.im == 0 && ks_cfloat_isreg(y.re) && ((int)y.re) == y.re && y.re > 0) {
+        /* (a*1i) ** b , b is int  */
+        int b = (int)y.re;
+        int bm4 = b % 4;
+
+        ks_cfloat v = pow(x.im, b);
+
+        if (bm4 == 0) {
+            /* a ** b * (1i ** (0 % 4)) */
+            return KS_CC_MAKE(v, 0);
+        } else if (bm4 == 1) {
+            return KS_CC_MAKE(0, v);
+        } else if (bm4 == 2) {
+            return KS_CC_MAKE(-v, 0);
+        } else {
+            return KS_CC_MAKE(0, -v);
+        }
+
     } else {
 
         /* absolute value & phase */

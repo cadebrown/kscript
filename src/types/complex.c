@@ -105,19 +105,19 @@ bool ks_ccomplex_from_str(const char* str, int sz, ks_ccomplex* out) {
     return true;
 }
 
-int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci, int prec) {
+int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci_re, bool sci_im, int prec_re, int prec_im) {
     int i = 0, msz;
     if (val.re == 0.0) {
         msz = sz - i;
         if (msz < 0) msz = 0;
-        int sz_im = ks_cfloat_to_str(str + i, msz, val.im, sci, prec, 10);
+        int sz_im = ks_cfloat_to_str(str + i, msz, val.im, sci_im, prec_im, 10);
         i += sz_im;
         if (i < sz) str[i++] = 'i';
     } else {
         if (i < sz) str[i++] = '(';
         msz = sz - i;
         if (msz < 0) msz = 0;
-        int sz_re = ks_cfloat_to_str(str + i, msz, val.re, sci, prec, 10);
+        int sz_re = ks_cfloat_to_str(str + i, msz, val.re, sci_re, prec_re, 10);
         i += sz_re;
         if (i < sz) {
             if (val.im >= 0 || val.im != val.im) str[i++] = '+';
@@ -125,7 +125,7 @@ int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci, int prec) {
 
         msz = sz - i;
         if (msz < 0) msz = 0;
-        int sz_im = ks_cfloat_to_str(str + i, msz, val.im, sci, prec, 10);
+        int sz_im = ks_cfloat_to_str(str + i, msz, val.im, sci_im, prec_im, 10);
         i += sz_im;
         if (i < sz) str[i++] = 'i';
         if (i < sz) str[i++] = ')';
@@ -180,18 +180,15 @@ static KS_TFUNC(T, str) {
     bool sci_re = a_re > 0 && (a_re >= A_SCI_BIG || a_re <= A_SCI_SML);
     bool sci_im = a_im > 0 && (a_im >= A_SCI_BIG || a_im <= A_SCI_SML);
 
-    bool sci = sci_re || sci_im;
-    int prec = sci?F_PREC_SCI:F_PREC_REG;
-
     /* Buffer, current position (this is just a useful case for small numbers,
      *   sometimes the buffer must be reallocated) 
      */
     char tmp[256];
-    int rsz = ks_ccomplex_to_str(tmp, sizeof(tmp) - 1, self->val, sci, prec);
+    int rsz = ks_ccomplex_to_str(tmp, sizeof(tmp) - 1, self->val, sci_re, sci_im, sci_re?F_PREC_SCI:F_PREC_REG, sci_im?F_PREC_SCI:F_PREC_REG);
 
     if (rsz >= sizeof(tmp) - 1) {
         char* atmp = ks_malloc(rsz + 2);
-        int new_rsz = ks_ccomplex_to_str(atmp, rsz + 1, self->val, sci, prec);
+        int new_rsz = ks_ccomplex_to_str(atmp, rsz + 1, self->val, sci_re, sci_im, sci_re?F_PREC_SCI:F_PREC_REG, sci_im?F_PREC_SCI:F_PREC_REG);
         assert(new_rsz == rsz);
         ks_str res = ks_str_new(rsz, atmp);
         ks_free(atmp);

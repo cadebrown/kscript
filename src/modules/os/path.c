@@ -676,8 +676,6 @@ static KS_TFUNC(T, abs) {
     return (kso)ksos_path_real(self);
 }
 
-
-
 static KS_TFUNC(T, join) {
     return (kso)ksos_path_join(_args, _nargs);
 }
@@ -687,6 +685,16 @@ static KS_TFUNC(T, parent) {
     KS_ARGS("self", &self);
 
     return (kso)ksos_path_parent(self);
+}
+
+static KS_TFUNC(T, exists) {
+    kso self;
+    KS_ARGS("self", &self);
+
+    bool res;
+    if (!ksos_path_exists(self, &res)) return NULL;
+
+    return KSO_BOOL(res);
 }
 
 static KS_TFUNC(T, isfile) {
@@ -942,6 +950,7 @@ void _ksi_os_path() {
         {"join",                   ksf_wrap(T_join_, T_NAME ".join(*args)", "Joins paths together, accepts 'str', 'os.path', and other path-like objects")},
         {"real",                   ksf_wrap(T_abs_, T_NAME ".real(self)", "Computes the real path (i.e. actual location within the filesystem)\n\n    Returns a path with an absolute root")},
 
+        {"exists",                 ksf_wrap(T_exists_, T_NAME ".exists(self)", "Computes whether 'self' exists on the file system")},
         {"isfile",                 ksf_wrap(T_isfile_, T_NAME ".isfile(self)", "Computes whether 'self' is a regular file")},
         {"isdir",                  ksf_wrap(T_isdir_, T_NAME ".isdir(self)", "Computes whether 'self' is a directory")},
         {"islink",                 ksf_wrap(T_islink_, T_NAME ".islink(self)", "Computes whether 'self' is a symbolic link")},

@@ -558,8 +558,7 @@ KS_API bool ks_ccomplex_from_str(const char* str, int sz, ks_ccomplex* out);
 
 /* Converts a 'ks_ccomplex' to a string
  */
-KS_API int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci, int prec);
-
+KS_API int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci_re, bool sci_im, int prec_re, int prec_im);
 
 /** Object API **/
 

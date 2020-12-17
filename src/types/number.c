@@ -331,6 +331,7 @@ static KS_TFUNC(T, mul) {
         } else if (kso_is_float(L) || kso_is_float(R)) {
             ks_cfloat Lf, Rf, V;
             if (!kso_get_cf(L, &Lf) || !kso_get_cf(R, &Rf)) return NULL;
+            
             return (kso)ks_float_new(Lf * Rf);
         } else if (kso_is_int(L) || kso_is_int(R)) {
             ks_int Li, Ri, V = NULL;
