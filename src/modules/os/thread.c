@@ -54,6 +54,12 @@ static void* init_thread_pthreads(void* _self) {
 
 /* C-API */
 ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
+    if (ksg_main_thread) {
+        #ifndef KS_HAVE_pthreads
+        ks_warn("os.thread", "Attempting to create a new thread when pthreads was not included (this may be disastrous)");
+        #endif
+    }
+
     ksos_thread self = KSO_NEW(ksos_thread, tp);
 
     static int cc = 1;

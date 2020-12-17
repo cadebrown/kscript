@@ -195,9 +195,9 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
                     LEN -= 1;
                 } else {
                     if (!COMPILE(SUB(i))) return false;
-
                 }
             }
+            i = NSUB - 1;
             if (i > j) {
                 EMITI(KSB_LIST_PUSHN, i - j);
                 LEN -= (i - j);
@@ -313,20 +313,21 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
                     LEN -= (i - j);
                     j = i+1;
                 }
-
                 if (!COMPILE((ks_ast)SUB(i)->args->elems[0])) return false;
                 EMIT(KSB_LIST_PUSHI);
                 LEN -= 1;
             } else {
                 if (!COMPILE(SUB(i))) return false;
-
             }
         }
+        i = NSUB - 1;
+
         if (i > j) {
             EMITI(KSB_LIST_PUSHN, i - j);
             LEN -= (i - j);
             j = i+1;
         }
+        assert(LEN == ssl + 1);
 
     } else if (k == KS_AST_TUPLE) {
         for (i = 0; i < NSUB; ++i) {
@@ -361,6 +362,8 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
                 }
             }
+            i = NSUB - 1;
+
             if (i > j) {
                 EMITI(KSB_TUPLE_PUSHN, i - j);
                 LEN -= (i - j);
@@ -394,6 +397,8 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
             }
         }
+        i = NSUB - 1;
+
         if (i > j) {
             EMITI(KSB_SET_PUSHN, i - j);
             LEN -= (i - j);
@@ -427,6 +432,8 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
             }
         }
+        i = NSUB - 1;
+
         if (i > j) {
             EMITI(KSB_DICT_PUSHN, i - j);
             LEN -= (i - j);

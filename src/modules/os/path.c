@@ -568,7 +568,7 @@ bool ksos_path_chdir(kso path) {
 #else
     KS_THROW(kst_OSError, "Failed to chdir %R: platform did not provide a 'chdir()' function", sp);
     KS_DECREF(sp);
-    return NULL;
+    return false;
 #endif
 }
 
@@ -761,7 +761,7 @@ static KS_TFUNC(T, chdir) {
 
     if (!ksos_path_chdir(self)) return NULL;
 
-    return KSO_TRUE;
+    return KSO_NONE;
 }
 
 /* 'Walk' Type */
