@@ -621,17 +621,22 @@ check_func sincos "v" "d,&d,&d"
 #check_func sincosl "v" "ld,&ld,&ld"
 #check_func sincosf128 "v" "f128,&f128,&f128"
 
+check_func "opendir" "i" "s,&st"
+
+check_func "getcwd" "s" "s"
+
+check_func "getenv" "s" "s"
+check_func "putenv" "i" "s"
+
 check_func "stat" "i" "s,&st"
 check_func "lstat" "i" "s,&st"
 check_func "fstat" "i" "s,&st"
-
-check_func "mkdir" "i" "s,i"
-check_func "remove" "i" "s"
-check_func "_mkdir" "i" "s"
-
 check_func "realpath" "s" "s,NULL"
 
-check_func "opendir" "i" "s,&st"
+check_func "mkdir" "i" "s,i"
+check_func "_mkdir" "i" "s"
+check_func "remove" "i" "s"
+check_func "chdir" "i" "s"
 
 check_func "clock" "c" ""
 check_func "time" "t" "&t"

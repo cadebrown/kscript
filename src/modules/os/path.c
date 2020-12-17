@@ -115,6 +115,8 @@ ksos_path ksos_path_new_o(kso ob) {
     return ksos_path_new_ot(ksost_path, ob);
 }
 
+/** Operations on paths **/
+
 ksos_path ksos_path_join(kso* paths, int len) {
     if (len == 0) {
         return ksos_path_new(-1, "", KSO_NONE);
@@ -170,7 +172,131 @@ ksos_path ksos_path_parent(kso self) {
 }
 
 
-/* Filesystem operations */
+ksos_path ksos_path_real(kso path) {
+    ks_str s = get_spath(path);
+    if (!s) return NULL;
+
+#ifdef KS_HAVE_realpath
+    char* cr = realpath(s->data, NULL);
+    if (cr) {
+        ksos_path res = ksos_path_new(-1, cr, KSO_NONE);
+        free(cr);
+        KS_DECREF(s);
+        return res;
+    } else {
+        KS_DECREF(s);
+        KS_THROW(kst_OSError, "Failed to determine real path for '%S': %s", path, strerror(errno));
+        return NULL;
+    }
+#else
+    KS_THROW(kst_OSError, "Failed to determine real path for '%S': platform did not provide a 'realpath()' function", path);
+    KS_DECREF(s);
+    return NULL;
+#endif
+
+    assert(false);
+    return NULL;
+}
+
+bool ksos_stat(kso path, struct ksos_cstat* out) {
+    ks_str s = get_spath(path);
+    if (!s) return NULL;
+
+#ifdef KS_HAVE_stat
+    int rs = stat(s->data, &out->v_stat);
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to stat: %s", s, strerror(errno));
+        KS_DECREF(s);
+        return NULL;
+    }
+
+    KS_DECREF(s);
+    return true;
+#else
+    KS_THROW(kst_PlatformWarning, "Failed to stat %R: The platform had no 'stat()' function");
+    KS_DECREF(s);
+    return NULL;
+#endif
+}
+
+bool ksos_fstat(int fd, struct ksos_cstat* out) {
+#ifdef KS_HAVE_fstat
+    int rs = fstat(fd, &out->v_stat);
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to fstat %i: %s", fd, strerror(errno));
+        return NULL;
+    }
+    return true;
+#else
+    KS_THROW(kst_PlatformWarning, "Failed to fstat: The platform had no 'fstat()' function");
+    KS_DECREF(s);
+    return NULL;
+#endif
+
+}
+bool ksos_lstat(kso path, struct ksos_cstat* out) {
+    ks_str s = get_spath(path);
+    if (!s) return NULL;
+
+#ifdef KS_HAVE_lstat
+    int rs = lstat(s->data, &out->v_stat);
+    if (rs != 0) {
+        KS_THROW(kst_OSError, "Failed to lstat %R: %s", s, strerror(errno));
+        KS_DECREF(s);
+        return NULL;
+    }
+    KS_DECREF(s);
+    return true;
+
+#else
+    KS_THROW(kst_PlatformWarning, "Failed to lstat: The platform had no 'lstat()' function", path);
+    KS_DECREF(s);
+    return NULL;
+#endif
+
+}
+
+bool ksos_path_exists(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        kso_catch_ignore();
+        *res = false;
+        return true;
+    } else {
+        *res = true;
+        return true;
+    }
+}
+
+bool ksos_path_isfile(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        return false;
+    }
+
+    *res = KSOS_CSTAT_ISFILE(st);
+    return true;
+}
+
+bool ksos_path_isdir(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        return false;
+    }
+
+    *res = KSOS_CSTAT_ISDIR(st);
+    return true;
+}
+
+bool ksos_path_islink(kso path, bool* res) {
+    struct ksos_cstat st;
+    if (!ksos_stat(path, &st)) {
+        return false;
+    }
+
+    *res = KSOS_CSTAT_ISLINK(st);
+    return true;
+}
 
 bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
     ks_str sp = get_spath(path);
@@ -226,77 +352,6 @@ bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
     closedir(dp);
     return true;
 }
-
-
-bool ksos_path_exists(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        kso_catch_ignore();
-        *res = false;
-        return true;
-    } else {
-        *res = true;
-        return true;
-    }
-}
-
-bool ksos_path_isfile(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        return false;
-    }
-
-    *res = KSOS_CSTAT_ISFILE(st);
-    return true;
-}
-
-bool ksos_path_isdir(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        return false;
-    }
-
-    *res = KSOS_CSTAT_ISDIR(st);
-    return true;
-}
-
-bool ksos_path_islink(kso path, bool* res) {
-    struct ksos_cstat st;
-    if (!ksos_stat(path, &st)) {
-        return false;
-    }
-
-    *res = KSOS_CSTAT_ISLINK(st);
-    return true;
-}
-
-
-ksos_path ksos_path_real(kso path) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
-
-#ifdef KS_HAVE_realpath
-    char* cr = realpath(s->data, NULL);
-    if (cr) {
-        ksos_path res = ksos_path_new(-1, cr, KSO_NONE);
-        free(cr);
-        KS_DECREF(s);
-        return res;
-    } else {
-        KS_DECREF(s);
-        KS_THROW(kst_OSError, "Failed to determine real path for '%S': %s", path, strerror(errno));
-        return NULL;
-    }
-#else
-    KS_THROW(kst_OSError, "Failed to determine real path for '%S': platform did not provide a 'realpath()' function", path);
-    KS_DECREF(s);
-    return NULL;
-#endif
-
-    assert(false);
-    return NULL;
-}
-
 
 bool ksos_path_mkdir(kso path, int mode, bool parents) {
     ks_str sp = get_spath(path);
@@ -406,7 +461,6 @@ bool ksos_path_rm(kso path, bool children) {
     if (!sp) return false;
 
 #ifdef KS_HAVE_remove
-
     int rc = 0, rcerr = 0;
     if (children) {
         /* Remove children */
@@ -487,6 +541,27 @@ bool ksos_path_rm(kso path, bool children) {
     return NULL;
 #endif
 
+}
+
+bool ksos_path_chdir(kso path) {
+    ks_str sp = get_spath(path);
+    if (!sp) return false;
+
+#ifdef KS_HAVE_chdir
+    int rc = chdir(sp->data);
+    int rcerr = errno;
+    if (rc == 0) {
+        return true;
+    } else {
+        KS_THROW(kst_OSError, "Failed to rm %R: %s", sp, strerror(rcerr));
+        return false;
+    }
+
+#else
+    KS_THROW(kst_OSError, "Failed to chdir %R: platform did not provide a 'chdir()' function", sp);
+    KS_DECREF(sp);
+    return NULL;
+#endif
 }
 
 /* Type Functions */

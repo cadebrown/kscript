@@ -9,113 +9,44 @@
 
 /* C-API */
 
-
-/* Turn path/string into string */
-static ks_str get_spath(kso path) {
-    ks_str s = NULL;
-    if (kso_issub(path->type, kst_str)) {
-        KS_INCREF(path);
-        s = (ks_str)path;
-    } else if (kso_issub(path->type, ksost_path)) {
-        s = ks_fmt("%S", path);
-    } else {
-        KS_THROW(kst_TypeError, "'%T' object cannot be treated as path", path);
-        return NULL;
-    }
-
-    return s;
-}
-
-bool ksos_stat(kso path, struct ksos_cstat* out) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
-
-    #ifdef KS_HAVE_stat
-    int rs = stat(s->data, &out->v_stat);
-    if (rs != 0) {
-        KS_THROW(kst_OSError, "Failed to stat: %s", s, strerror(errno));
-        KS_DECREF(s);
-        return NULL;
-    }
-    #else
-    KS_THROW(kst_PlatformWarning, "Failed to stat %R: The platform had no 'stat()' function");
-    KS_DECREF(s);
-    return NULL;
-    #endif
-
-    KS_DECREF(s);
-    return true;
-}
-
-bool ksos_fstat(int fd, struct ksos_cstat* out) {
-
-    #ifdef KS_HAVE_fstat
-    int rs = fstat(fd, &out->v_stat);
-    if (rs != 0) {
-        KS_THROW(kst_OSError, "Failed to fstat %i: %s", fd, strerror(errno));
-        return NULL;
-    }
-    #else
-    KS_THROW(kst_PlatformWarning, "Failed to fstat: The platform had no 'fstat()' function");
-    KS_DECREF(s);
-    return NULL;
-    #endif
-
-    return true;
-}
-bool ksos_lstat(kso path, struct ksos_cstat* out) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
-
-    #ifdef KS_HAVE_lstat
-    int rs = lstat(s->data, &out->v_stat);
-    if (rs != 0) {
-        KS_THROW(kst_OSError, "Failed to lstat %R: %s", s, strerror(errno));
-        KS_DECREF(s);
-        return NULL;
-    }
-    #else
-    KS_THROW(kst_PlatformWarning, "Failed to lstat: The platform had no 'lstat()' function", path);
-    KS_DECREF(s);
-    return NULL;
-    #endif
-
-    KS_DECREF(s);
-    return true;
-}
-
-
 kso ksos_getenv(ks_str name, kso defa) {
-    /* TODO: detect getenv */
+#ifdef KS_HAVE_getenv
     char* res = getenv(name->data);
-
-    if (res == NULL) {
+    if (res) {
+        return (kso)ks_str_new(-1, res);
+    } else {
         if (defa) {
             return KS_NEWREF(defa);
         } else {
             KS_THROW(kst_KeyError, "Key %R not present in the environment", name);
             return NULL;
         }
-    } else {
-        return (kso)ks_str_new(-1, res);
     }
+#else
+    KS_THROW(kst_OSError, "Failed to getenv %R: platform did not provide a 'getenv()' function", name);
+    return false;
+#endif
 }
 
 bool ksos_setenv(ks_str name, ks_str val) {
+#ifdef KS_HAVE_putenv
     ks_ssize_t sl = name->len_b + val->len_b + 4;
     char* tmp = malloc(sl);
 
     snprintf(tmp, sl - 1, "%s=%s", name->data, val->data);
 
-    /* TODO: detect setenv/putenv */
-    int rs = putenv(tmp);
 
-    if (rs != 0) {
+    int rc = putenv(tmp);
+    if (rc != 0) {
         KS_THROW(kst_OSError, "Failed to set %R in environment: %s", name, strerror(errno));
         return false;
-    }else {
+    } else {
         return true;
     }
+#else
+    KS_THROW(kst_OSError, "Failed to getenv %R: platform did not provide a 'putenv()' function", name);
+    return false;
+#endif
 }
 
 /* Module Functions */
@@ -128,7 +59,6 @@ static KS_TFUNC(M, getenv) {
     return ksos_getenv(key, defa);
 }
 
-
 static KS_TFUNC(M, setenv) {
     ks_str key, val;
     KS_ARGS("key:* val:*", &key, kst_str, &val, kst_str);
@@ -137,6 +67,7 @@ static KS_TFUNC(M, setenv) {
 
     return KSO_NONE;
 }
+
 
 /* Export */
 

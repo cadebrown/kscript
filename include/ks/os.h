@@ -144,8 +144,6 @@ struct ksos_frame_s {
 
 };
 
-
-
 /* 'os.thread' - Single thread of execution
  *
  */
@@ -235,6 +233,18 @@ typedef struct ksos_mutex_s {
 
 
 
+/** Misc. Process/Environment Functions **/
+
+/* Attempt to retrieve an environment variable, and return 'defa' if none was found
+ * If 'defa==NULL', then an exception will be thrown if the key was not found
+ * Returns whether one was found
+ */
+KS_API kso ksos_getenv(ks_str key, kso defa);
+KS_API bool ksos_setenv(ks_str key, ks_str val);
+
+
+/** Filesystem/Paths **/
+
 /* Create a new path from a C-style string, which will split on seperators
  *
  * If 'len_b < 0' then data is assumed to be NUL-terminated
@@ -255,6 +265,15 @@ KS_API ksos_path ksos_path_join(kso* paths, int len);
 KS_API ksos_path ksos_path_parent(kso self);
 
 
+/* Attempts to resolve 'path' to an absolute path */
+KS_API ksos_path ksos_path_real(kso path);
+
+/* Performs a C-style 'stat' on a path object
+ */
+KS_API bool ksos_path_stat(kso path, struct ksos_cstat* out);
+KS_API bool ksos_path_lstat(kso path, struct ksos_cstat* out);
+KS_API bool ksos_path_fstat(int fd, struct ksos_cstat* out);
+
 /* Return whether 'path' exists, and set '*res' to whether it does
  */
 KS_API bool ksos_path_exists(kso path, bool* res);
@@ -271,9 +290,6 @@ KS_API bool ksos_path_islink(kso path, bool* res);
 /* Return a list of directories and files in a given directory */
 KS_API bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files);
 
-/* Attempts to resolve 'path' to an absolute path */
-KS_API ksos_path ksos_path_real(kso path);
-
 /* Attempts to create a directory. If 'parents' is given, then parents are created as well */
 KS_API bool ksos_path_mkdir(kso path, int mode, bool parents);
 
@@ -282,6 +298,13 @@ KS_API bool ksos_path_mkdir(kso path, int mode, bool parents);
  */
 KS_API bool ksos_path_rm(kso path, bool children);
 
+/* Changes the current working direcotory to a given path
+ */
+KS_API bool ksos_path_chdir(kso path);
+
+
+
+/** Threading **/
 
 /* Create a new thread
  * Does not start executing the thread
@@ -300,7 +323,6 @@ KS_API bool ksos_thread_start(ksos_thread self);
 /* Join the thread (i.e. wait for completion on the calling thread)
  */
 KS_API bool ksos_thread_join(ksos_thread self);
-
 
 
 /* Create new 'os.frame'
@@ -340,22 +362,8 @@ KS_API void ksos_mutex_unlock(ksos_mutex self);
  */
 KS_API bool ksos_mutex_trylock(ksos_mutex self);
 
-/* Performs a C-style 'stat' on a path object
- */
-KS_API bool ksos_stat(kso path, struct ksos_cstat* out);
-KS_API bool ksos_lstat(kso path, struct ksos_cstat* out);
-KS_API bool ksos_fstat(int fd, struct ksos_cstat* out);
 
-/* Changes the current working direcotory to a given path
- */
-KS_API bool ksos_chdir(kso path);
 
-/* Attempt to retrieve an environment variable, and return 'defa' if none was found
- * If 'defa==NULL', then an exception will be thrown if the key was not found
- * Returns whether one was found
- */
-KS_API kso ksos_getenv(ks_str key, kso defa);
-KS_API bool ksos_setenv(ks_str key, ks_str val);
 
 
 /* Types */

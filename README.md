@@ -98,7 +98,6 @@ $ make check # runs the standard tests
 
 TODO: I've gotten it to build on Windows, but I need to make it more complete so others can reproduce it
 
-
 ## Examples
 
 See the `examples/` folder for examples
@@ -110,7 +109,3 @@ This is the classic Hello World example:
 ```ks
 print ("Hello World")
 ```
-
-### FizzBuzz
-
-

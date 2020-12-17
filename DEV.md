@@ -1,12 +1,6 @@
 # Developer Guide
 
-This document describes how to develop kscript, contribute to the repository, and so on. See [https://github.com/ChemicalDevelopment/kscript/issues/3](https://github.com/ChemicalDevelopment/kscript/issues/3) if you have any issues with this guide
-
-## Work In Progress
-
-The current areas that need to be worked on:
-  * Implementing `nx` library efficiently without such a huge code bloat
-  * Re-writing the parser for faster speed and less stack space (perhaps we should go back to a Shunting-Yard based approach)
+This document describes how to develop kscript, contribute to the repository, and so on. 
 
 ## Setup
 
@@ -38,6 +32,4 @@ For changing the general kscript API and utilities, those files are typically lo
 To commit your changes, add any files you changed via `git add` (for example, `git add src/types/int.c`), then run `git commit` and enter your message (use `git commit -m "MESSAGE"` to not use an editor).
 
 Finally, run `git push` to push it to the GitHub repo. Note that most of the time you'll be pushing it to another branch than `master` which you should have already checked out. You can check out (or fork the repo, and send a pull request) your own branch if you are working on code that has a lot of interop with other code.
-
-
 
