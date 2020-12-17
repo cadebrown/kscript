@@ -25,7 +25,11 @@
 
 
 /** Constants **/
-
+#ifndef PATH_MAX
+#define KSOS_PATH_MAX 4096
+#else
+#define KSOS_PATH_MAX PATH_MAX
+#endif
 
 /** Types **/
 
@@ -242,6 +246,11 @@ typedef struct ksos_mutex_s {
 KS_API kso ksos_getenv(ks_str key, kso defa);
 KS_API bool ksos_setenv(ks_str key, ks_str val);
 
+/* Attempt to retrieve the current working directory, and return NULL if an error
+ * has occurred. In the event that the c command getcwd() is not available,
+ * an execption is thrown.
+ */
+KS_API ksos_path ksos_getcwd();
 
 /** Filesystem/Paths **/
 

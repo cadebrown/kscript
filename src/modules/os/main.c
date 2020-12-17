@@ -49,6 +49,23 @@ bool ksos_setenv(ks_str name, ks_str val) {
 #endif
 }
 
+ksos_path ksos_getcwd() {
+#ifdef KS_HAVE_getcwd
+    char buf[KSOS_PATH_MAX + 1];
+    
+    if (getcwd(buf, sizeof(buf) - 1) == NULL) {
+        KS_THROW(kst_OSError, "Failed to getcwd: %s", strerror(errno));
+        return NULL;
+    } else {
+        return ksos_path_new(-1, buf, KSO_NONE);
+    }
+
+#else
+    KS_THROW(kst_OSError, "Failed to getcwd: platform did not provide a 'getcwd()' function");
+    return false;
+#endif
+}
+
 /* Module Functions */
 
 static KS_TFUNC(M, getenv) {
@@ -66,6 +83,11 @@ static KS_TFUNC(M, setenv) {
     if (!ksos_setenv(key, val)) return NULL;
 
     return KSO_NONE;
+}
+
+static KS_TFUNC(M, getcwd) {
+    KS_ARGS("");
+    return (kso) ksos_getcwd();
 }
 
 
@@ -114,6 +136,7 @@ ks_module _ksi_os() {
         /* Functions */
         {"getenv",                 ksf_wrap(M_getenv_, M_NAME ".getenv(key, defa=none)", "Retrieves the environment entry indicated by 'key', or a default if it was not found\n\n    If 'defa' was not given, then an error is thrown")},
         {"setenv",                 ksf_wrap(M_setenv_, M_NAME ".setenv(key, val)", "Sets an environment entry to another string value")},
+        {"getcwd",                 ksf_wrap(M_getcwd_, M_NAME ".getcwd()", "Returns current working directory")},
     ));
 
 
