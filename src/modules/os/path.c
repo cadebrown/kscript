@@ -173,24 +173,24 @@ ksos_path ksos_path_parent(kso self) {
 
 
 ksos_path ksos_path_real(kso path) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
+    ks_str sp = get_spath(path);
+    if (!sp) return NULL;
 
 #ifdef KS_HAVE_realpath
-    char* cr = realpath(s->data, NULL);
+    char* cr = realpath(sp->data, NULL);
     if (cr) {
         ksos_path res = ksos_path_new(-1, cr, KSO_NONE);
         free(cr);
-        KS_DECREF(s);
+        KS_DECREF(sp);
         return res;
     } else {
-        KS_DECREF(s);
-        KS_THROW(kst_OSError, "Failed to determine real path for '%S': %s", path, strerror(errno));
+        KS_DECREF(sp);
+        KS_THROW(kst_OSError, "Failed to determine real path for %R: %s", sp, strerror(errno));
         return NULL;
     }
 #else
-    KS_THROW(kst_OSError, "Failed to determine real path for '%S': platform did not provide a 'realpath()' function", path);
-    KS_DECREF(s);
+    KS_THROW(kst_OSError, "Failed to determine real path for %R: platform did not provide a 'realpath()' function", sp);
+    KS_DECREF(sp);
     return NULL;
 #endif
 
@@ -199,22 +199,22 @@ ksos_path ksos_path_real(kso path) {
 }
 
 bool ksos_stat(kso path, struct ksos_cstat* out) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
+    ks_str sp = get_spath(path);
+    if (!sp) return NULL;
 
 #ifdef KS_HAVE_stat
-    int rs = stat(s->data, &out->v_stat);
+    int rs = stat(sp->data, &out->v_stat);
     if (rs != 0) {
-        KS_THROW(kst_OSError, "Failed to stat: %s", s, strerror(errno));
-        KS_DECREF(s);
+        KS_THROW(kst_OSError, "Failed to stat %R: %s", sp, strerror(errno));
+        KS_DECREF(sp);
         return NULL;
     }
 
-    KS_DECREF(s);
+    KS_DECREF(sp);
     return true;
 #else
-    KS_THROW(kst_PlatformWarning, "Failed to stat %R: The platform had no 'stat()' function");
-    KS_DECREF(s);
+    KS_THROW(kst_PlatformWarning, "Failed to stat %R: The platform had no 'stat()' function", sp);
+    KS_DECREF(sp);
     return NULL;
 #endif
 }
@@ -228,29 +228,29 @@ bool ksos_fstat(int fd, struct ksos_cstat* out) {
     }
     return true;
 #else
-    KS_THROW(kst_PlatformWarning, "Failed to fstat: The platform had no 'fstat()' function");
+    KS_THROW(kst_PlatformWarning, "Failed to fstat %i: The platform had no 'fstat()' function", fd);
     KS_DECREF(s);
     return NULL;
 #endif
 
 }
 bool ksos_lstat(kso path, struct ksos_cstat* out) {
-    ks_str s = get_spath(path);
-    if (!s) return NULL;
+    ks_str sp = get_spath(path);
+    if (!sp) return NULL;
 
 #ifdef KS_HAVE_lstat
-    int rs = lstat(s->data, &out->v_stat);
+    int rs = lstat(sp->data, &out->v_stat);
     if (rs != 0) {
-        KS_THROW(kst_OSError, "Failed to lstat %R: %s", s, strerror(errno));
-        KS_DECREF(s);
+        KS_THROW(kst_OSError, "Failed to lstat %R: %s", sp, strerror(errno));
+        KS_DECREF(sp);
         return NULL;
     }
-    KS_DECREF(s);
+    KS_DECREF(sp);
     return true;
 
 #else
-    KS_THROW(kst_PlatformWarning, "Failed to lstat: The platform had no 'lstat()' function", path);
-    KS_DECREF(s);
+    KS_THROW(kst_PlatformWarning, "Failed to lstat %R: The platform had no 'lstat()' function", sp);
+    KS_DECREF(sp);
     return NULL;
 #endif
 
@@ -309,13 +309,21 @@ bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
     KS_DECREF(sp);
 
     if (!dp) {
-        KS_THROW(kst_OSError, "Failed to open %S: %s", path, strerror(errno));
+        KS_THROW(kst_OSError, "Failed to open %R: %s", sp, strerror(errno));
         return false;
     }
 
     /* Collect Entries */
-    *dirs = ks_list_new(0, NULL);
-    *files = ks_list_new(0, NULL);
+    if (*dirs) {
+        ks_list_clear(*dirs);
+    } else {
+        *dirs = ks_list_new(0, NULL);
+    }
+    if (*files) {
+        ks_list_clear(*files);
+    } else {
+        *files = ks_list_new(0, NULL);
+    }
 
     struct dirent* ent;
     while ((ent = readdir(dp)) != NULL) {
@@ -553,7 +561,7 @@ bool ksos_path_chdir(kso path) {
     if (rc == 0) {
         return true;
     } else {
-        KS_THROW(kst_OSError, "Failed to rm %R: %s", sp, strerror(rcerr));
+        KS_THROW(kst_OSError, "Failed to chdir %R: %s", sp, strerror(rcerr));
         return false;
     }
 
