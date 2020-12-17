@@ -231,6 +231,7 @@ _KS_DO_SPEC(_KSACT)
     
         {"chr", (kso)ksf_chr},
         {"ord", (kso)ksf_ord},
+        {"id", (kso)ksf_id},
     
     ));
 

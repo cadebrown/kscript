@@ -56,6 +56,13 @@ ks_int ks_int_newu(ks_uint val) {
 
 
 ks_int ks_int_newft(ks_type tp, ks_cfloat val) {
+    if (val != val) {
+        KS_THROW(kst_ValError, "Cannot convert 'nan' to int");
+        return NULL;
+    } else if (!ks_cfloat_isreg(val)) {
+        KS_THROW(kst_ValError, "Cannot convert infinite value to int");
+        return NULL;
+    }
     val = floor(val);
     if ((ks_cint)val == val) {
         return ks_int_newt(tp, (ks_cint)val);

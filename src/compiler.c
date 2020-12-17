@@ -177,9 +177,8 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         if (i == NSUB) {
             /* Normal call */
             EMITI(KSB_CALL, i);
-            LEN += 1 - i;
             META(v->tok);
-
+            LEN += 1 - i;
         } else {
             EMITI(KSB_LIST, i);
             LEN += 1 - i;

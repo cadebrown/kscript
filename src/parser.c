@@ -801,8 +801,9 @@ RULE(E1p) {
             KS_DECREF(res);
             return NULL;
         }
-
-        res = ks_ast_newn(KS_AST_CALL, 2, (ks_ast[]){ other, res }, NULL, res->tok);
+        ks_tok t = ks_tok_combo( other->tok, res->tok);
+        res = ks_ast_newn(KS_AST_CALL, 2, (ks_ast[]){ other, res }, NULL, t);
+        res->tok = t;
     }
     return res;
 }
@@ -1105,7 +1106,8 @@ RULE(E14) {
                 return NULL;
             }
         } else if (TOK.kind == KS_TOK_RBRC) {
-            res = ks_ast_new(KS_AST_DICT, 0, NULL, NULL, ks_tok_combo(t, EAT()));
+            ks_tok tttt = ks_tok_combo(t, EAT());
+            res = ks_ast_new(KS_AST_DICT, 0, NULL, NULL, tttt);
         } else {
             /* May be set or dict */
             assert(res == NULL);

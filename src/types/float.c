@@ -343,6 +343,9 @@ int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int b
     return i;
 }
 
+bool ks_cfloat_isreg(ks_cfloat x) {
+    return x != KS_CFLOAT_INF && x != -KS_CFLOAT_INF && x == x;
+}
 
 /* Type functions */
 

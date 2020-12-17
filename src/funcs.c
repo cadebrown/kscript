@@ -198,6 +198,12 @@ static KS_FUNC(isinst) {
 
     return issub_(2, (kso[]){ (kso)obj->type, of });
 }
+static KS_FUNC(id) {
+    kso obj;
+    KS_ARGS("obj", &obj);
+
+    return (kso)ks_int_newu((ks_uint)obj);
+}
 
 
 void _ksi_funcs() {
@@ -225,6 +231,7 @@ void _ksi_funcs() {
     F(iter, "iter(obj)", "Returns an iterator over the contents of 'obj'\n\n    Delegates to 'type(obj).__iter'")
     F(next, "next(obj)", "Returns the next object in an iterator\n\n    Delegates to 'type(obj).__next', or 'next(iter(obj))'")
 
+    F(id, "id(obj)", "Return the id of an object, which is its memory location");
 
     #undef F
 

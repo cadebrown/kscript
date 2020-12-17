@@ -634,7 +634,7 @@ check_func "fstat" "i" "s,&st"
 check_func "realpath" "s" "s,NULL"
 
 check_func "mkdir" "i" "s,i"
-check_func "_mkdir" "i" "s"
+check_func "_mkdir" "i" "s,i"
 check_func "remove" "i" "s"
 check_func "chdir" "i" "s"
 

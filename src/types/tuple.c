@@ -32,7 +32,6 @@ ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems) {
     return self;
 }
 
-
 ks_tuple ks_tuple_newit(ks_type tp, kso objs) {
     ks_tuple res = KSO_NEW(ks_tuple, tp);
 
@@ -88,7 +87,13 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso objs = KSO_NONE;
+    KS_ARGS("tp:* ?objs", &tp, kst_type, &objs);
 
+    return (kso)ks_tuple_newit(tp, objs);
+}
 static KS_TFUNC(T, bool) {
     ks_tuple self;
     KS_ARGS("self:*", &self, kst_tuple);
@@ -112,6 +117,7 @@ ks_type kst_tuple = &tp;
 void _ksi_tuple() {
     _ksinit(kst_tuple, kst_object, T_NAME, sizeof(struct ks_tuple_s), -1, "Like 'list', but immutable", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(self, objs=none)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
     ));
