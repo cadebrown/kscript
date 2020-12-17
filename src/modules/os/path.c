@@ -668,6 +668,8 @@ static KS_TFUNC(T, abs) {
     return (kso)ksos_path_real(self);
 }
 
+
+
 static KS_TFUNC(T, join) {
     return (kso)ksos_path_join(_args, _nargs);
 }
@@ -708,7 +710,6 @@ static KS_TFUNC(T, islink) {
 
     return KSO_BOOL(res);
 }
-
 static KS_TFUNC(T, listdir) {
     kso self;
     KS_ARGS("self", &self);
@@ -722,6 +723,7 @@ static KS_TFUNC(T, listdir) {
         (kso)files
     });
 }
+
 static KS_TFUNC(T, mkdir) {
     kso self;
     ks_cint mode = 0775;
@@ -733,6 +735,7 @@ static KS_TFUNC(T, mkdir) {
         return KSO_NONE;
     }
 }
+
 static KS_TFUNC(T, rm) {
     kso self;
     bool children = false;
@@ -744,6 +747,14 @@ static KS_TFUNC(T, rm) {
     }
 }
 
+static KS_TFUNC(T, chdir) {
+    kso self;
+    KS_ARGS("self", &self);
+
+    if (!ksos_path_chdir(self)) return NULL;
+
+    return KSO_TRUE;
+}
 
 /* 'Walk' Type */
 
@@ -929,7 +940,7 @@ void _ksi_os_path() {
         {"listdir",                ksf_wrap(T_listdir_, T_NAME ".listdir(self)", "Computes a tuple '(dirs, files)' of a given directory")},
         {"mkdir",                  ksf_wrap(T_mkdir_, T_NAME ".mkdir(self, mode=0o775, parents=false)", "Create a directory")},
         {"rm",                     ksf_wrap(T_rm_, T_NAME ".rm(self, children=false)", "Remove a file from the OS")},
-
+        {"chdir",                  ksf_wrap(T_chdir_, T_NAME ".chdir(self)", "Change the processes's directory to 'self'")},
 
         {"walk",                   KS_NEWREF(ksost_path_walk)},
 

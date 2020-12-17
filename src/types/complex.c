@@ -105,13 +105,37 @@ bool ks_ccomplex_from_str(const char* str, int sz, ks_ccomplex* out) {
     return true;
 }
 
-int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci, int prec, int base) {
-    
+int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci, int prec) {
+    int i = 0, msz;
+    if (val.re == 0.0) {
+        msz = sz - i;
+        if (msz < 0) msz = 0;
+        int sz_im = ks_cfloat_to_str(str + i, msz, val.im, sci, prec, 10);
+        i += sz_im;
+        if (i < sz) str[i++] = 'i';
+    } else {
+        if (i < sz) str[i++] = '(';
+        msz = sz - i;
+        if (msz < 0) msz = 0;
+        int sz_re = ks_cfloat_to_str(str + i, msz, val.re, sci, prec, 10);
+        i += sz_re;
+        if (i < sz) {
+            if (val.im >= 0 || val.im != val.im) str[i++] = '+';
+        }
+
+        msz = sz - i;
+        if (msz < 0) msz = 0;
+        int sz_im = ks_cfloat_to_str(str + i, msz, val.im, sci, prec, 10);
+        i += sz_im;
+        if (i < sz) str[i++] = 'i';
+        if (i < sz) str[i++] = ')';
+    }
+
+    return i;
 }
 
 
 /* Type Functions */
-
 
 static KS_TFUNC(T, new) {
     ks_type tp;
@@ -156,99 +180,25 @@ static KS_TFUNC(T, str) {
     bool sci_re = a_re > 0 && (a_re >= A_SCI_BIG || a_re <= A_SCI_SML);
     bool sci_im = a_im > 0 && (a_im >= A_SCI_BIG || a_im <= A_SCI_SML);
 
+    bool sci = sci_re || sci_im;
+    int prec = sci?F_PREC_SCI:F_PREC_REG;
 
     /* Buffer, current position (this is just a useful case for small numbers,
      *   sometimes the buffer must be reallocated) 
      */
     char tmp[256];
-    int i = 0;
+    int rsz = ks_ccomplex_to_str(tmp, sizeof(tmp) - 1, self->val, sci, prec);
 
-    /* Slop bytes (enough for extra control characters like 'i' and parenthesis, signs, etc) */
-    #define SLOPB 8
-
-    if (a_re == 0) {
-        /* imag only, don't output parens or real component */
-        int msz_im = sizeof(tmp) - SLOPB;
-        int sz_im = ks_cfloat_to_str(tmp+i, msz_im, im, sci_im, sci_im?F_PREC_SCI:F_PREC_REG, 10);
-        if (sz_im > msz_im) {
-            /* out of room, allocate a buffer manually and return it */
-            char* atmp = ks_malloc(sz_im + SLOPB);
-            msz_im = ks_cfloat_to_str(atmp+i, sz_im, im, sci_im, sci_im?F_PREC_SCI:F_PREC_REG, 10);
-            assert(sz_im == msz_im);
-            i += sz_im;
-            atmp[i++] = 'i';
-            ks_str res = ks_str_new(i, atmp);
-            ks_free(atmp);
-            return NULL;
-        }
-        i += sz_im;
-        tmp[i++] = 'i';
-        return (kso)ks_str_new(i, tmp);
+    if (rsz >= sizeof(tmp) - 1) {
+        char* atmp = ks_malloc(rsz + 2);
+        int new_rsz = ks_ccomplex_to_str(atmp, rsz + 1, self->val, sci, prec);
+        assert(new_rsz == rsz);
+        ks_str res = ks_str_new(rsz, atmp);
+        ks_free(atmp);
+        return (kso)res;
     } else {
-        /* Needs parenthesis and both components (even if imag is 0, otherwise would look like a normal
-         *   float) 
-         */
-        tmp[i++] = '(';
-
-        int msz_re = sizeof(tmp) - SLOPB - i;
-        int sz_re = ks_cfloat_to_str(tmp+i, msz_re, re, sci_re, sci_re?F_PREC_SCI:F_PREC_REG, 10);
-        if (sz_re > msz_re) {
-            /* out of room */
-            char* atmp = ks_malloc(2 * sz_re + SLOPB);
-            memcpy(atmp, tmp, i);
-            msz_re = ks_cfloat_to_str(atmp+i, sz_re, re, sci_re, sci_re?F_PREC_SCI:F_PREC_REG, 10);
-            assert(sz_re == msz_re);
-            i += sz_re;
-
-            if (im >= 0.0) atmp[i++] = '+';
-
-            int msz_im = 2 * sz_re - i;
-            int sz_im = ks_cfloat_to_str(atmp+i, msz_im, im, sci_im, sci_im?F_PREC_SCI:F_PREC_REG, 10);
-            if (sz_im > msz_im) {
-                atmp = ks_realloc(atmp, i + sz_im + SLOPB);
-                msz_im = ks_cfloat_to_str(atmp+i, sz_im, im, sci_im, sci_im?F_PREC_SCI:F_PREC_REG, 10);
-                assert(msz_im == sz_im);
-                i += sz_im;
-            } else {
-                i += sz_im;
-            }
-
-            atmp[i++] = 'i';
-            atmp[i++] = ')';
-            ks_str res = ks_str_new(i, atmp);
-            ks_free(atmp);
-            return (kso)res;
-
-        }
-        i += sz_re;
-
-        if (im >= 0.0) tmp[i++] = '+';
-
-        int msz_im = sizeof(tmp) - SLOPB - i;
-        int sz_im = ks_cfloat_to_str(tmp+i, msz_im, im, sci_im, sci_im?F_PREC_SCI:F_PREC_REG, 10);
-        if (sz_im > msz_im) {
-            /* need to allocate */
-            char* atmp = ks_malloc(i + sz_im + SLOPB);
-            memcpy(atmp, tmp, i);
-            msz_im = ks_cfloat_to_str(atmp+i, sz_im, im, sci_im, sci_im?F_PREC_SCI:F_PREC_REG, 10);
-            assert(msz_im == sz_im);
-            i += sz_im;
-
-            atmp[i++] = 'i';
-            atmp[i++] = ')';
-            ks_str res = ks_str_new(i, atmp);
-            ks_free(atmp);
-            return (kso)res;
-
-        } else {
-            i += sz_im;
-        }
-
-        tmp[i++] = 'i';
-        tmp[i++] = ')';
-        return (kso)ks_str_new(i, tmp);
+        return (kso)ks_str_new(rsz, tmp);
     }
-
 }
 
 
