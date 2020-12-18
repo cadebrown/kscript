@@ -368,7 +368,12 @@ static KS_TFUNC(T, new) {
 
     return (kso)ks_fmt("%S", extra[0]);
 }
+static KS_TFUNC(T, bytes) {
+    ks_str self;
+    KS_ARGS("self:*", &self, kst_str);
 
+    return (kso)ks_bytes_new(self->len_b, self->data);
+}
 static KS_TFUNC(T, len) {
     ks_str self;
     KS_ARGS("self:*", &self, kst_str);
@@ -638,6 +643,8 @@ void _ksi_str() {
     _ksinit(kst_str, kst_object, T_NAME, sizeof(struct ks_str_s), -1, "String (i.e. a collection of Unicode characters)\n\n    Indicies, operations, and so forth take character positions, not byte positions", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none)", "")},
+        {"__bytes",              ksf_wrap(T_bytes_, T_NAME ".__bytes(self)", "")},
+
         {"__len",                ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
 
         {"__iter",               KS_NEWREF(kst_str_iter)},

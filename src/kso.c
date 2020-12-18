@@ -283,7 +283,7 @@ ks_bytes kso_bytes(kso ob) {
         return r;
     }
 
-    KS_THROW(kst_TypeError, "Failed to convert '%T' object to 'bytes'");
+    KS_THROW(kst_TypeError, "Failed to convert '%T' object to 'bytes'", ob);
     return NULL;
 }
 ks_str kso_repr(kso ob) {

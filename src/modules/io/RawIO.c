@@ -50,10 +50,10 @@ static KS_TFUNC(T, init) {
         flags = O_RDONLY;
     } else if (ks_str_eq_c(mode, "w", 1) || ks_str_eq_c(mode, "wb", 2)) {
         is_w = true;
-        flags = O_WRONLY | O_TRUNC;
+        flags = O_WRONLY | O_CREAT | O_TRUNC;
     } else if (ks_str_eq_c(mode, "a", 1) || ks_str_eq_c(mode, "ab", 2)) {
         is_w = true;
-        flags = O_WRONLY | O_APPEND;
+        flags = O_WRONLY | O_CREAT | O_APPEND;
     } else if (ks_str_eq_c(mode, "r+", 1) || ks_str_eq_c(mode, "r+b", 2) || ks_str_eq_c(mode, "rb+", 2)) {
         is_r = true;
         is_w = true;
@@ -61,11 +61,11 @@ static KS_TFUNC(T, init) {
     } else if (ks_str_eq_c(mode, "w+", 1) || ks_str_eq_c(mode, "w+b", 2) || ks_str_eq_c(mode, "wb+", 2)) {
         is_r = true;
         is_w = true;
-        flags = O_RDWR | O_TRUNC;
+        flags = O_RDWR | O_CREAT | O_TRUNC;
     } else if (ks_str_eq_c(mode, "a+", 1) || ks_str_eq_c(mode, "a+b", 2) || ks_str_eq_c(mode, "ab+", 2)) {
         is_r = true;
         is_w = true;
-        flags = O_RDWR | O_APPEND;
+        flags = O_RDWR | O_CREAT | O_APPEND;
     } else {
         KS_THROW(kst_Error, "Invalid mode: %R", mode);
         return NULL;
@@ -74,8 +74,9 @@ static KS_TFUNC(T, init) {
     /* Attempt to open via the C library 
      * TODO: check filesystem encoding
      */
-    self->fd = open(src->data, flags);
-    if (!self->fd) {
+    mode_t m = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+    self->fd = (flags & O_CREAT) ? open(src->data, flags, m) : open(src->data, flags);
+    if (self->fd < 0) {
         KS_THROW(kst_IOError, "Failed to open %R: %s", src, strerror(errno));
         return NULL;
     }
