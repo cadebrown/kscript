@@ -18,6 +18,10 @@
 #include <ks/ks.h>
 #endif
 
+#include <fcntl.h>
+
+
+
 /** Constants **/
 
 /* Buffer size */
@@ -29,6 +33,32 @@
 
 /* Any Input/Output stream */
 typedef kso ksio_BaseIO;
+
+/* 'io.RawIO' - represents an open file descriptor
+ */
+typedef struct ksio_RawIO_s {
+    KSO_BASE
+
+    /* File descriptor (from 'open()' or similar) */
+    int fd;
+    
+    /* If true, 'close(fd)' after the IO is done */
+    bool do_close;
+
+    /* Whether the IO is open */
+    bool is_open;
+
+    /* Whether the RawIO is readable/writeable */
+    bool is_r, is_w;
+
+    /* Number of bytes read and written (not rigorous, don't rely on these) */
+    ks_ssize_t sz_r, sz_w;
+
+    /* The name of the source */
+    ks_str fname;
+
+}* ksio_RawIO;
+
 
 /* 'io.FileIO' - represents a file that can be read or written
  */
@@ -58,6 +88,7 @@ typedef struct ksio_FileIO_s {
     FILE* fp;
 
 }* ksio_FileIO;
+
 
 /* 'io.StringIO' - in-memory stream of Unicode text
  */
@@ -89,7 +120,6 @@ typedef struct ksio_StringIO_s {
 /* 'io.BytesIO' - like 'io.StringIO', but for binary data
  */
 typedef ksio_StringIO ksio_BytesIO;
-
 
 
 /** Unicode Translation **/
@@ -215,6 +245,10 @@ KS_API bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap);
 
 /** Specific Types **/
 
+/* Return a wrapper around an opened C-style file descriptor
+ */
+KS_API ksio_RawIO ksio_RawIO_wrap(ks_type tp, int fd, bool do_close, bool is_r, bool is_w, ks_str fname);
+
 /* Return a wrapper around an opened C-style FILE*
  */
 KS_API ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, bool is_w, bool is_bin, ks_str src_name);
@@ -240,7 +274,6 @@ KS_API ksio_BytesIO ksio_BytesIO_new();
 KS_API ks_bytes ksio_BytesIO_get(ksio_BytesIO self);
 KS_API ks_bytes ksio_BytesIO_getf(ksio_BytesIO self);
 
-
 /** Misc. Utils **/
 
 /* Read entire file and return as a string. Returns NULL and throws an error if there was a problem
@@ -258,10 +291,10 @@ KS_API ks_str ksio_readall(ks_str fname);
  */
 KS_API ks_ssize_t ksu_getline(char** lineptr, ks_ssize_t* n, FILE* fp);
 
-
 /* Types */
 KS_API extern ks_type
     ksiot_BaseIO,
+    ksiot_RawIO,
     ksiot_FileIO,
     ksiot_StringIO,
     ksiot_BytesIO

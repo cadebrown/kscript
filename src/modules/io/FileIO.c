@@ -36,6 +36,7 @@ static KS_TFUNC(T, init) {
     KS_ARGS("self:* src ?mode:*", &self, ksiot_FileIO, &ssrc, &mode, kst_str);
 
     ks_str src = NULL;
+    int ssrc_fd = -1;
     if (kso_issub(ssrc->type, kst_str)) {
         KS_INCREF(ssrc);
         src = (ks_str)ssrc;

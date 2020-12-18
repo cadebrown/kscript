@@ -61,6 +61,7 @@ void _ksi_Exception();
 
 ks_module _ksi_io();
 void _ksi_io_BaseIO();
+void _ksi_io_RawIO();
 void _ksi_io_FileIO();
 void _ksi_io_StringIO();
 void _ksi_io_BytesIO();

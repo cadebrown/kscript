@@ -18,6 +18,9 @@ bool ksio_is_open(ksio_BaseIO self, bool* out) {
     if (kso_issub(self->type, ksiot_FileIO)) {
         *out = ((ksio_FileIO)self)->is_open;
         return true;
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        *out = ((ksio_RawIO)self)->is_open;
+        return true;
     } else if (kso_issub(self->type, ksiot_StringIO) || kso_issub(self->type, ksiot_BytesIO)) {
         *out = true;
         return true;
@@ -47,6 +50,9 @@ bool ksio_is_r(ksio_BaseIO self, bool* out) {
     if (kso_issub(self->type, ksiot_FileIO)) {
         *out = ((ksio_FileIO)self)->is_r;
         return true;
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        *out = ((ksio_RawIO)self)->is_r;
+        return true;
     } else if (kso_issub(self->type, ksiot_StringIO) || kso_issub(self->type, ksiot_BaseIO)) {
         *out = true;
         return true;
@@ -59,6 +65,9 @@ bool ksio_is_r(ksio_BaseIO self, bool* out) {
 bool ksio_is_w(ksio_BaseIO self, bool* out) {
     if (kso_issub(self->type, ksiot_FileIO)) {
         *out = ((ksio_FileIO)self)->is_w;
+        return true;
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        *out = ((ksio_RawIO)self)->is_w;
         return true;
     } else if (kso_issub(self->type, ksiot_StringIO) || kso_issub(self->type, ksiot_BaseIO)) {
         *out = true;
@@ -83,6 +92,9 @@ ks_type ksio_rtype(ksio_BaseIO self) {
         KS_INCREF(kst_str);
         return kst_str;
     } else if (kso_issub(self->type, ksiot_BytesIO)) {
+        KS_INCREF(kst_bytes);
+        return kst_bytes;
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
         KS_INCREF(kst_bytes);
         return kst_bytes;
     } else {
@@ -151,12 +163,37 @@ ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data) {
         /* Unlock GIL for multithreading */
         KS_GIL_UNLOCK();
         ks_ssize_t real_sz = fread(data, 1, sz_b, fio->fp);
+        int eno = errno;
         KS_GIL_LOCK();
 
         /* Update state variables */
         fio->sz_r += real_sz;
 
+        if (real_sz == 0 && sz_b != 0) {
+            KS_THROW(kst_IOError, "Failed to read from '%T' object: %s", fio, strerror(eno));
+            return -1;
+        }
+
         return real_sz;
+
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        ksio_RawIO rio = (ksio_RawIO)self;
+
+        /* Unlock GIL for multithreading */
+        KS_GIL_UNLOCK();
+        ks_ssize_t real_sz = read(rio->fd, data, sz_b);
+        int eno = errno;
+        KS_GIL_LOCK();
+        if (real_sz < 0) {
+            KS_THROW(kst_IOError, "Failed to read from '%T' object: %s", rio, strerror(eno));
+            return -1;
+        }
+
+        /* Update state variables */
+        rio->sz_r += real_sz;
+
+        return real_sz;
+
     } else if (kso_issub(self->type, ksiot_BytesIO)) {
         ksio_StringIO sio = (ksio_StringIO)self;
 
@@ -355,6 +392,23 @@ bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
         fio->sz_w += real_sz;
         return true;
 
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        ksio_RawIO rio = (ksio_RawIO)self;
+
+        /* Unlock GIL for multithreading */
+        KS_GIL_UNLOCK();
+        ks_ssize_t real_sz = write(rio->fd, data, sz_b);
+        int eno = errno;
+        KS_GIL_LOCK();
+        if (real_sz < 0) {
+            KS_THROW(kst_IOError, "Failed to write to '%T' object: %s", rio, strerror(eno));
+            return -1;
+        }
+
+        /* Update state variables */
+        rio->sz_r += real_sz;
+
+        return real_sz;
     } else if (kso_issub(self->type, ksiot_BytesIO) || kso_issub(self->type, ksiot_StringIO)) {
         ksio_StringIO sio = (ksio_StringIO)self;
 
@@ -432,7 +486,23 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
 
         fio->sz_w += real_sz;
         return real_sz;
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        ksio_RawIO rio = (ksio_RawIO)self;
 
+        /* Unlock GIL for multithreading */
+        KS_GIL_UNLOCK();
+        ks_ssize_t real_sz = write(rio->fd, data, sz_b);
+        int eno = errno;
+        KS_GIL_LOCK();
+        if (real_sz < 0) {
+            KS_THROW(kst_IOError, "Failed to write to '%T' object: %s", rio, strerror(eno));
+            return -1;
+        }
+
+        /* Update state variables */
+        rio->sz_r += real_sz;
+
+        return real_sz;
     } else if (kso_issub(self->type, ksiot_BytesIO) || kso_issub(self->type, ksiot_StringIO)) {
         ksio_StringIO sio = (ksio_StringIO)self;
 
