@@ -112,6 +112,17 @@ kstime_struct kstime_struct_new_local(ks_cfloat tse) {
 
 /* Type Functions */
 
+
+static KS_TFUNC(T, free) {
+    kstime_struct self;
+    KS_ARGS("self:*", &self, kstimet_struct);
+
+    KS_NDECREF(self->zone);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
 static KS_TFUNC(T, str) {
     kstime_struct self;
     KS_ARGS("self:*", &self, kstimet_struct);
@@ -123,6 +134,68 @@ static KS_TFUNC(T, str) {
     KS_DECREF(fmt);
     return (kso)res;
 }
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso obj = KSO_NONE;
+    KS_ARGS("tp:* ?obj", &tp, kst_type, &obj);
+
+
+    KS_THROW(kst_Error, "Failed to convert '%T' object to time structure; use 'time.struct.local()' or 'time.struct.utc()'", obj);
+    return NULL;
+}
+static KS_TFUNC(T, getattr) {
+    kstime_struct self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, kstimet_struct, &attr, kst_str);
+
+    if (ks_str_eq_c(attr, "zone", 4)) {
+        return KS_NEWREF(self->zone);
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
+
+
+static KS_TFUNC(T, local) {
+    kso obj = KSO_NONE;
+    KS_ARGS("?obj", &obj);
+
+    if (kso_isinst(obj, kstimet_struct)) {
+        /* convert struct to localtime */
+    } else if (kso_is_float(obj) || kso_is_int(obj)) {
+        ks_cfloat tse;
+        if (!kso_get_cf(obj, &tse)) {
+            return NULL;
+        }
+        return (kso)kstime_struct_new_local(tse);
+    } else if (obj == KSO_NONE) {
+        return (kso)kstime_struct_new_local(kstime_time());
+    }
+
+    KS_THROW(kst_Error, "Failed to convert '%T' object to local time", obj);
+    return NULL;
+}
+
+static KS_TFUNC(T, utc) {
+    kso obj = KSO_NONE;
+    KS_ARGS("?obj", &obj);
+
+    if (kso_isinst(obj, kstimet_struct)) {
+        /* convert struct to localtime */
+    } else if (kso_is_float(obj) || kso_is_int(obj)) {
+        ks_cfloat tse;
+        if (!kso_get_cf(obj, &tse)) {
+            return NULL;
+        }
+        return (kso)kstime_struct_new_utc(tse);
+    } else if (obj == KSO_NONE) {
+        return (kso)kstime_struct_new_utc(kstime_time());
+    }
+
+    KS_THROW(kst_Error, "Failed to convert '%T' object to utc time", obj);
+    return NULL;
+}
 
 
 /* Export */
@@ -132,8 +205,14 @@ ks_type kstimet_struct = &tp;
 
 void _ksi_time_struct() {
     _ksinit(kstimet_struct, kst_object, T_NAME, sizeof(struct kstime_struct_s), -1, "Structure describing a point in time", KS_IKV(
+        {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__getattr",            ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+
+        {"local",                ksf_wrap(T_local_, T_NAME ".local(obj=none)", "Create a new structure describing a time in local time")},
+        {"utc",                  ksf_wrap(T_utc_, T_NAME ".local(obj=none)", "Create a new structure describing a time in UTC time")},
 
     ));
 

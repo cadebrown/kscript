@@ -117,7 +117,7 @@ kso _ks_exec(ks_code bc, ks_type _in) {
     /* Thread we are executing on */
     ksos_thread th = ksos_thread_get();
     assert(th && th->frames->len > 0);
-    assert(ksos_thread_get() == ksg_main_thread);
+    //assert(ksos_thread_get() == ksg_main_thread);
 
     /* Frame being executed on */
     ksos_frame frame = (ksos_frame)th->frames->elems[th->frames->len - 1];

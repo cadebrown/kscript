@@ -85,6 +85,8 @@ bool ksos_mutex_trylock(ksos_mutex self) {
 
 void ksos_mutex_unlock(ksos_mutex self) {
 
+   // assert(!self->owned_by || self->owned_by == ksos_thread_get());
+
     #ifdef KS_HAVE_pthreads
     /* Unlock using the pthreads library */
     pthread_mutex_unlock(&self->pm_);

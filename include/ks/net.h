@@ -15,7 +15,6 @@
 #endif
 
 
-
 /* See http://stackoverflow.com/questions/12765743/getaddrinfo-on-win32 */
 #ifndef _WIN32_WINNT
 #define _WIN32_WINNT 0x0501  /* Windows XP. */
@@ -53,7 +52,11 @@
 
 /** Constants **/
 
+/* Maximum address length */
+#define KSNET_ADDR_MAX 4096
 
+
+/* Types of addresses (aka address families) */
 typedef enum {
     KSNET_FK_NONE                  = 0,
 
@@ -75,44 +78,57 @@ typedef enum {
 
     /* Bluetooth Style Addresses
      *
-     * AKA: PF_BLUETOOTH
+     * AKA: AF_BLUETOOTH
      */
     KSNET_FK_BT                    = 3,
 
 
-} ksnet_family_kind;
+    /*
+     *
+     * AKA: AF_PACKET
+     */
+    KSNET_FK_PACKET                = 4,
 
 
+} ksnet_fk;
+
+/* Types of sockets */
 typedef enum {
     KSNET_SK_NONE                  = 0,
+
+    /* Raw stream
+     *
+     * AKA: SOCK_RAW
+     */
+    KSNET_SK_RAW                   = 1,
 
     /* TCP Socket
      *
      * AKA: SOCK_STREAM
      */
-    KSNET_SK_TCP                   = 1,
+    KSNET_SK_TCP                   = 2,
 
     /* UDP Socket
      * 
      * AKA: SOCK_DGRAM
      */
-    KSNET_SK_UDP                   = 2,
+    KSNET_SK_UDP                   = 3,
 
     /* Packet Stream
      *
      * AKA: SOCK_PACKET
      */
-    KSNET_SK_PACKET                = 3,
+    KSNET_SK_PACKET                = 4,
 
     /* Sequential Packet Stream
      *
      * AKA: SOCK_SEQPACKET
      */
-    KSNET_SK_PACKET_SEQ            = 4,
+    KSNET_SK_PACKET_SEQ            = 5,
 
-} ksnet_socket_kind;
+} ksnet_sk;
 
-
+/* Types of protocol */
 typedef enum {
 
     /* Automatic Protocol
@@ -125,14 +141,19 @@ typedef enum {
      */
     KSNET_PK_BT_L2CAP              = 1,
 
-} ksnet_proto_kind;
+    /* Bluetooth Protocol
+     *
+     * AKA: BTPROTO_RFCOMM
+     */
+    KSNET_PK_BT_RFCOMM             = 2,
 
+} ksnet_pk;
 
 /** Types **/
 
 /* net.SocketIO - describes a networking socket, which can communicate over a network (or locally)
  *
- * Is a base of 'io.AnyIO'
+ * Is a derived type of 'io.BaseIO'
  * 
  */
 typedef struct ksnet_SocketIO_s {
@@ -142,9 +163,9 @@ typedef struct ksnet_SocketIO_s {
     bool is_bound, is_listening, is_connected;
 
     /* Socket, family, and protocol the socket is using */
-    ksnet_socket_kind sk;
-    ksnet_family_kind fk;
-    ksnet_proto_kind  pk;
+    ksnet_sk sk;
+    ksnet_fk fk;
+    ksnet_pk pk;
 
     /* Platform-specifics (TODO: detect specifics) */
 
@@ -160,14 +181,16 @@ typedef struct ksnet_SocketIO_s {
 
 }* ksnet_SocketIO;
 
-/* Create a new 'net.SocketIO' from the given parameters
+/* Functions */
+
+/* Create a new 'net.SocketIO' from the given kinds of family, socket, and protocol
  */
-KS_API ksnet_SocketIO ksnet_SocketIO_new(ks_type tp, ksnet_family_kind fk, ksnet_socket_kind sk, ksnet_proto_kind pk);
+KS_API ksnet_SocketIO ksnet_SocketIO_new(ks_type tp, ksnet_fk fk, ksnet_sk sk, ksnet_pk pk);
 
 /* Binds socket to a given address
  * Format of 'addr' depends on the family of the socket
  */
-KS_API ksnet_SocketIO ksnet_SocketIO_bind(ksnet_SocketIO self, kso addr);
+KS_API bool ksnet_SocketIO_bind(ksnet_SocketIO self, kso addr);
 
 /* Connect 'self' to 'addr', as a client socket
  * Format of 'addr' depends on the family of the socket
@@ -182,17 +205,14 @@ KS_API bool ksnet_SocketIO_listen(ksnet_SocketIO self, int num);
  */
 KS_API bool ksnet_SocketIO_accept(ksnet_SocketIO self, ksnet_SocketIO* client_socket, ks_str* client_addr);
 
-/* Retrieve the address name of a socket
+
+/* Get the hostname as a string
  */
-KS_API ks_str ksnet_SocketIO_get_addr_name(ksnet_SocketIO self);
+KS_API ks_str ksnet_SocketIO_name(ksnet_SocketIO self);
 
-/* Retreive the port a socket is bound to
+/* Get the socket port
  */
-KS_API bool ksnet_SocketIO_get_port(ksnet_SocketIO self, int* out);
-
-
-
-
+KS_API bool ksnet_Socket_port(ksnet_SocketIO self, int* out);
 
 /** Functions **/
 

@@ -46,8 +46,11 @@ bool ks_logger_clogv(ks_logger self, int level, const char* file, const char* fu
         else if (level <= KS_LOGGER_ERROR) col = I_col_ERROR;
         else if (level <= KS_LOGGER_FATAL) col = I_col_FATAL;
 
+        /* Create StringIO so that output is syncronized */
+        ksio_StringIO sio = ksio_StringIO_new();
+
         /* Actually add output */
-        if (!ksio_add(self->output, KS_COL_RESET "[" KS_COL_MGA "%S" KS_COL_RESET ":%s" KS_COL_RESET "] ", self->name, col)) {
+        if (!ksio_add(sio, KS_COL_RESET "[" KS_COL_MGA "%S" KS_COL_RESET ":%s" KS_COL_RESET "] ", self->name, col)) {
             res = false;
         } else {
 
@@ -55,31 +58,37 @@ bool ks_logger_clogv(ks_logger self, int level, const char* file, const char* fu
             if (level >= KS_LOGGER_WARN) {
                 /* print additional information (location in source code) */
                 if (line >= 0 && file != NULL) {
-                    ksio_add(self->output, "[" KS_COL_LBLU "@" "%s" KS_COL_RESET ":" KS_COL_LCYN "%i", file, line);
+                    ksio_add(sio, "[" KS_COL_LBLU "@" "%s" KS_COL_RESET ":" KS_COL_LCYN "%i", file, line);
                 }
                 if (level >= KS_LOGGER_ERROR) {
                     /* add function */
                     if (func != NULL) {
-                        ksio_add(self->output, KS_COL_RESET " in " KS_COL_BLU "%s()", func);
+                        ksio_add(sio, KS_COL_RESET " in " KS_COL_BLU "%s()", func);
                     }
                 }
 
                 if (line >= 0 && file != NULL) {
-                    ksio_add(self->output, KS_COL_RESET "] ");
+                    ksio_add(sio, KS_COL_RESET "] ");
                 }
             }
 
-            if (!ksio_addv(self->output, fmt, ap)) {
+            if (!ksio_addv(sio, fmt, ap)) {
                 res = false;
             } else {
                 /* We're good */
-                ksio_add(self->output, "\n");
+                ksio_add(sio, "\n");
             }
         }
 
         /* Restore level */
         self->level = sl;
+        if (res) {
+            if (!ksio_addbuf(self->output, sio->len_b, sio->data)) res = false;
+        }
+        KS_DECREF(sio);
+
     }
+
 
     return res;
 }

@@ -22,7 +22,7 @@
 
 /* Buffer size */
 #ifndef KSIO_BUFSIZ
-#define KSIO_BUFSIZ 256
+#define KSIO_BUFSIZ 1024
 #endif
 
 /** Types **/
@@ -169,10 +169,6 @@ typedef ksio_StringIO ksio_BytesIO;
  */
 KS_API bool ksio_is_open(ksio_BaseIO self, bool* out);
 
-/* Calculate whether reading the IO is at the end
- */
-KS_API bool ksio_is_eof(ksio_BaseIO self, bool* out);
-
 /* Calculate whether the IO is readable/writeable
  */
 KS_API bool ksio_is_r(ksio_BaseIO self, bool* out);
@@ -261,7 +257,6 @@ KS_API ks_str ksio_readall(ks_str fname);
  *
  */
 KS_API ks_ssize_t ksu_getline(char** lineptr, ks_ssize_t* n, FILE* fp);
-
 
 
 /* Types */

@@ -190,6 +190,7 @@ ks_module ks_import(ks_str name) {
     _BIMOD(time)
     _BIMOD(ffi)
     _BIMOD(ucd)
+    _BIMOD(net)
 
     if (!res) {
         /* No builtin found, so try dynamically searching */

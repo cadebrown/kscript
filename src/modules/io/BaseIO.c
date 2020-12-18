@@ -12,7 +12,6 @@
 #define T_NAME "io.BaseIO"
 #define TI_NAME T_NAME ".__iter"
 
-
 /* C-API */
 
 bool ksio_is_open(ksio_BaseIO self, bool* out) {
@@ -22,26 +21,27 @@ bool ksio_is_open(ksio_BaseIO self, bool* out) {
     } else if (kso_issub(self->type, ksiot_StringIO) || kso_issub(self->type, ksiot_BytesIO)) {
         *out = true;
         return true;
+    } else {
+        ks_str key = ks_str_new(-1, "isopen");
+        kso ff = kso_getattr(self, key);
+        KS_DECREF(key);
+        if (!ff) return NULL;
+
+        kso res = kso_call(ff, 0, NULL);
+        KS_DECREF(ff);
+        if (!res) return NULL;
+
+        if (!kso_truthy(res, out)) {
+            KS_DECREF(res);
+            return false;
+        }
+        KS_DECREF(res);
+        return true;
     }
 
     KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was open", self);
     return false;
 }
-
-
-bool ksio_is_eof(ksio_BaseIO self, bool* out) {
-    if (kso_issub(self->type, ksiot_FileIO)) {
-        *out = feof(((ksio_FileIO)self)->fp);
-        return true;
-    } else if (kso_issub(self->type, ksiot_StringIO) || kso_issub(self->type, ksiot_BytesIO)) {
-        *out = ((ksio_StringIO)self)->pos_b >= ((ksio_StringIO)self)->len_b;
-        return true;
-    }
-
-    KS_THROW(kst_TypeError, "Failed to determine whether '%T' object was at EOF", self);
-    return false;
-}
-
 
 bool ksio_is_r(ksio_BaseIO self, bool* out) {
     if (kso_issub(self->type, ksiot_FileIO)) {
@@ -70,8 +70,6 @@ bool ksio_is_w(ksio_BaseIO self, bool* out) {
     return false;
 }
 
-
-
 ks_type ksio_rtype(ksio_BaseIO self) {
     if (kso_issub(self->type, ksiot_FileIO)) {
         if (((ksio_FileIO)self)->is_bin) {
@@ -87,10 +85,28 @@ ks_type ksio_rtype(ksio_BaseIO self) {
     } else if (kso_issub(self->type, ksiot_BytesIO)) {
         KS_INCREF(kst_bytes);
         return kst_bytes;
+    } else {
+        ks_str key = ks_str_new(-1, "rtype");
+        kso ff = kso_getattr(self, key);
+        KS_DECREF(key);
+        if (!ff) return NULL;
+
+        ks_type res = (ks_type)kso_call(ff, 0, NULL);
+        KS_DECREF(ff);
+        if (!res) return NULL;
+
+        if (!kso_issub(res->type, kst_type)) {
+            KS_THROW(kst_TypeError, "'%T.rtype()' returned non-type object of type '%T'", res);
+            KS_DECREF(res);
+            return NULL;
+        }
+
+        return res;
     }
-    KS_THROW(kst_TypeError, "Failed to determine the result type of '%T' object");
+    KS_THROW(kst_TypeError, "Failed to determine the IO result type of '%T' object", self);
     return NULL;
 }
+
 bool ksio_is_bytes(ksio_BaseIO self, bool* out) {
     ks_type rt = ksio_rtype(self);
     if (!rt) return false;
@@ -99,6 +115,7 @@ bool ksio_is_bytes(ksio_BaseIO self, bool* out) {
     KS_DECREF(rt);
     return true;
 }
+
 bool ksio_is_str(ksio_BaseIO self, bool* out) {
     ks_type rt = ksio_rtype(self);
     if (!rt) return false;
@@ -143,8 +160,31 @@ ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data) {
     } else if (kso_issub(self->type, ksiot_BytesIO)) {
         ksio_StringIO sio = (ksio_StringIO)self;
 
-
         return sz_b;
+    } else {
+        ks_str key = ks_str_new(-1, "read");
+        kso rf = kso_getattr(self, key);
+        KS_DECREF(key);
+        if (!rf) return -1;
+
+        ks_int obsz = ks_int_new(sz_b);
+        ks_bytes bio = (ks_bytes)kso_call(rf, 1, (kso[]){ (kso)obsz });
+        KS_DECREF(obsz);
+        KS_DECREF(rf);
+
+        if (!bio) {
+            return -1;
+        } else if (!kso_issub(bio->type, kst_bytes)) {
+            KS_THROW(kst_TypeError, "'%T.read()' returned non-bytes object of type '%T'", bio);
+            KS_DECREF(bio);
+            return -1;
+        }
+
+        ks_ssize_t real_sz = bio->len_b;
+        memcpy(data, bio->data, bio->len_b);
+        KS_DECREF(bio);
+
+        return real_sz;
     }
 
     KS_THROW(kst_IOError, "Don't know how to read bytes from '%T' object", self);
@@ -248,6 +288,31 @@ ks_ssize_t ksio_reads(ksio_BaseIO self, ks_ssize_t sz_c, void* data, ks_ssize_t*
             (*num_c)++;
         }
         return sz_b;
+    } else {
+        ks_str key = ks_str_new(-1, "read");
+        kso rf = kso_getattr(self, key);
+        KS_DECREF(key);
+        if (!rf) return -1;
+
+        ks_int obsz = ks_int_new(sz_c);
+        ks_str bio = (ks_str)kso_call(rf, 1, (kso[]){ (kso)obsz });
+        KS_DECREF(obsz);
+        KS_DECREF(rf);
+
+        if (!bio) {
+            return -1;
+        } else if (!kso_issub(bio->type, kst_str)) {
+            KS_THROW(kst_TypeError, "'%T.read()' returned non-str object of type '%T'", bio);
+            KS_DECREF(bio);
+            return -1;
+        }
+
+        ks_ssize_t real_sz = bio->len_b;
+        memcpy(data, bio->data, bio->len_b);
+        KS_DECREF(bio);
+
+        (*num_c) = bio->len_c;
+        return real_sz;
     }
 
 
@@ -260,12 +325,12 @@ bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
     if (!ksio_is_open(self, &good)) return -1;
     if (!good) {
         KS_THROW(kst_IOError, "'%T' object is not open", self);
-        return -1;
+        return false;
     }
     if (!ksio_is_w(self, &good)) return -1;
     if (!good) {
         KS_THROW(kst_IOError, "'%T' object is not writeable", self);
-        return -1;
+        return false;
     }
     if (!ksio_is_bytes(self, &good)) return -1;
     if (!good) {
@@ -307,10 +372,25 @@ bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
         sio->len_c += sz_b;
 
         return true;
+    } else {
+        ks_str key = ks_str_new(-1, "write");
+        kso rf = kso_getattr(self, key);
+        KS_DECREF(key);
+        if (!rf) return false;
+
+        ks_bytes bio = ks_bytes_new(sz_b, data);
+        kso rr = kso_call(rf, 1, (kso[]){ (kso)bio });
+        KS_DECREF(bio);
+        KS_DECREF(rf);
+        if (!rr) {
+            return false;
+        }
+        KS_DECREF(rr);
+        return true;
     }
 
     KS_THROW(kst_IOError, "Don't know how to write bytes to '%T' object", self);
-    return -1;
+    return false;
 }
 
 bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
@@ -370,11 +450,25 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
         sio->len_c += ks_str_lenc(sz_b, data);
 
         return sz_b;
+    } else {
+        ks_str key = ks_str_new(-1, "write");
+        kso rf = kso_getattr(self, key);
+        KS_DECREF(key);
+        if (!rf) return false;
+
+        ks_str bio = ks_str_new(sz_b, data);
+        kso rr = kso_call(rf, 1, (kso[]){ (kso)bio });
+        KS_DECREF(bio);
+        KS_DECREF(rf);
+        if (!rr) {
+            return false;
+        }
+        KS_DECREF(rr);
+        return true;
     }
 
     KS_THROW(kst_IOError, "Don't know how to write str to '%T' object", self);
-
-    return -1;
+    return false;
 }
 
 
@@ -384,10 +478,10 @@ static KS_TFUNC(T, bool) {
     ksio_BaseIO self;
     KS_ARGS("self:*", &self, ksiot_BaseIO);
 
-    bool iseof;
-    if (!ksio_is_eof(self, &iseof)) return NULL;
+    bool g;
+    if (!ksio_is_open(self, &g)) return NULL;
 
-    return KSO_BOOL(!iseof);
+    return KSO_BOOL(g);
 }
 
 static KS_TFUNC(T, close) {
@@ -417,23 +511,7 @@ static KS_TFUNC(T, write) {
     return NULL;
 }
 
-static KS_TFUNC(T, getattr) {
-    ksio_BaseIO self;
-    ks_str attr;
-    KS_ARGS("self:* attr:*", &self, ksiot_BaseIO, &attr, kst_str);
-
-    if (ks_str_eq_c(attr, "restype", 7)) {
-        return (kso)ksio_rtype(self);
-    }
-
-    KS_THROW_ATTR(self, attr);
-    return NULL;
-}
-
-
-
 /** Iterable type **/
-
 
 typedef struct _iter_s {
     KSO_BASE
@@ -441,7 +519,6 @@ typedef struct _iter_s {
     ksio_BaseIO of;
 
 }* _iter;
-
 
 static struct ks_type_s tpi;
 static ks_type ksiot_BaseIO_iter = &tpi;
@@ -472,9 +549,9 @@ static KS_TFUNC(TI, next) {
     _iter self;
     KS_ARGS("self:*", &self, ksiot_BaseIO_iter);
 
-    bool iseof;
-    if (!ksio_is_eof(self->of, &iseof)) return NULL;
-    if (iseof) {
+    bool g;
+    if (!ksio_is_open(self->of, &g)) return NULL;
+    if (!g) {
         KS_OUTOFITER();
         return NULL;
     }
@@ -540,8 +617,6 @@ void _ksi_io_BaseIO() {
     _ksinit(ksiot_BaseIO, kst_object, T_NAME, sizeof(struct kso_s), -1, "Abstract base type of other IO objects", KS_IKV(
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__iter",                 KS_NEWREF(ksiot_BaseIO_iter)},
-
-        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
 
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},

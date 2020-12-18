@@ -10,8 +10,8 @@ import getarg
 
 p = getarg.Parser("threadprint", "0.1.0", "Print out ranges using threads", ["Cade Brown <cade@kscript.org>"])
 
-p.arg("ppt", ["-ppt", "--per-thread"], "Number of elements to print per thread", int, none, 10)
-p.arg("N", ["-N", "--Nthreads"], "Number of threads to run", int, none, 2)
+p.opt("ppt", ["-ppt", "--per-thread"], "Number of elements to print per thread", int, 10)
+p.opt("N", ["-N", "--Nthreads"], "Number of threads to run", int, 2)
 
 # parse the args, throwing an error if something incorrect was given
 # or, if `-h` or `--help` are given, print out a usage message and exit successfully
@@ -27,7 +27,7 @@ func threadfunc(i, toprint) {
 
 # create logger
 LOG = logger('threadprint')
-LOG.level = logger.INFO
+LOG.level = logger.levels.INFO
 
 # now, create threads
 threads = []

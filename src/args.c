@@ -4,12 +4,24 @@
  */
 #include <ks/impl.h>
 
-
-bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
-    const char* o_fmt = fmt;
-
+bool kso_parse(int nargs, kso* args, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);
+    bool res = _ks_argsv(1, nargs, args, fmt, ap);
+    va_end(ap);
+    return res;
+}
+
+bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    bool res = _ks_argsv(0, nargs, args, fmt, ap);
+    va_end(ap);
+    return res;
+}
+
+bool _ks_argsv(int kk, int nargs, kso* args, const char* fmt, va_list ap) {
+    const char* o_fmt = fmt;
 
     bool res = true;
 
@@ -55,7 +67,11 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
 
             if (cai >= nargs) {
                 if (is_opt) break;
-                KS_THROW(kst_Error, "Missing arguments, only given %i", nargs);
+                if (kk == 0) {
+                    KS_THROW(kst_Error, "Missing arguments, only given %i", nargs);
+                } else {
+                    KS_THROW(kst_Error, "Missing values for value string '%s'", o_fmt);
+                }
                 res = false;
                 break;
             }
@@ -72,7 +88,11 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
                     assert(req->type == kst_type);
 
                     if (!kso_issub(cargin->type, req)) {
-                        KS_THROW(kst_Error, "Expected argument '%.*s' to be of type %R, but was of type '%T'", an_c, an, req->i__fullname, cargin);
+                        if (kk == 0) {
+                            KS_THROW(kst_Error, "Expected argument '%.*s' to be of type %R, but was of type '%T'", an_c, an, req->i__fullname, cargin);
+                        } else {
+                            KS_THROW(kst_Error, "Expected value '%.*s' to be of type %R, but was of type '%T' (in value string '%s')", an_c, an, req->i__fullname, cargin, o_fmt);
+                        }
                         res = false;
                         break;
                     }
@@ -83,8 +103,11 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
 
                     if (!kso_get_ci(cargin, (ks_cint*)cargto)) {
                         kso_catch_ignore();
-
-                        KS_THROW(kst_Error, "Argument '%.*s' (of type '%T') could not be converted to a C-style int", an_c, an, cargin);
+                        if (kk == 0) {
+                            KS_THROW(kst_Error, "Argument '%.*s' (of type '%T') could not be converted to a C-style int", an_c, an, cargin);
+                        } else {
+                            KS_THROW(kst_Error, "Value '%.*s' (of type '%T') could not be converted to a C-style int", an_c, an, cargin);
+                        }
                         res = false;
                         break;
                     }
@@ -94,8 +117,11 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
 
                     if (!kso_get_cf(cargin, (ks_cfloat*)cargto)) {
                         kso_catch_ignore();
-
-                        KS_THROW(kst_Error, "Argument '%.*s' (of type '%T') could not be converted to a C-style float", an_c, an, cargin);
+                        if (kk == 0) {
+                            KS_THROW(kst_Error, "Argument '%.*s' (of type '%T') could not be converted to a C-style float", an_c, an, cargin);
+                        } else {
+                            KS_THROW(kst_Error, "Value '%.*s' (of type '%T') could not be converted to a C-style float", an_c, an, cargin);
+                        }
                         res = false;
                         break;
                     }
@@ -110,7 +136,7 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
                     continue;
 
                 } else {
-                    assert(false && "'KS_GETARGS' was given a bad format string");
+                    assert(false && "'KS_ARGS'/similar was given a bad C-style format string");
                 }
             }
 
@@ -123,7 +149,6 @@ bool _ks_args(int nargs, kso* args, const char* fmt, ...) {
         res = false;
     }
     /* Success/Fail */
-    va_end(ap);
     return res;
 }
 

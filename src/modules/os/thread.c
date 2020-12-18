@@ -18,8 +18,27 @@
 ksos_thread ksg_main_thread = NULL;
 
 
+
 /* Set of threads currently active */
 static ks_set active_threads = NULL;
+static bool is_joining_active = false;
+
+static void join_active_threads() {
+    is_joining_active = true;
+    int i = 0;
+    for (i = 0; i < active_threads->len_ents; ++i) {
+        struct ks_set_ent* ent = &active_threads->ents[i];
+        if (ent->key != NULL) {
+            ksos_thread key = (ksos_thread)ent->key;
+            if (!ksos_thread_join(key)) {
+                kso_catch_ignore_print();
+            }
+        }
+    }
+    is_joining_active = false;
+    ks_set_clear(active_threads);
+}
+
 
 /* Thread-local key which we store the thread instance on */
 static pthread_key_t this_thread_key;
@@ -35,7 +54,7 @@ static void* init_thread_pthreads(void* _self) {
     KS_GIL_LOCK();
     self->is_active = true;
     self->is_queue = false;
-    
+
     /* Execute the code */
     kso res = kso_call(self->of, self->args->len, self->args->elems);
     if (!res) {
@@ -86,7 +105,6 @@ ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso of, ks_tuple args) {
 
     self->exc = NULL;
 
-
     return self;
 }
 
@@ -107,15 +125,22 @@ bool ksos_thread_start(ksos_thread self) {
     #if defined(KS_HAVE_pthreads)
 
     /* Start pthread up */
-    /*if (!ks_set_add(active_threads, (kso)self)) {
-        ks_catch_ignore();
-    }*/
+    if (!ks_set_add(active_threads, (kso)self)) {
+        kso_catch_ignore();
+    }
 
     int stat = pthread_create(&self->pth_, NULL, init_thread_pthreads, self);
     if (stat != 0) {
         KS_THROW(kst_OSError, "Failed to start thread: %s", strerror(stat));
         return false;
     }
+
+    /* Wait for the queue */
+    KS_GIL_UNLOCK();
+    while (self->is_queue) {
+        ;
+    }
+    KS_GIL_LOCK();
 
     return true;
     #else
@@ -140,10 +165,10 @@ bool ksos_thread_join(ksos_thread self) {
     }
     self->is_active = false;
 
-    /*if (!is_joining_active) {
+    if (!is_joining_active) {
         bool found;
-        if (!ks_set_del(active_threads, (kso)self, &found)) ks_catch_ignore();
-    }*/
+        if (!ks_set_del(active_threads, (kso)self, &found)) kso_catch_ignore();
+    }
     
     return true;
     #else
@@ -187,7 +212,22 @@ static KS_TFUNC(T, str) {
     KS_ARGS("self:*", &self, ksost_thread);
     return (kso)ks_fmt("<thread %R>", self->name);
 }
+static KS_TFUNC(T, start) {
+    ksos_thread self;
+    KS_ARGS("self:*", &self, ksost_thread);
 
+    if (!ksos_thread_start(self)) return NULL;
+
+    return KSO_NONE;
+}
+static KS_TFUNC(T, join) {
+    ksos_thread self;
+    KS_ARGS("self:*", &self, ksost_thread);
+
+    if (!ksos_thread_join(self)) return NULL;
+
+    return KSO_NONE;
+}
 
 /* Export */
 
@@ -199,11 +239,17 @@ void _ksi_os_thread() {
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of, args=none)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
+
+        {"start",                  ksf_wrap(T_start_, T_NAME ".start(self)", "Start executing a thread")},
+        {"join",                   ksf_wrap(T_join_, T_NAME ".join(self)", "Wait for a thread to finish executing")},
     ));
 
     ks_str tmp = ks_str_new(-1, "main");
     ksg_main_thread = ksos_thread_new(ksost_thread, tmp, NULL, _ksv_emptytuple);
     KS_DECREF(tmp);
+
+    active_threads = ks_set_new(0, NULL);
+    atexit(join_active_threads);
 
     #ifdef KS_HAVE_pthreads
 
@@ -218,9 +264,6 @@ void _ksi_os_thread() {
     pthread_setspecific(this_thread_key, (void*)ksg_main_thread);
 
     #endif /* KS_HAVE_pthreads */
-
-
-
 }
 
 

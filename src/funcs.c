@@ -48,17 +48,20 @@ static KS_FUNC(print) {
     kso* args;
     KS_ARGS("*args", &n_args, &args);
 
-
     /* Where to output to */
     ksio_BaseIO out = (ksio_BaseIO)ksos_stdout;
 
+    ks_str toprint = ks_fmt("%J\n", " ", n_args, args);
+    if (!toprint) return NULL;
+    ksio_addbuf(out, toprint->len_b, toprint->data);
+    /*
     int i;
     for (i = 0; i < n_args; ++i) {
         if (i > 0) ksio_addbuf(out, 1, " ");
         if (!ksio_add(out, "%S", args[i])) return NULL;
     }
     ksio_addbuf(out, 1, "\n");
-
+    */
     return KSO_NONE;
 }
 

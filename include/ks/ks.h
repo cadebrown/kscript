@@ -798,6 +798,10 @@ KS_API ks_bytes ks_bytes_new(ks_ssize_t len_b, const char* data);
  */
 KS_API ks_bytes ks_bytes_newn(ks_ssize_t len_b, char* data);
 
+/* Creates a new bytes from an object
+ */
+KS_API ks_bytes ks_bytes_newo(ks_type tp, kso obj);
+
 
 /* Create a new regular-expression from a descriptor string
  */
@@ -1124,6 +1128,9 @@ KS_API kso kso_iter(kso ob);
  */
 KS_API kso kso_next(kso ob);
 
+/* Parse a format string and values, similar to 'KS_ARGS', but for any list of argu
+ */
+KS_API bool kso_parse(int nargs, kso* args, const char* fmt, ...);
 
 /* Attempt to get the '__attr__' dict from an object, returning NULL if it couldn't be determined
  * NOTE: this does NOT throw an error if it wasn't found
@@ -1258,6 +1265,7 @@ KS_API void _kso_free(kso obj, const char* file, const char* func, int line);
 
 /* Parse 'args' into a list of addresses, with optionally specifying types. Use the 'KS_ARGS' macros
  */
+KS_API bool _ks_argsv(int kk, int nargs, kso* args, const char* fmt, va_list ap);
 KS_API bool _ks_args(int nargs, kso* args, const char* fmt, ...);
 
 
