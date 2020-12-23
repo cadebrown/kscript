@@ -17,12 +17,32 @@
     *y = _r; \
     return true; \
 
+#define E_(_c, _r) case _c: \
+    KS_THROW(kst_Error, "Unsupported on this platform: %s (platform did not support %s)", #_c, #_r); \
+    return false;
+
 static bool k2u_fk(ksnet_fk x, int* y) {
     switch (x) {
+#ifdef KS_HAVE_AF_INET
     C_(KSNET_FK_INET4, AF_INET)
+#else
+    E_(KSNET_FK_INET4, AF_INET)
+#endif
+#ifdef KS_HAVE_AF_INET6
     C_(KSNET_FK_INET6, AF_INET6)
+#else
+    E_(KSNET_FK_INET6, AF_INET6)
+#endif
+#ifdef KS_HAVE_AF_BLUETOOTH
     C_(KSNET_FK_BT, AF_BLUETOOTH)
+#else
+    E_(KSNET_FK_BT, AF_BLUETOOTH)
+#endif
+#ifdef KS_HAVE_AF_PACKET
     C_(KSNET_FK_PACKET, AF_PACKET)
+#else
+    E_(KSNET_FK_PACKET, AF_PACKET)
+#endif
     }
 
     KS_THROW(kst_Error, "Unknown family kind: %i", (int)x);
@@ -30,11 +50,31 @@ static bool k2u_fk(ksnet_fk x, int* y) {
 }
 static bool k2u_sk(ksnet_sk x, int* y) {
     switch (x) {
+#ifdef KS_HAVE_SOCK_RAW
     C_(KSNET_SK_RAW, SOCK_RAW)
+#else
+    E_(KSNET_SK_RAW, SOCK_RAW)
+#endif
+#ifdef KS_HAVE_SOCK_STREAM
     C_(KSNET_SK_TCP, SOCK_STREAM)
+#else
+    E_(KSNET_SK_TCP, SOCK_STREAM)
+#endif
+#ifdef KS_HAVE_SOCK_DGRAM
     C_(KSNET_SK_UDP, SOCK_DGRAM)
+#else
+    E_(KSNET_SK_UDP, SOCK_DGRAM)
+#endif
+#ifdef KS_HAVE_SOCK_PACKET
     C_(KSNET_SK_PACKET, SOCK_PACKET)
+#else
+    E_(KSNET_SK_PACKET, SOCK_PACKET)
+#endif
+#ifdef KS_HAVE_SOCK_SEQPACKET
     C_(KSNET_SK_PACKET_SEQ, SOCK_SEQPACKET)
+#else
+    E_(KSNET_SK_PACKET_SEQ, SOCK_SEQPACKET)
+#endif
     }
 
     KS_THROW(kst_Error, "Unknown socket kind: %i", (int)x);
