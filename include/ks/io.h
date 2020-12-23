@@ -34,28 +34,27 @@
 /* Any Input/Output stream */
 typedef kso ksio_BaseIO;
 
+
+#define KSIO_RAWIO_BASE \
+    KSO_BASE \
+    /* File descriptor (from 'open()' or similar) */ \
+    int fd; \
+    /* If true, 'close(fd)' after the IO is done */ \
+    bool do_close; \
+    /* Whether the IO is open */ \
+    bool is_open; \
+    /* Whether the RawIO is readable/writeable */ \
+    bool is_r, is_w; \
+    /* Number of bytes read and written (not rigorous, don't rely on these) */ \
+    ks_ssize_t sz_r, sz_w; \
+    /* The name of the source */ \
+    ks_str fname; \
+
+
 /* 'io.RawIO' - represents an open file descriptor
  */
 typedef struct ksio_RawIO_s {
-    KSO_BASE
-
-    /* File descriptor (from 'open()' or similar) */
-    int fd;
-    
-    /* If true, 'close(fd)' after the IO is done */
-    bool do_close;
-
-    /* Whether the IO is open */
-    bool is_open;
-
-    /* Whether the RawIO is readable/writeable */
-    bool is_r, is_w;
-
-    /* Number of bytes read and written (not rigorous, don't rely on these) */
-    ks_ssize_t sz_r, sz_w;
-
-    /* The name of the source */
-    ks_str fname;
+    KSIO_RAWIO_BASE
 
 }* ksio_RawIO;
 

@@ -189,6 +189,10 @@ ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data) {
             return -1;
         }
 
+        if (real_sz == 0) {
+            rio->is_open = false;
+        }
+
         /* Update state variables */
         rio->sz_r += real_sz;
 
@@ -640,12 +644,18 @@ static KS_TFUNC(TI, next) {
         } else {
             csz = ksio_reads(self->of, 1, data + rsz, &num_c);
         }
+
         rsz += csz;
         if (csz < 0) {
             ks_free(data);
             return NULL;
         } else if (csz == 0) {
-            ks_str res = ks_str_new(rsz, data);
+            kso res = NULL;
+            if (isbin) {
+                res = (kso)ks_bytes_new(rsz, data);
+            } else {
+                res = (kso)ks_str_new(rsz, data);
+            }
             ks_free(data);
             return (kso)res;
         } else if (data[rsz - csz] == '\n') {

@@ -157,27 +157,18 @@ typedef enum {
  * 
  */
 typedef struct ksnet_SocketIO_s {
-    KSO_BASE
+    KSIO_RAWIO_BASE
 
     /* State */
-    bool is_bound, is_listening, is_connected;
+    bool is_bound, is_listening;
 
     /* Socket, family, and protocol the socket is using */
     ksnet_sk sk;
     ksnet_fk fk;
     ksnet_pk pk;
 
-    /* Platform-specifics (TODO: detect specifics) */
-
-    struct {
-
-        /* Socket Descriptor */
-        int sd;
-
-        /* Addres of the socket (only valid when bound) */
-        struct sockaddr_in sa_addr;
-
-    } _unix;
+    /* Address of the socket, if applicable */
+    struct sockaddr_in addr;
 
 }* ksnet_SocketIO;
 

@@ -148,6 +148,7 @@ static KS_TFUNC(T, read) {
         if (csz == 0) break;
     }
 
+
     ks_bytes res = ks_bytes_new(rsz, dest);
     ks_free(dest);
     return (kso)res;

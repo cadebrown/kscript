@@ -53,31 +53,30 @@ static bool k2u_pk(ksnet_pk x, int* y) {
 }
 
 
-static ksnet_SocketIO ksnet_SocketIO_wrap(int fd, int fk, int sk, int pk, bool is_bound, bool is_listening) {
+ksnet_SocketIO ksnet_SocketIO_wrap(int fd, ksnet_fk fk, ksnet_sk sk, ksnet_pk pk, bool is_bound, bool is_listening) {
     ksnet_SocketIO self = KSO_NEW(ksnet_SocketIO, ksnett_SocketIO);
 
     self->fk = fk;
     self->sk = sk;
     self->pk = pk;
 
+    self->fname = ks_fmt("[socket:%i]", fd);
+
+    self->is_r = self->is_w = true;
+
     /* Copy settings */
-    self->is_connected = true;
+    self->is_open = true;
     self->is_bound = is_bound;
     self->is_listening = is_listening;
 
     /* Copy socket descriptor */
-    self->_unix.sd = fd;
-    if (self->_unix.sd < 0) {
-        KS_DECREF(self);
-        KS_THROW(kst_IOError, "Failed to wrap UNIX-style socket");
-        return NULL;
-    }
+    self->fd = fd;
 
     /* Set socket options */
     int opt = 1;
 
     /* Reuse addresses */
-    if (setsockopt(self->_unix.sd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
+    if (setsockopt(self->fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
         KS_DECREF(self);
         KS_THROW(kst_IOError, "Failed to set socket option (SO_REUSEADDR): %s", strerror(errno));
         return NULL;
@@ -85,7 +84,7 @@ static ksnet_SocketIO ksnet_SocketIO_wrap(int fd, int fk, int sk, int pk, bool i
 
     /* Reuse port */
     #ifdef SO_REUSEPORT
-    if(setsockopt(self->_unix.sd, SOL_SOCKET, SO_REUSEPORT, (void*)&opt, sizeof(opt)) < 0) {
+    if(setsockopt(self->fd, SOL_SOCKET, SO_REUSEPORT, (void*)&opt, sizeof(opt)) < 0) {
         KS_DECREF(self);
         KS_THROW(kst_IOError, "Failed to set socket option (SO_REUSEPORT): %s", strerror(errno));
         return NULL;
@@ -104,39 +103,29 @@ ksnet_SocketIO ksnet_SocketIO_new(ks_type tp, ksnet_fk fk, ksnet_sk sk, ksnet_pk
     }
 
     /* Create socket descriptor */
-    int usd = socket(ufk, usk, upk);
-    if (usd < 0) {
+    int fd = socket(ufk, usk, upk);
+    if (fd < 0) {
         KS_THROW(kst_IOError, "Failed to create socket: %s", strerror(errno));
         return NULL;
     }
 
     int opt = 1;
     /* Reuse addresses */
-    if (setsockopt(usd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
+    if (setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (void*)&opt, sizeof(opt)) < 0) {
         KS_THROW(kst_IOError, "Failed to set socket option (%i): %s", SO_REUSEADDR, strerror(errno));
         return NULL;
     }
 
     /* Reuse port */
     #ifdef SO_REUSEPORT
-    if(setsockopt(usd, SOL_SOCKET, SO_REUSEPORT, (void*)&opt, sizeof(opt)) < 0) {
+    if(setsockopt(fd, SOL_SOCKET, SO_REUSEPORT, (void*)&opt, sizeof(opt)) < 0) {
         KS_THROW(kst_IOError, "Failed to set socket option (%i): %s", SO_REUSEPORT, strerror(errno));
         return NULL;
     }
     #endif
 
     /* Now, wrap it */
-    ksnet_SocketIO self = KSO_NEW(ksnet_SocketIO, ksnett_SocketIO);
-
-    self->fk = fk;
-    self->sk = sk;
-    self->pk = pk;
-
-    self->_unix.sd = usd;
-
-    self->is_bound = self->is_connected = self->is_listening = false;
-
-    return self;
+    return ksnet_SocketIO_wrap(fd, fk, sk, pk, false, false);
 }
 
 bool ksnet_SocketIO_bind(ksnet_SocketIO self, kso addr) {
@@ -167,19 +156,19 @@ bool ksnet_SocketIO_bind(ksnet_SocketIO self, kso addr) {
         if (!kso_get_ci(taddr->elems[1], &port)) return false;
 
         /* Get server address */
-        self->_unix.sa_addr.sin_family = ufk;
-        self->_unix.sa_addr.sin_port = htons(port);
+        self->addr.sin_family = ufk;
+        self->addr.sin_port = htons(port);
 
         if (ks_str_eq_c(hostname, "localhost", 9)|| ks_str_eq_c(hostname, "", 0)) {
-            self->_unix.sa_addr.sin_addr.s_addr = INADDR_ANY;
-        } else if (inet_pton(ufk, hostname->data, &self->_unix.sa_addr.sin_addr) <= 0) {
+            self->addr.sin_addr.s_addr = INADDR_ANY;
+        } else if (inet_pton(ufk, hostname->data, &self->addr.sin_addr) <= 0) {
             KS_THROW(kst_IOError, "Failed to resolve address: %R", hostname);
             return false;
         }
 
         /* Connect to address */
         KS_GIL_UNLOCK();
-        if (bind(self->_unix.sd, (struct sockaddr *)&self->_unix.sa_addr, sizeof(self->_unix.sa_addr)) < 0)  { 
+        if (bind(self->fd, (struct sockaddr *)&self->addr, sizeof(self->addr)) < 0)  { 
             KS_GIL_LOCK();
             KS_THROW(kst_IOError, "Failed to bind socket: %s", strerror(errno));
             return false;
@@ -241,12 +230,12 @@ bool ksnet_SocketIO_connect(ksnet_SocketIO self, kso addr) {
         memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
 
         /* Connect to address */
-        if (connect(self->_unix.sd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)  { 
+        if (connect(self->fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)  { 
             KS_THROW(kst_IOError, "Failed to connect socket: %s", strerror(errno));
             return false;
         } 
 
-        self->is_connected = true;
+        self->is_open = true;
         break;
     
     default:
@@ -264,7 +253,7 @@ bool ksnet_SocketIO_listen(ksnet_SocketIO self, int num) {
     }
 
     KS_GIL_UNLOCK();
-    if (listen(self->_unix.sd, num) < 0) { 
+    if (listen(self->fd, num) < 0) { 
         KS_GIL_LOCK();
         KS_THROW(kst_IOError, "Failed to listen on socket: %s", strerror(errno));
         return false;
@@ -292,7 +281,7 @@ bool ksnet_SocketIO_accept(ksnet_SocketIO self, ksnet_SocketIO* client_socket, k
     struct sockaddr_in addr_conn;
     socklen_t addr_conn_len = sizeof(addr_conn);
     KS_GIL_UNLOCK();
-    if ((sockfd_conn = accept(self->_unix.sd, (struct sockaddr*)&addr_conn, &addr_conn_len)) < 0) {
+    if ((sockfd_conn = accept(self->fd, (struct sockaddr*)&addr_conn, &addr_conn_len)) < 0) {
         KS_GIL_LOCK();
         KS_THROW(kst_IOError, "Failed to accept connection: %s", strerror(errno));
         return false;
@@ -332,7 +321,7 @@ ks_str ksnet_SocketIO_name(ksnet_SocketIO self) {
 
     int ufk;
     if (!k2u_fk(self->fk, &ufk)) return NULL;
-    if (!inet_ntop(ufk, &self->_unix.sa_addr.sin_addr, addr, KSNET_ADDR_MAX)) {
+    if (!inet_ntop(ufk, &self->addr.sin_addr, addr, KSNET_ADDR_MAX)) {
         KS_THROW(kst_IOError, "Failed to get name for socket: %s", strerror(errno));
         return false;
     }
@@ -346,7 +335,7 @@ bool ksnet_SocketIO_port(ksnet_SocketIO self, int* out) {
         return false;
     }
 
-    *out = (int)ntohs(self->_unix.sa_addr.sin_port);
+    *out = (int)ntohs(self->addr.sin_port);
     return true;
 }
 
@@ -362,12 +351,23 @@ static KS_TFUNC(T, new) {
 
     return (kso)ksnet_SocketIO_new(tp, fk, sk, pk);
 }
+static KS_TFUNC(T, init) {
+    int nargs;
+    kso* args;
+    KS_ARGS("*args", &nargs, &args);
 
+    return KSO_NONE;
+}
 static KS_TFUNC(T, free) {
     ksnet_SocketIO self;
     KS_ARGS("self:*", &self, ksnett_SocketIO);
 
-    close(self->_unix.sd);
+    if (self->fd >= 0) {
+        shutdown(self->fd, SHUT_WR);
+        shutdown(self->fd, SHUT_RD);
+        close(self->fd);
+    }
+    KS_NDECREF(self->fname);
 
     KSO_DEL(self);
 
@@ -380,7 +380,7 @@ static KS_TFUNC(T, getattr) {
     KS_ARGS("self:* attr:*", &self, ksnett_SocketIO, &attr, kst_str);
 
     if (ks_str_eq_c(attr, "_fd", 3)) {
-        return (kso)ks_int_new(self->_unix.sd);
+        return (kso)ks_int_new(self->fd);
     } else if (ks_str_eq_c(attr, "name", 4)) {
         return (kso)ksnet_SocketIO_name(self);
     } else if (ks_str_eq_c(attr, "port", 4)) {
@@ -393,87 +393,21 @@ static KS_TFUNC(T, getattr) {
     return NULL;
 }
 
-static KS_TFUNC(T, isopen) {
+static KS_TFUNC(T, close) {
     ksnet_SocketIO self;
     KS_ARGS("self:*", &self, ksnett_SocketIO);
 
-    if (!self->is_connected) return KSO_FALSE;
-
-    char c;
-    ks_ssize_t x = recv(self->_unix.sd, &c, 1, MSG_PEEK);
-    if (x > 0) {
-        return KSO_TRUE;
-    } else if (x == 0) {
-        self->is_connected = false;
-        return KSO_FALSE;
-    } else {
-        /* error */
-        KS_THROW(kst_IOError, "Failed to detect whether socket was open: %s", strerror(errno));
-        return NULL;
+    if (self->fd >= 0) {
+        shutdown(self->fd, SHUT_WR);
+        shutdown(self->fd, SHUT_RD);
+        close(self->fd);
     }
+    self->fd = -1;
+
+    return KSO_NONE;
 }
 
-static KS_TFUNC(T, rtype) {
-    ksnet_SocketIO self;
-    KS_ARGS("self:*", &self, ksnett_SocketIO);
 
-    return KS_NEWREF(kst_bytes);
-}
-
-static KS_TFUNC(T, read) {
-    ksnet_SocketIO self;
-    ks_cint sz = KS_CINT_MAX;
-    KS_ARGS("self:* ?sz:cint", &self, ksnett_SocketIO, &sz);
-
-    /* Read bytes */
-    ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0;
-    void* dest = NULL;
-    while (rsz < sz && self->is_connected) {
-        dest = ks_realloc(dest, rsz + bsz);
-        ks_ssize_t msz = sz - rsz;
-        if (msz <= 0) break;
-        if (msz > bsz) msz = bsz;
-        ks_ssize_t csz = read(self->_unix.sd, ((char*)dest) + rsz, msz);
-        if (csz < 0) {
-            KS_THROW(kst_IOError, "Failed to read from socket: %s", strerror(errno));
-            ks_free(dest);
-            return NULL;
-
-        } else if (csz == 0) {
-            self->is_connected = false;
-            break;
-        } else {
-            rsz += csz;
-            if (csz < msz) {
-                self->is_connected = false;
-            }
-        }
-    }
-    ks_bytes res = ks_bytes_new(rsz, dest);
-    ks_free(dest);
-    return (kso)res;
-}
-
-static KS_TFUNC(T, write) {
-    ksnet_SocketIO self;
-    kso msg;
-    KS_ARGS("self:* msg", &self, ksnett_SocketIO, &msg);
-
-    ks_bytes bio = ks_bytes_newo(kst_bytes, msg);
-    if (!bio) return NULL;
-
-    ks_ssize_t csz = write(self->_unix.sd, bio->data, bio->len_b);
-    if (csz < 0) {
-        KS_THROW(kst_IOError, "Failed to write to socket: %s", strerror(errno));
-        KS_DECREF(bio);
-        return NULL;
-    } else if (csz == 0) {
-        self->is_connected = false;
-    }
-
-    KS_DECREF(bio);
-    return (kso)ks_int_new(csz);
-}
 static KS_TFUNC(T, bind) {
     ksnet_SocketIO self;
     kso addr;
@@ -517,8 +451,6 @@ static KS_TFUNC(T, accept) {
 }
 
 
-
-
 /* Export */
 
 static struct ks_type_s tp;
@@ -526,35 +458,19 @@ ks_type ksnett_SocketIO = &tp;
 
 void _ksi_net_SocketIO() {
 
-    _ksinit(ksnett_SocketIO, ksiot_BaseIO, T_NAME, sizeof(struct ksnet_SocketIO_s), -1, "Represents a stream-like interface to a socket", KS_IKV(
+    _ksinit(ksnett_SocketIO, ksiot_RawIO, T_NAME, sizeof(struct ksnet_SocketIO_s), -1, "Represents a stream-like interface to a socket", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, fk=net.FK.INET4, sk=net.SK.TCP, pk=net.PK.AUTO)", "Create a new 'SocketIO' with the given parameters")},
+        {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(*args)", "")},
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
 
-        {"rtype",                  ksf_wrap(T_rtype_, T_NAME ".rtype(self)", "")},
-
-        {"isopen",                 ksf_wrap(T_isopen_, T_NAME ".isopen(self)", "Calculates whether the socket is open")},
-
-        {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Read a message from the socket")},
-        {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a message to the socket")},
-
+        {"close",                  ksf_wrap(T_close_, T_NAME ".close(self)", "")},
 
         {"bind",                   ksf_wrap(T_bind_, T_NAME ".bind(self, addr)", "Bind the socket to the given address (the format depends on the type of socket)")},
         {"connect",                ksf_wrap(T_connect_, T_NAME ".connect(self, addr)", "Connect to the given address (the format depends on the type of socket)")},
         {"listen",                 ksf_wrap(T_listen_, T_NAME ".listen(self, num=16)", "Begin listening for connections, up to 'num' before refusing more")},
         {"accept",                 ksf_wrap(T_accept_, T_NAME ".accept(self)", "Accept a new connection, retuning a tuple of '(sock, name)' for the new connection")},
 
-
-/*
-        {"bind",                   kso_func_new(T_bind_, T_NAME ".bind(self, addr)", "Bind the socket to the given address (which depends on what kind of socket it is)")},
-        {"connect",                kso_func_new(T_connect_, T_NAME ".connect(self, addr)", "Connect the socket to the given address (which depends on what kind of socket it is)")},
-
-        {"listen",                 kso_func_new(T_listen_, T_NAME ".listen(self, num)", "Begin listening\n\n    If 'num' is given, then connections will be rejected once 'num' connections are queued up")},
-        {"accept",                 kso_func_new(T_accept_, T_NAME ".accept(self)", "Wait for a new request to come in, and return a tuple of '(socket, clientname)'")},
-
-        {"send",                   kso_func_new(T_send_, T_NAME ".send(self, msg)", "Send a message over the socket")},
-        {"recv",                   kso_func_new(T_recv_, T_NAME ".recv(self, msglen)", "Receive a message from the socket, with 'msglen' bytes")},
-*/
     ));
 
 }

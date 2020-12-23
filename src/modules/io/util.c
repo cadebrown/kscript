@@ -416,7 +416,7 @@ static bool add_repr(ksio_BaseIO self, kso obj) {
         }
 
         return ksio_addbuf(self, 1, "'");
-    } else if (kso_issub(obj->type, kst_bytes) && obj->type->i__str == kst_str->i__bytes) {
+    } else if (kso_issub(obj->type, kst_bytes) && obj->type->i__str == kst_bytes->i__str) {
         ks_bytes bobj = (ks_bytes)obj;
 
         /* TODO: include ASCII by default? */
