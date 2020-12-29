@@ -191,6 +191,7 @@ ks_module ks_import(ks_str name) {
     _BIMOD(ffi)
     _BIMOD(ucd)
     _BIMOD(net)
+    _BIMOD(nx)
 
     if (!res) {
         /* No builtin found, so try dynamically searching */

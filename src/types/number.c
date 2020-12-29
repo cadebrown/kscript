@@ -170,7 +170,7 @@ static KS_TFUNC(T, abs) {
         ks_int Vi, R = NULL;
         if (!(Vi = kso_int(V))) return NULL;
 
-        if (ks_int_cmp_c(Vi, 0) >= 0) return KS_NEWREF(V);
+        if (ks_int_cmp_c(Vi, 0) >= 0) return (kso)Vi;
 
         /* Otherwise, negate */
 
@@ -235,6 +235,18 @@ static KS_TFUNC(T, sqig) {
         R = KS_CC_CONJ(Vc);
 
         return (kso)ks_complex_new(R);
+    } else if (kso_is_int(V)) {
+        ks_int Vi, R = NULL;
+        if (!(Vi = kso_int(V))) return NULL;
+
+        mpz_t v;
+        mpz_init(v);
+        mpz_neg(v, Vi->val);
+        mpz_sub_ui(v, v, 1);
+        R = ks_int_newzn(v);
+
+        KS_DECREF(Vi);
+        return (kso)R;
     }
 
     return KSO_UNDEFINED;
@@ -672,12 +684,6 @@ static KS_TFUNC(T, binior) {
                 return NULL;
             }
 
-            ks_cint Rc;
-            if (!kso_get_ci((kso)Ri, &Rc)) {
-                KS_DECREF(Li);
-                KS_DECREF(Ri);
-                return NULL;
-            }
 
             ks_int res = NULL;
             mpz_t Rz;
@@ -705,14 +711,6 @@ static KS_TFUNC(T, binxor) {
                 KS_DECREF(Li);
                 return NULL;
             }
-
-            ks_cint Rc;
-            if (!kso_get_ci((kso)Ri, &Rc)) {
-                KS_DECREF(Li);
-                KS_DECREF(Ri);
-                return NULL;
-            }
-
             ks_int res = NULL;
             mpz_t Rz;
             mpz_init(Rz);
@@ -738,13 +736,6 @@ static KS_TFUNC(T, binand) {
             if (!(Li = kso_int(L))) return NULL;
             if (!(Ri = kso_int(R))) {
                 KS_DECREF(Li);
-                return NULL;
-            }
-
-            ks_cint Rc;
-            if (!kso_get_ci((kso)Ri, &Rc)) {
-                KS_DECREF(Li);
-                KS_DECREF(Ri);
                 return NULL;
             }
 

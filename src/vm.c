@@ -221,6 +221,11 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             ks_list_push(stk, stk->elems[stk->len + arg]);
         VMD_OP_END
 
+        VMD_OPA(KSB_DUPN)
+            ks_list_reserve(stk, stk->len + arg);
+            ks_list_pusha(stk, arg, &stk->elems[stk->len - arg]);
+        VMD_OP_END
+
         VMD_OP(KSB_RCR)
             L = stk->elems[stk->len - 2];
             R = stk->elems[stk->len - 1];
@@ -265,6 +270,63 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             STORE(name, V);
         VMD_OP_END
 
+        VMD_OPA(KSB_ASSV)
+            th->assv= arg;
+        VMD_OP_END
+
+        VMD_OPA(KSB_ASSM)
+            /* Make assignment */
+            V = stk->elems[stk->len - 1];
+            int ti = arg;
+            if (!kso_is_iterable(V)) {
+                KS_THROW(kst_Error, "In extended assignment, right hand was not iterable, was of type '%T'", V);
+                goto thrown;
+            }
+            ks_list ass_objs = ks_list_new(0, NULL);
+            if (!ks_list_pushall(ass_objs, V)) {
+                KS_DECREF(ass_objs);
+                goto thrown;
+            }
+
+            if (th->assv < 0 && ass_objs->len < arg) {
+                KS_THROW(kst_Error, "In extended assignment, got too few values to assign (%i), expected %i", (int)ass_objs->len, arg);
+                KS_DECREF(ass_objs);
+                goto thrown;
+            } else if (th->assv < 0 && ass_objs->len > arg) {
+                KS_THROW(kst_Error, "In extended assignment, got too many values to assign (%i), expected %i", (int)ass_objs->len, arg);
+                KS_DECREF(ass_objs);
+                goto thrown;
+            } else if (th->assv >= 0 && ass_objs->len < arg - 1) {
+                KS_THROW(kst_Error, "In extended assignment, got too few values to assign (%i), expected at least %i", (int)ass_objs->len, arg - 1);
+                KS_DECREF(ass_objs);
+                goto thrown;
+            }
+
+            if (th->assv < 0) {
+                /* Straight assignment */
+                for (i = ass_objs->len - 1; i >= 0; --i) {
+                    ks_list_push(stk, ass_objs->elems[i]);
+                }
+            } else {
+                /* Variadic assignment */
+                int num_vararg = ass_objs->len - arg + 1;
+
+                for (i = ass_objs->len - 1; i >= th->assv + num_vararg; --i) {
+                    ks_list_push(stk, ass_objs->elems[i]);
+                }
+
+                ks_list vararg_objs = ks_list_new(num_vararg, ass_objs->elems + th->assv);
+                ks_list_push(stk, (kso)vararg_objs);
+                KS_DECREF(vararg_objs);
+
+                for (i = th->assv - 1; i >= 0; --i) {
+                    ks_list_push(stk, ass_objs->elems[i]);
+                }
+            }
+            KS_DECREF(ass_objs);
+            th->assv = -1;
+
+        VMD_OP_END
         VMD_OPA(KSB_GETATTR)
             V = stk->elems[--stk->len];
             name = (ks_str)VC(arg);

@@ -30,6 +30,9 @@ struct compiler {
 
     /* Array of loops */
     struct compiler_loop {
+
+        /* Required stack length */
+        int stklen;
         
         /* Number of control-flow-actions (CFAs) */
         int cfa_n;
@@ -99,28 +102,166 @@ struct compiler {
 static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code, ks_ast v);
 
 
-/* Computes assignment, from the TOS (which should alrea)
+/* Computes assignment, to the TOS
+ *
+ * If 'aug' is positive, then it should be augmented assignment with that binary operator (i.e. give KS_AST_BOP_ADD for augmented
+ *   assignment)
+ * If 'aug' is zero, then it is normal assignment
+ * If 'aug' is negative, then RHS has already been emitted and is at the TOS
+ * 
  */
-static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, ks_ast lhs, ks_ast rhs, ks_ast par) {
-    int i;
-
+static bool assign(struct compiler* co, ks_str fname, ks_str src, ks_code code, ks_ast lhs, ks_ast rhs, ks_ast par, int aug) {
+    int i, ssl = LEN;
     if (lhs->kind == KS_AST_NAME) {
-        EMITO(KSB_STORE, lhs->val);
+        if (aug < 0) {
+            /* Already emitted */            
+            EMITO(KSB_STORE, lhs->val);
+        } else if (aug > 0) {
+            /* Augmented assignment */
+            EMITO(KSB_LOAD, lhs->val);
+            LEN += 1;
+
+            /* Perform operation */
+            if (!COMPILE(rhs)) return false;
+            EMIT(aug);
+            LEN += 1 - 2;
+
+            /* Store back */
+            EMITO(KSB_STORE, lhs->val);
+
+        } else {
+            /* Just store in name */
+            if (!COMPILE(rhs)) return false;
+            EMITO(KSB_STORE, lhs->val);
+        }
 
     } else if (lhs->kind == KS_AST_ATTR) {
-        if (!COMPILE((ks_ast)lhs->args->elems[0])) return false;
-        EMITO(KSB_SETATTR, lhs->val);
-        LEN--;
-        META(par->tok);
+        if (aug < 0) {
+            /* Already emitted */      
+
+            /* Store as attribute */      
+            if (!COMPILE((ks_ast)lhs->args->elems[0])) return false;
+            EMITO(KSB_SETATTR, lhs->val);
+            LEN--;
+            META(par->tok);
+        } else if (aug > 0) {
+            /* First, get the attribute */
+
+            if (!COMPILE(lhs)) return false;
+            if (!COMPILE(rhs)) return false;
+            EMIT(aug);
+            LEN += 1 - 2;
+
+            if (!COMPILE((ks_ast)lhs->args->elems[0])) return false;
+            EMITO(KSB_SETATTR, lhs->val);
+            LEN--;
+            META(par->tok);
+
+        } else {
+            if (!COMPILE(rhs)) return false;
+            if (!COMPILE((ks_ast)lhs->args->elems[0])) return false;
+            EMITO(KSB_SETATTR, lhs->val);
+            LEN--;
+            META(par->tok);
+        }
 
     } else if (lhs->kind == KS_AST_ELEM) {
-        for (i = 0; i < lhs->args->len; ++i) {
-            if (!COMPILE((ks_ast)lhs->args->elems[i])) return false;
+        if (aug < 0) {
+            /* Already emitted */
+
+            /* Store as element (awkward since it is already emitted) */
+            for (i = 0; i < lhs->args->len; ++i) {
+                if (!COMPILE((ks_ast)lhs->args->elems[i])) return false;
+            }
+
+            EMITI(KSB_DUPI, -lhs->args->len-1);
+            EMITI(KSB_SETELEMS, 1 + lhs->args->len);
+            EMIT(KSB_POPU);
+            LEN += 1 - (1 + lhs->args->len);
+            META(par->tok);
+
+        } else if (aug > 0) {
+            /* Augmented assignment */
+            /* Emit all arguments */
+            for (i = 0; i < lhs->args->len; ++i) {
+                if (!COMPILE((ks_ast)lhs->args->elems[i])) return false;
+            }
+            assert(LEN == ssl + lhs->args->len);
+            EMITI(KSB_DUPN, lhs->args->len);
+            LEN += lhs->args->len;
+            EMITI(KSB_GETELEMS, lhs->args->len);
+            LEN += 1 - lhs->args->len;
+            META(lhs->tok);
+            assert(LEN == ssl + 1 + lhs->args->len);
+            if (!COMPILE(rhs)) return false;
+
+            /* Do operation */
+            EMIT(aug);
+            LEN += 1 - 2;
+
+            assert(LEN == ssl + 1 + lhs->args->len);
+
+            /* Now, store element */
+            EMITI(KSB_SETELEMS, 1 + lhs->args->len);
+            LEN += - lhs->args->len;
+            META(par->tok);
+
+            assert(LEN == ssl + 1);
+
+        } else {
+            
+            /* Emit all arguments */
+            for (i = 0; i < lhs->args->len; ++i) {
+                if (!COMPILE((ks_ast)lhs->args->elems[i])) return false;
+            }
+            if (!COMPILE(rhs)) return false;
+            EMITI(KSB_SETELEMS, 1 + lhs->args->len);
+            LEN += - lhs->args->len;
+            META(par->tok);
+            assert(LEN == ssl + 1);
         }
-        EMITI(KSB_DUPI, -lhs->args->len-1);
-        EMITI(KSB_SETELEMS, 1 + lhs->args->len);
-        LEN += 1 - lhs->args->len;
-        META(par->tok);
+    } else if (lhs->kind == KS_AST_TUPLE) {
+        /* Multi-assignment */
+        if (aug < 0) {
+            /* Already emitted */
+        } else if (aug > 0) {
+            KS_THROW_SYNTAX(fname, src, par->tok, "Can't do augmented assignment to tuple");
+            return false;
+        } else {
+            if (!COMPILE(rhs)) return false;
+        }
+
+        /* Find arguments */
+        int vararg_idx = -1;
+        for (i = 0; i < lhs->args->len; ++i) {
+            ks_ast child = (ks_ast)lhs->args->elems[i];
+            if (child->kind == KS_AST_UOP_STAR) {
+                if (vararg_idx >= 0) {
+                    /* Already found a '*' target */
+                    KS_THROW_SYNTAX(fname, src, par->tok, "May only have one '*' target per assignment");
+                    return false;
+                }
+                vararg_idx = i;
+            }
+        }
+
+        /* Now, given that there was 1 item on the stack that we must assign to the tuple,
+        *   we need to break it up into the correct length to process
+        */
+        EMITI(KSB_ASSV, vararg_idx);
+        EMITI(KSB_ASSM, lhs->args->len);
+        META(rhs->tok);
+        
+        for (i = 0; i < lhs->args->len; ++i) {
+            ks_ast child = (ks_ast)lhs->args->elems[i];
+            if (child->kind == KS_AST_UOP_STAR) {
+                /* Replace with its child, since that has already been handled */
+                child = (ks_ast)child->args->elems[0];
+            }
+            if (!assign(co, fname, src, code, child, rhs, par, -1)) return false;
+            META(child->tok);
+            EMIT(KSB_POPU);
+        }
     } else {
         KS_THROW_SYNTAX(fname, src, par->tok, "Can't assign to the left hand side");
         return false;
@@ -222,6 +363,11 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         i = loop->cfa_n++;
         loop->cfa = ks_zrealloc(loop->cfa, sizeof(*loop->cfa), loop->cfa_n);
 
+        /* Clear to the stack length */
+        CLEAR(loop->stklen);
+
+        LEN = ssl;
+
         /* Dummy values now */
         int l = BC_N;
         EMITI(KSB_JMP, -1);
@@ -236,7 +382,31 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
     } else if (k == KS_AST_CONT) {
         assert(NSUB == 0);
 
+        if (co->loop_n <= 0) {
+            KS_THROW_SYNTAX(fname, src, v->tok, "Unexpected 'cont' outside of a loop");
+            return false;
+        }
 
+        struct compiler_loop* loop = &co->loop[co->loop_n - 1];
+
+        i = loop->cfa_n++;
+        loop->cfa = ks_zrealloc(loop->cfa, sizeof(*loop->cfa), loop->cfa_n);
+
+        /* Clear to the stack length */
+        CLEAR(loop->stklen);
+
+        LEN = ssl;
+
+        /* Dummy values now */
+        int l = BC_N;
+        EMITI(KSB_JMP, -1);
+        int f = BC_N;
+
+        loop->cfa[i] = (struct compiler_loop_action) {
+            l,
+            f,
+            true
+        };
     } else if (k == KS_AST_RET) {
         assert(NSUB == 1);
         if (!COMPILE(SUB(0))) return false;
@@ -626,7 +796,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         co->loop[st_i].cfa_n = 0;
         co->loop[st_i].cfa = NULL;
-
+        co->loop[st_i].stklen = ssl;
 
         int body_l = BC_N;
         if (!COMPILE(SUB(1))) return false;
@@ -708,7 +878,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         LEN += 1;
 
         /* Assign to the for loop capture */
-        if (!assign(co, fname, src, code, SUB(0), SUB(1), v)) return NULL;
+        if (!assign(co, fname, src, code, SUB(0), SUB(1), v, -1)) return NULL;
         CLEAR(ssl+1);
 
         int body_l = BC_N;
@@ -719,7 +889,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         co->loop[st_i].cfa_n = 0;
         co->loop[st_i].cfa = NULL;
-
+        co->loop[st_i].stklen = ssl;
 
         if (!COMPILE(SUB(2))) return false;
         CLEAR(ssl+1);
@@ -815,7 +985,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
             
             if (to->kind != KS_AST_CONST) {
                 /* Assign TOS to the capture variable */
-                if (!assign(co, fname, src, code, to, tp, v)) {
+                if (!assign(co, fname, src, code, to, tp, v, -1)) {
                     ks_free(js_l);
                     ks_free(js_f);
                     return false;
@@ -968,10 +1138,29 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         PATCH(sj_l, sj_f, BC_N);
     } else if (k == KS_AST_BOP_ASSIGN) {
         assert(NSUB == 2 && "binary operator requires 2 children");
-        if (!COMPILE(SUB(1))) return false;
+        if (!assign(co, fname, src, code, SUB(0), SUB(1), v, 0)) return false;
 
-        if (!assign(co, fname, src, code, SUB(0), SUB(1), v)) return false;
+    } else if (KS_AST_BOP__AFIRST <= k && k <= KS_AST_BOP__ALAST) {
+        assert(NSUB == 2 && "binary operator requires 2 children");
 
+        int vk;
+        if (k == KS_AST_BOP_AADD) vk = KS_AST_BOP_ADD;
+        else if (k == KS_AST_BOP_ASUB) vk = KS_AST_BOP_SUB;
+        else if (k == KS_AST_BOP_AMUL) vk = KS_AST_BOP_MUL;
+        else if (k == KS_AST_BOP_ADIV) vk = KS_AST_BOP_DIV;
+        else if (k == KS_AST_BOP_AFLOORDIV) vk = KS_AST_BOP_FLOORDIV;
+        else if (k == KS_AST_BOP_AMOD) vk = KS_AST_BOP_MOD;
+        else if (k == KS_AST_BOP_APOW) vk = KS_AST_BOP_POW;
+        else if (k == KS_AST_BOP_ALSH) vk = KS_AST_BOP_LSH;
+        else if (k == KS_AST_BOP_ARSH) vk = KS_AST_BOP_RSH;
+        else if (k == KS_AST_BOP_AIOR) vk = KS_AST_BOP_IOR;
+        else if (k == KS_AST_BOP_AXOR) vk = KS_AST_BOP_XOR;
+        else if (k == KS_AST_BOP_AAND) vk = KS_AST_BOP_AND;
+        else {
+            assert(false);
+        }
+
+        if (!assign(co, fname, src, code, SUB(0), SUB(1), v, vk)) return false;
 
     } else if (k == KS_AST_RICHCMP) {
         /* Rich comparison chaining */
@@ -1044,6 +1233,8 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         ks_free(fjs_f);
         ks_free(fjs_l);
 
+
+
     } else if (KS_AST_BOP__FIRST <= k && k <= KS_AST_BOP__LAST) {
         assert(NSUB == 2 && "binary operator requires 2 children");
         /* Binary operator */
@@ -1055,6 +1246,39 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         EMIT(k);
         META(v->tok);
         LEN += 1 - 2;
+
+    } else if (k == KS_AST_UOP_POSPOS) {
+        assert(NSUB == 1 && "unary operator requires 1 children");
+        /* ++x */
+
+        /* equivalent to 'x += 1' */
+        ks_ast rhs = ks_ast_newn(KS_AST_CONST, 0, NULL, (kso)ks_int_new(1), v->tok);
+        if (!assign(co, fname, src, code, SUB(0), rhs, v, KS_AST_BOP_ADD)) {
+            KS_DECREF(rhs);
+            return false;
+        }
+        KS_DECREF(rhs);
+
+    } else if (k == KS_AST_UOP_NEGNEG) {
+        assert(NSUB == 1 && "unary operator requires 1 children");
+        /* --x */
+
+        /* equivalent to 'x -= 1' */
+        ks_ast rhs = ks_ast_newn(KS_AST_CONST, 0, NULL, (kso)ks_int_new(1), v->tok);
+        if (!assign(co, fname, src, code, SUB(0), rhs, v, KS_AST_BOP_SUB)) {
+            KS_DECREF(rhs);
+            return false;
+        }
+        KS_DECREF(rhs);
+
+    } else if (k == KS_AST_UOP_POSPOS_POST) {
+        assert(NSUB == 1 && "unary operator requires 1 children");
+        /* x++ */
+        assert(false);
+    } else if (k == KS_AST_UOP_NEGNEG_POST) {
+        assert(NSUB == 1 && "unary operator requires 1 children");
+        /* x-- */
+        assert(false);
 
     } else if (KS_AST_UOP__FIRST <= k && k <= KS_AST_UOP__LAST) {
         assert(NSUB == 1 && "unary operator requires 1 children");

@@ -14,7 +14,7 @@ s = net.SocketIO()
 
 s.bind((args.addr, args.port))
 
-s.listen()
+s.listen(12)
 
 func handle(sock, name) {
     print ('START', name)

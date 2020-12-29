@@ -54,6 +54,7 @@ static KS_FUNC(print) {
     ks_str toprint = ks_fmt("%J\n", " ", n_args, args);
     if (!toprint) return NULL;
     ksio_addbuf(out, toprint->len_b, toprint->data);
+    KS_DECREF(toprint);
     /*
     int i;
     for (i = 0; i < n_args; ++i) {

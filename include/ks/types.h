@@ -545,6 +545,20 @@ typedef struct ks_tuple_s {
 
 }* ks_tuple;
 
+
+/* 'tuple.__iter' iterator type */
+typedef struct ks_tuple_iter_s {
+    KSO_BASE
+
+    ks_tuple of;
+
+    /* Current position that the iterator is at */
+    ks_cint pos;
+
+}* ks_tuple_iter;
+
+
+
 /* 'set' - collection of unique objects
  *
  * Ordered by insertion order, but sets with objects in a different order are still treated equally

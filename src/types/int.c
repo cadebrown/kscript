@@ -216,7 +216,7 @@ static KS_TFUNC(T, new) {
         ks_cfloat x;
         if (!kso_get_cf(obj, &x)) return NULL;
         return (kso)ks_int_newft(tp, x);
-    } else if (kso_is_int(obj)) {
+    } else if (kso_is_int(obj) || obj->type->i__int) {
         ks_int v = kso_int(obj);
         if (!v) return NULL;
 
@@ -231,7 +231,6 @@ static KS_TFUNC(T, new) {
 
         return (kso)r;
     }
-
     KS_THROW_CONV(obj->type, tp);
     return NULL;
 }

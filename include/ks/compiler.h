@@ -407,6 +407,10 @@ enum {
 
 };
 
+#define KS_AST_BOP__AFIRST KS_AST_BOP_ASSIGN
+#define KS_AST_BOP__ALAST KS_AST_BOP_APOW
+
+
 #define KS_AST_BOP__FIRST KS_AST_BOP_ASSIGN
 #define KS_AST_BOP__LAST KS_AST_BOP_POW
 
@@ -472,11 +476,17 @@ enum {
      */
     KSB_DUP,
 
-    /* DUP i
+    /* DUPI i
      *
      * Duplicates 'stk[i]', most of the time negative, which means from the top
      */
     KSB_DUPI,
+
+    /* DUPN num
+     *
+     * Duplicates the top 'num' items on the stack
+     */
+    KSB_DUPN,
 
     /* RCR
      * Rich-CMP-Rotate
@@ -498,6 +508,20 @@ enum {
      *   name)
      */
     KSB_STORE,
+
+    /* ASSV i
+     *
+     * Set the variadic index for a multiple assignment (or -1 if there was none) (this is used
+     *   as a preparation to ASSM)
+     */
+    KSB_ASSV,
+
+    /* ASSM num
+     *
+     * Pop the last 'num' objects off (ASSV sets the index to which one should be expanded, or -1 if
+     *   none)
+     */
+    KSB_ASSM,
 
     /* GETATTR idx
      *

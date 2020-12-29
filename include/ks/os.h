@@ -172,6 +172,9 @@ typedef struct ksos_thread_s {
     /* List of objects currently inside 'repr()' */
     ks_list inrepr;
 
+    /* Variadic index of the assignment */
+    int assv;
+
 
     /* Stack frames for functions currently executing */
     ks_list frames;

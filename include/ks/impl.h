@@ -92,6 +92,10 @@ void _ksi_ffi_ints();
 void _ksi_ffi_floats();
 
 ks_module _ksi_nx();
+void _ksi_nx_dtype();
+void _ksi_nx_array();
+void _ksi_nx_view();
+
 ks_module _ksi_re();
 ks_module _ksi_gram();
 ks_module _ksi_ucd();

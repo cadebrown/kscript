@@ -388,6 +388,8 @@ struct ks_eikv {
 /* Throws a key error for an object, and a key that was missing */
 #define KS_THROW_KEY(_obj, _key) KS_THROW(kst_KeyError, "%R", _key)
 
+#define KS_THROW_VAL(_obj, _key) KS_THROW(kst_ValError, "%R", _key)
+
 /* Throws a attr error for an object, and a key that was missing */
 #define KS_THROW_ATTR(_obj, _attr) KS_THROW(kst_AttrError, "'%T' object had no attribute %R", _obj, _attr)
 
@@ -874,6 +876,11 @@ KS_API ks_list ks_list_newi(kso objs);
 /* Clears a list
  */
 KS_API void ks_list_clear(ks_list self);
+
+/* Ensures a list can hold 'cap' number of elements
+ */
+KS_API bool ks_list_reserve(ks_list self, int cap);
+
 
 /* Add element to list
  */

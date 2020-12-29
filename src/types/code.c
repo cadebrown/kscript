@@ -219,9 +219,14 @@ static KS_TFUNC(T, dis) {
         OPV(KSB_PUSH)
         OP(KSB_POPU)
         OP(KSB_DUP)
+        OPI(KSB_DUPI)
+        OPI(KSB_DUPN)
+        OP(KSB_RCR)
         
         OPV(KSB_LOAD)
         OPV(KSB_STORE)
+        OPI(KSB_ASSV)
+        OPI(KSB_ASSM)
         
         OPV(KSB_GETATTR)
         OPV(KSB_SETATTR)
@@ -241,6 +246,10 @@ static KS_TFUNC(T, dis) {
         OPI(KSB_SET)
         OPI(KSB_SET_PUSHN)
         OP(KSB_SET_PUSHI)
+        OPI(KSB_DICT)
+        OPI(KSB_DICT_PUSHN)
+        OP(KSB_DICT_PUSHI)
+
         OPV(KSB_FUNC)
         OPI(KSB_FUNC_DEFA)
         OPV(KSB_TYPE)
@@ -251,6 +260,7 @@ static KS_TFUNC(T, dis) {
 
         OP(KSB_RET)
         OP(KSB_THROW)
+        OPV(KSB_ASSERT)
 
         OP(KSB_FOR_START)
         OPT(KSB_FOR_NEXTT)
@@ -290,7 +300,7 @@ static KS_TFUNC(T, dis) {
         OP(KSB_UOP_NOT)
             
         else {
-            ksio_add((ksio_BaseIO)sio, "%4i: <err>\n", i);
+            ksio_add((ksio_BaseIO)sio, "%04i: <err>\n", i);
             i += sizeof(op.op);
         }
 

@@ -555,7 +555,7 @@ static KS_TFUNC(T, mod) {
             char c = self->data[p++];
             if (c == '%') {
                 ksio_add(sio, "%%");
-            } else if (c == 's') {
+            } else if (c == 'S' || c == 's') {
                 if (ai >= args->len) {
                     KS_THROW(kst_Error, "More format specifiers than arguments");
                     KS_DECREF(sio);
@@ -566,7 +566,18 @@ static KS_TFUNC(T, mod) {
                     KS_DECREF(sio);
                     return NULL;
                 }
-            } else if (c == 'T') {
+            } else if (c == 'R' || c == 'r') {
+                if (ai >= args->len) {
+                    KS_THROW(kst_Error, "More format specifiers than arguments");
+                    KS_DECREF(sio);
+                    return NULL;
+                }
+                a = args->elems[ai++];
+                if (!ksio_add(sio, "%R", a)) {
+                    KS_DECREF(sio);
+                    return NULL;
+                }
+            } else if (c == 'T' || c == 't') {
                 if (ai >= args->len) {
                     KS_THROW(kst_Error, "More format specifiers than arguments");
                     KS_DECREF(sio);

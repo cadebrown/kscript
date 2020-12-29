@@ -139,11 +139,22 @@ bool kso_hash(kso ob, ks_hash_t* val) {
             if (!kso_hash(v->elems[i], &ho)) return false;
             *val = (*val) * KS_HASH_MUL + KS_HASH_ADD + ho;
         }
-
         return true;
     } else if (ob->type->i__hash == kst_object->i__hash) {
         *val = (ks_hash_t)ob;
         return true;
+    } else if (ob->type->i__hash) {
+        ks_int r = (ks_int)kso_call(ob->type->i__hash, 1, &ob);
+        if (!r) return false;
+        else if (!kso_issub(r->type, kst_int)) {
+            KS_THROW(kst_TypeError, "'%T.__hash' returned non-int object of type '%T'", r);
+            KS_DECREF(r);
+            return false;
+        }
+
+        bool res = kso_hash((kso)r, val);
+        KS_DECREF(r);
+        return res;
     }
 
 
@@ -919,6 +930,14 @@ kso kso_next(kso ob) {
         }
 
         return KS_NEWREF(it->of->elems[it->pos++]);
+    } else if (kso_issub(ob->type, kst_tuple_iter) && ob->type->i__next == kst_tuple_iter->i__next) {
+        ks_tuple_iter it = (ks_tuple_iter)ob;
+        if (it->pos >= it->of->len) {
+            KS_OUTOFITER();
+            return NULL;
+        }
+
+        return KS_NEWREF(it->of->elems[it->pos++]);
     } else if (kso_issub(ob->type, kst_set_iter) && ob->type->i__next == kst_set_iter->i__next) {
         ks_set_iter it = (ks_set_iter)ob;
         if (it->pos >= it->of->len_ents) {
@@ -967,7 +986,6 @@ kso kso_next(kso ob) {
 
             return (kso)res;
         }
-
 
         /* Determine the next value */
         if (it->cur) {

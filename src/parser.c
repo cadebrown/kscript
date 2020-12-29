@@ -903,6 +903,7 @@ RULE(E5) {
         /* rich comparison needed */
         ks_tuple rcs = ks_tuple_new(cmps->len, cmps->elems);
         ks_ast rr = ks_ast_new(KS_AST_RICHCMP, res->len, (ks_ast*)res->elems, (kso)rcs, KS_TOK_MAKE_EMPTY());
+        KS_DECREF(rcs);
         KS_DECREF(res);
         KS_DECREF(cmps);
         return rr;
@@ -1040,7 +1041,6 @@ RULE(E14) {
 
             if (TOK.kind != KS_TOK_RPAR) {
                 KS_THROW_SYNTAX(fname, src, TOK, "Expected ')' to end group here");
-                KS_DECREF(res);
                 return NULL;
             }
             tup->tok = ks_tok_combo(tup->tok, EAT());
@@ -1612,6 +1612,16 @@ RULE(E14) {
             }
 
             res->tok = ks_tok_combo(res->tok, EAT());
+
+        } else if (TOK.kind == KS_TOK_ADDADD) {
+            /* ++, so do post-increment */
+
+            res = ks_ast_newn(KS_AST_UOP_POSPOS_POST, 1, &res, NULL, ks_tok_combo(res->tok, EAT()));
+        } else if (TOK.kind == KS_TOK_ADDADD) {
+            /* --, so do post-decrement */
+
+            res = ks_ast_newn(KS_AST_UOP_NEGNEG_POST, 1, &res, NULL, ks_tok_combo(res->tok, EAT()));
+
         } else break;
     }
 
@@ -1818,7 +1828,7 @@ RULE(ATOM) {
                 ks_ucp v = ksucd_lookup(&info, en-sn, s+sn);
                 if (v < 1) {
                     KS_DECREF(sio);
-                    KS_THROW_SYNTAX(fname, src, t, "Unknown unicode character: '%.*s'", t.epos - t.spos, s + t.spos);
+                    KS_THROW_SYNTAX(fname, src, t, "Unknown unicode character: '%.*s'", en-sn, s+sn);
                     return NULL;
                 }
                 /* Decode and add */

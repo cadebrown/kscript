@@ -724,8 +724,18 @@ int main(int argc, char** argv) {
 }
 
 
+check_name AF_INET "AF_INET"
+check_name AF_INET6 "AF_INET6"
 check_name AF_BLUETOOTH "AF_BLUETOOTH"
+check_name AF_PACKET "AF_PACKET"
+
+check_name SOCK_RAW "SOCK_RAW"
+check_name SOCK_STREAM "SOCK_STREAM"
+check_name SOCK_DGRAM "SOCK_DGRAM"
 check_name SOCK_PACKET "SOCK_PACKET"
+check_name SOCK_SEQPACKET "SOCK_SEQPACKET"
+
+
 check_name CLOCK_REALTIME "CLOCK_REALTIME"
 check_name CLOCK_REALTIME_COARSE "CLOCK_REALTIME_COARSE"
 check_name CLOCK_MONOTONIC "CLOCK_MONOTONIC"

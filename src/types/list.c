@@ -75,8 +75,13 @@ ks_list ks_list_newit(ks_type tp, kso objs) {
 ks_list ks_list_newi(kso objs) {
     return ks_list_newit(kst_list, objs);
 }
-
-
+bool ks_list_reserve(ks_list self, int cap) {
+    if (cap > self->_max_len) {
+        self->_max_len = ks_nextsize(self->_max_len, cap);
+        self->elems = ks_zrealloc(self->elems, sizeof(*self->elems), self->_max_len);
+    }
+    return true;
+}
 
 void ks_list_clear(ks_list self) {
     ks_size_t i;
@@ -262,7 +267,6 @@ static KS_TFUNC(T, len) {
     return (kso)ks_int_newu(self->len);
 }
 
-
 static KS_TFUNC(T, add) {
     kso L, R;
     KS_ARGS("L R", &L, &R);
@@ -314,7 +318,31 @@ static KS_TFUNC(T, pop) {
         return (kso)res;
     }
 }
+static KS_TFUNC(T, index) {
+    ks_list self;
+    kso elem;
+    KS_ARGS("self:* elem", &self, kst_list, &elem);
 
+    ks_cint i;
+    for (i = 0; i < self->len; ++i) {
+        kso ob = self->elems[i];
+        if (ob == elem) {
+            return (kso)ks_int_new(i);
+        }
+
+        bool eq;
+        if (!kso_eq(elem, ob, &eq)) {
+            kso_catch_ignore();
+        } else if (eq) {
+            return (kso)ks_int_new(i);
+        }
+
+    }
+
+
+    KS_THROW_VAL(self, elem);
+    return NULL;
+}
 
 /** Iterator **/
 
@@ -354,7 +382,7 @@ ks_type kst_list_iter = &tp_iter;
 
 void _ksi_list() {
 
-    _ksinit(kst_list_iter, kst_object, TI_NAME, sizeof(struct ks_list_s), -1, "", KS_IKV(
+    _ksinit(kst_list_iter, kst_object, TI_NAME, sizeof(struct ks_list_iter_s), -1, "", KS_IKV(
         {"__free",               ksf_wrap(TI_free_, TI_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(TI_new_, TI_NAME ".__new(tp, of)", "")},
     ));
@@ -370,6 +398,7 @@ void _ksi_list() {
 
         {"push",                 ksf_wrap(T_push_, T_NAME ".push(self, *args)", "Pushes any number of arguments on to the end of the list")},
         {"pop",                  ksf_wrap(T_pop_, T_NAME ".pop(self, num=1)", "Pops the given number of arguments off of the end of the list")},
+        {"index",                ksf_wrap(T_index_, T_NAME ".index(self, elem)", "Calculates the index of an element")},
     ));
 
     kst_list->i__hash = NULL;
