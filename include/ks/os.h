@@ -242,6 +242,11 @@ typedef struct ksos_mutex_s {
 
 /** Misc. Process/Environment Functions **/
 
+/* Execute a command and wait as if run in shell - returns exit code
+ * GREG TODO: i/o redirection, array parsing
+ */
+KS_API int ksos_exec(ks_str cmd);
+
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found
  * Returns whether one was found

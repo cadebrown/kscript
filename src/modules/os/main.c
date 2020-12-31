@@ -66,6 +66,16 @@ ksos_path ksos_getcwd() {
 #endif
 }
 
+int ksos_exec(ks_str cmd) {
+#ifdef KS_HAVE_system
+    return system(cmd->data);
+#else
+    KS_THROW(kst_OSError, "Failed to exec %R: platform did not provide a 'system()' function", cmd);
+    return -1;
+#endif
+}
+
+
 /* Module Functions */
 
 static KS_TFUNC(M, getenv) {
@@ -88,6 +98,17 @@ static KS_TFUNC(M, setenv) {
 static KS_TFUNC(M, getcwd) {
     KS_ARGS("");
     return (kso) ksos_getcwd();
+}
+
+static KS_TFUNC(M, exec) {
+    ks_str cmd;
+
+    KS_ARGS("cmd:*", &cmd, kst_str);
+
+    int ret = ksos_exec(cmd);
+    if (ret < 0) return NULL;
+
+    return (kso) ks_int_new(ret);
 }
 
 
@@ -137,6 +158,7 @@ ks_module _ksi_os() {
         {"getenv",                 ksf_wrap(M_getenv_, M_NAME ".getenv(key, defa=none)", "Retrieves the environment entry indicated by 'key', or a default if it was not found\n\n    If 'defa' was not given, then an error is thrown")},
         {"setenv",                 ksf_wrap(M_setenv_, M_NAME ".setenv(key, val)", "Sets an environment entry to another string value")},
         {"getcwd",                 ksf_wrap(M_getcwd_, M_NAME ".getcwd()", "Returns current working directory")},
+        {"exec",                   ksf_wrap(M_exec_, M_NAME ".exec(cmd)", "Attempts to execute a command as if typed in console - returns exit code")},
     ));
 
 
