@@ -345,7 +345,6 @@ typedef int (*nx_vec_cf)(int N, nxar_t* inp, int len, void* _data);
 } while (0)
 
 
-
 /** Functions **/
 
 /*** Configuration/Operation Helpers ***/
@@ -425,11 +424,64 @@ static void* nx_get_ptr(void* data, int N, ks_size_t* dims, ks_ssize_t* strides,
 }
 
 
+
+/** Submodule: 'nx.rand' **/
+
+
+
+
+
+/* nx.rand.State - Random number generator
+ *
+ * Based on the mersenne twister algorithm
+ * 
+ */
+typedef struct nxrand_State_s {
+    KSO_BASE
+
+/* Length of state vector (in units) */
+#define NXRAND_MT_N 624
+/* Period parameter */
+#define NXRAND_MT_M 397
+/* Magic constant */
+#define NXRAND_MT_K 0x9908B0DFULL
+
+    /* State of generated words */
+    ks_uint32_t state[NXRAND_MT_N + 1];
+
+    /* Position within 'state' */
+    int pos;
+
+}* nxrand_State;
+
+/* Create a new random number generator state */
+KS_API nxrand_State nxrand_State_new(ks_uint seed);
+
+/* Fill 'A' with random numbers (for integers, random of their range, and for floats, random between 0.0 and 1.0) */
+KS_API bool nxrand_get_a(nxrand_State self, nxar_t A);
+
+/* Generate 'nout' uniformly distributed bytes */
+KS_API bool nxrand_get_b(nxrand_State self, int nout, unsigned char* out);
+
+/* Generate 'nout' uniformly distributed 'ks_uint's (i.e. from 0 to 'KS_UINT_MAX') and store in 'out' */
+KS_API bool nxrand_get_i(nxrand_State self, int nout, ks_uint* out);
+
+/* Generate 'nout' uniformly distribute 'ks_cfloat's between 0.0 (inclusive) and 1.0 (exclusive) */
+KS_API bool nxrand_get_f(nxrand_State self, int nout, ks_cfloat* out);
+
+
+
+
+
+/*  */
+
 /* Types */
 KS_API extern ks_type
     nxt_dtype,
     nxt_array,
-    nxt_view
+    nxt_view,
+
+    nxrandt_State
 
 ;
 

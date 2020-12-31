@@ -96,6 +96,10 @@ void _ksi_nx_dtype();
 void _ksi_nx_array();
 void _ksi_nx_view();
 
+ks_module _ksi_nxrand();
+void _ksi_nxrand_State();
+
+
 ks_module _ksi_re();
 ks_module _ksi_gram();
 ks_module _ksi_ucd();
@@ -103,6 +107,7 @@ ks_module _ksi_ucd();
 void _ksi_parser();
 void _ksi_funcs();
 void _ksi_import();
+
 
 /* Initialize type */
 void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, const char* doc, struct ks_ikv* ikv);

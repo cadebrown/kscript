@@ -118,6 +118,9 @@ ks_module _ksi_nx() {
 
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "NumeriX module", KS_IKV(
 
+        /* Submodules */
+        {"rand",                   (kso)_ksi_nxrand()},
+        
         /* Datatypes */
         {"float32",                (kso)(nx_float32 = nx_dtype_get_cfloat(32))},
         {"float64",                (kso)(nx_float64 = nx_dtype_get_cfloat(64))},
