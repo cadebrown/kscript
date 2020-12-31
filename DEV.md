@@ -27,6 +27,15 @@ For changing the builtin modules, check `src/modules/<name>` (i.e. `src/modules/
 
 For changing the general kscript API and utilities, those files are typically located in `src/` (i.e. `src/init.c` for initialization routines).
 
+
+## Adding a c-wrapped function to a module
+
+1. Ensure that any required libraries are included in the relevant configure script
+2. In the module header (`include/ks/module.h`), create a function prototype using `KS_API` macro; for example, `KS_API bool ksos_setenv(ks_str key, ks_str val);`
+3. In the relevant module src file, add dictionary entry to `KS_IKV` with string representing function as key, and `ksf_wrap(M_FUNCNAME_, M_NAME ".funcname(parameters)", "function description")`
+4. Write the function in the src file
+
+
 ## Commiting Changes
 
 To commit your changes, add any files you changed via `git add` (for example, `git add src/types/int.c`), then run `git commit` and enter your message (use `git commit -m "MESSAGE"` to not use an editor).
