@@ -68,7 +68,13 @@ ksos_path ksos_getcwd() {
 
 int ksos_exec(ks_str cmd) {
 #ifdef KS_HAVE_system
-    return system(cmd->data);
+    int ret = system(cmd->data);
+
+    if (ret < 0) {
+        KS_THROW(kst_OSError, "Failed to exec %R: %s", cmd, strerror(errno));
+    }
+
+    return ret;
 #else
     KS_THROW(kst_OSError, "Failed to exec %R: platform did not provide a 'system()' function", cmd);
     return -1;
