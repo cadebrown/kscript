@@ -38,7 +38,7 @@ ks_cfloat ksm_gamma(ks_cfloat x) {
         } 
 
         /* Reflect: Gamma(x) = pi / (sin(pi * x) * Gamma(1 - x)) */
-        return KS_M_PI / (sin(KS_M_PI * x) * ksm_gamma(1 - x));
+        return KSM_PI / (sin(KSM_PI * x) * ksm_gamma(1 - x));
     } else {
         x -= 1.0;
 
@@ -72,7 +72,7 @@ ks_cfloat ksm_gamma(ks_cfloat x) {
 
         /* Recombine */
         ks_cfloat tmp = x + g + 0.5;
-        return KS_M_SQRT_2PI * pow(tmp, x + 0.5) * exp(-tmp) * sum;
+        return KSM_SQRT_2PI * pow(tmp, x + 0.5) * exp(-tmp) * sum;
     }
 }
 
@@ -82,9 +82,9 @@ ks_ccomplex ksm_cgamma(ks_ccomplex x) {
 
     if (x.re < 0) {
         /* Reflect: Gamma(x) = pi / (sin(pi * x) * Gamma(1 - x)) */
-        ks_ccomplex t0 = ksm_csin(KS_CC_MAKE(KS_M_PI * x.re, KS_M_PI * x.im)), t1 = KS_CC_MAKE(1 - x.re, -x.im) /* 1-x */;
+        ks_ccomplex t0 = ksm_csin(KS_CC_MAKE(KSM_PI * x.re, KSM_PI * x.im)), t1 = KS_CC_MAKE(1 - x.re, -x.im) /* 1-x */;
         t0 = ksm_cmul(t0, ksm_cgamma(t1));
-        return ksm_cdiv(KS_CC_MAKE(KS_M_PI, 0), t0);
+        return ksm_cdiv(KS_CC_MAKE(KSM_PI, 0), t0);
     } else {
         ks_cfloat xrs = x.re - 1.0;
 
@@ -128,7 +128,7 @@ ks_ccomplex ksm_cgamma(ks_ccomplex x) {
 
         t0 = ksm_cmul(ksm_cmul(KS_CC_MAKE(sumr, sumi), t2), t3);
 
-        return ksm_cmul(KS_CC_MAKE(KS_M_SQRT_2PI, 0), t0);
+        return ksm_cmul(KS_CC_MAKE(KSM_SQRT_2PI, 0), t0);
     }
 }
 
@@ -145,7 +145,7 @@ ks_cfloat ksm_zeta(ks_cfloat x) {
         } 
 
         /* Reflect: Zeta(x) = 2 * (2*pi)^(x-1) * sin(x*pi/2) * Gamma(x-1) * Zeta(1-x) */
-        return 2 * pow(2 * KS_M_PI, x - 1) * sin(x * KS_M_PI / 2) * ksm_gamma(1 - x) * ksm_zeta(1 - x);
+        return 2 * pow(2 * KSM_PI, x - 1) * sin(x * KSM_PI / 2) * ksm_gamma(1 - x) * ksm_zeta(1 - x);
 
     } else {
         /* x >= 0, summation will converge */
@@ -202,8 +202,8 @@ ks_ccomplex ksm_czeta(ks_ccomplex x) {
 
     if (x.re < 0) {
         /* Reflect: Zeta(x) = 2 * (2*pi)^(x-1) * sin(x*pi/2) * Gamma(x-1) * Zeta(1-x) */
-        ks_ccomplex t0 = ksm_cpow(KS_CC_MAKE(2 * KS_M_PI, 0), KS_CC_MAKE(x.re-1, x.im)) /* (2*pi)^(x-1) */;
-        ks_ccomplex t1 = ksm_csin(KS_CC_MAKE((KS_M_PI / 2.0) * x.re, (KS_M_PI / 2.0) * x.im)) /* sin(x*pi/2) */;
+        ks_ccomplex t0 = ksm_cpow(KS_CC_MAKE(2 * KSM_PI, 0), KS_CC_MAKE(x.re-1, x.im)) /* (2*pi)^(x-1) */;
+        ks_ccomplex t1 = ksm_csin(KS_CC_MAKE((KSM_PI / 2.0) * x.re, (KSM_PI / 2.0) * x.im)) /* sin(x*pi/2) */;
         ks_ccomplex t2 = ksm_cgamma(KS_CC_MAKE(x.re-1, x.im)), t3 = ksm_czeta(KS_CC_MAKE(x.re-1, x.im)) /* {Gamma,Zeta}(1-x) */;
 
         return ksm_cmul(KS_CC_MAKE(2, 0), ksm_cmul(t0, ksm_cmul(t1, ksm_cmul(t2, t3))));

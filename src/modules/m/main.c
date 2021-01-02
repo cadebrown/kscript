@@ -166,11 +166,11 @@ _MT_F(abs, "x", fabs, {
 })
 
 static ks_cfloat my_rad(ks_cfloat degrees) {
-    return KS_M_DEG2RAD * degrees;
+    return KSM_DEG2RAD * degrees;
 }
 
 static ks_cfloat my_deg(ks_cfloat radians) {
-    return KS_M_RAD2DEG * radians;
+    return KSM_RAD2DEG * radians;
 }
 
 _MT_F(rad, "x", my_rad, { })
@@ -188,7 +188,7 @@ _MT_FC(atan, "x", atan, ksm_catan, { })
 static ks_cfloat my_atan2(ks_cfloat x, ks_cfloat y) {
     /* libc has arguments switched, and returns different range */
     long double res = atan2l(y, x);
-    if (res < 0) res += KS_M_TAU;
+    if (res < 0) res += KSM_TAU;
     return res;
 }
 
@@ -537,11 +537,11 @@ ks_module _ksi_m() {
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'m' - math module\n\n    This module implements common mathematical operations", KS_IKV(
         /* Constants */
         
-        {"pi",                     (kso)ks_float_new(KS_M_PI)},
-        {"tau",                    (kso)ks_float_new(KS_M_TAU)},
-        {"e",                      (kso)ks_float_new(KS_M_E)},
-        {"phi",                    (kso)ks_float_new(KS_M_PHI)},
-        {"mascheroni",             (kso)ks_float_new(KS_M_MASCHERONI)},
+        {"pi",                     (kso)ks_float_new(KSM_PI)},
+        {"tau",                    (kso)ks_float_new(KSM_TAU)},
+        {"e",                      (kso)ks_float_new(KSM_E)},
+        {"phi",                    (kso)ks_float_new(KSM_PHI)},
+        {"mascheroni",             (kso)ks_float_new(KSM_MASCHERONI)},
 
         /* Functions */
         

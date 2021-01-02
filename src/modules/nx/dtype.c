@@ -274,11 +274,24 @@ nx_dtype
 ;
 
 nx_dtype
+    nxd_schar,
+    nxd_uchar,
+    nxd_sshort,
+    nxd_ushort,
+    nxd_sint,
+    nxd_uint,
+    nxd_slong,
+    nxd_ulong,
+
     nxd_float,
     nxd_double,
+    nxd_longdouble,
+    nxd_float128,
 
     nxd_complexfloat,
-    nxd_complexdouble
+    nxd_complexdouble,
+    nxd_complexlongdouble,
+    nxd_complexfloat128
 ;
 
 
@@ -297,6 +310,15 @@ void _ksi_nx_dtype() {
 
         {"int",                    ksf_wrap(T_int_, T_NAME ".int(bits=32, sgn=true)", "")},
     ));
+
+    nxd_float = nx_dtype_get_cfloat(sizeof(nxc_float) * 8);
+    nxd_double = nx_dtype_get_cfloat(sizeof(nxc_double) * 8);
+    nxd_longdouble = nx_dtype_get_cfloat(sizeof(nxc_longdouble) * 8);
+    nxd_float128 = nx_dtype_get_cfloat(sizeof(nxd_float128) * 8);
+    nxd_complexfloat = nx_dtype_get_ccomplex(sizeof(nxc_float) * 8);
+    nxd_complexdouble = nx_dtype_get_ccomplex(sizeof(nxc_double) * 8);
+    nxd_complexlongdouble = nx_dtype_get_ccomplex(sizeof(nxc_longdouble) * 8);
+    nxd_complexfloat128 = nx_dtype_get_ccomplex(sizeof(nxd_float128) * 8);
 }
 
 

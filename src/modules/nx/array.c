@@ -130,7 +130,7 @@ static bool I_array_fill(ks_type tp, nx_dtype dtype, nx_array* resp, kso cur, in
 
 nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
     if (kso_is_iterable(obj)) {
-        if (!dtype) dtype = nx_float64;
+        if (!dtype) dtype = nxd_double;
 
         /* set up temporaries and fill array */
         int idx = 0, max_dep = 0;
@@ -145,7 +145,7 @@ nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
         ks_free(dims);
         return res;
     } else if (kso_is_int(obj)) {
-        if (!dtype) dtype = nx_sint64;
+        if (!dtype) dtype = nxd_double;
 
         nx_array res = nx_array_newc(tp, dtype, 0, NULL, NULL, NULL);
         if (!nx_dtype_enc(dtype, obj, NX_gep(res->ar.data, dtype->size, 0))) {
@@ -154,7 +154,7 @@ nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
 
         return res;
     } else if (kso_is_complex(obj)) {
-        dtype = nx_complex64;
+        if (!dtype) dtype = nxd_complexdouble;
 
         nx_array res = nx_array_newc(tp, dtype, 0, NULL, NULL, NULL);
 
@@ -164,7 +164,7 @@ nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
 
         return res;
     } else if (kso_is_float(obj)) {
-        if (!dtype) dtype = nx_float64;
+        if (!dtype) dtype = nxd_double;
 
         nx_array res = nx_array_newc(tp, dtype, 0, NULL, NULL, NULL);
 
@@ -197,7 +197,7 @@ static KS_TFUNC(T, free) {
 static KS_TFUNC(T, new) {
     ks_type tp;
     kso obj;
-    nx_dtype dtype = nx_float64;
+    nx_dtype dtype = nxd_double;
     KS_ARGS("tp:* obj ?dtype:*", &tp, kst_type, &obj, &dtype, nxt_dtype);
 
 

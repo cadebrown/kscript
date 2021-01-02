@@ -109,6 +109,65 @@ nx_dtype nx_calc_numcast(nx_dtype da, nx_dtype db) {
 }
 
 
+/* Module Functions */
+
+static KS_FUNC(add) {
+    kso x, y, z = KSO_NONE;
+    KS_ARGS("x y ?z", &x, &y, &z);
+
+    nxar_t ax, ay, az;
+    kso rx, ry, rz;
+
+    if (!nxar_get(x, NULL, &ax, &rx)) {
+        return NULL;
+    }
+
+    if (!nxar_get(y, NULL, &ay, &ry)) {
+        KS_NDECREF(rx);
+        return NULL;
+    }
+
+    if (z == KSO_NONE) {
+        /* Generate output */
+        int rankz;
+        ks_size_t* dimz = nx_calc_bcast(2, (nxar_t[]){ ax, ay }, &rankz);
+        if (!dimz) {
+            KS_NDECREF(rx);
+            KS_NDECREF(ry);
+            return NULL;
+        }
+
+        z = (kso)nx_array_newc(nxt_array, ax.dtype, rankz, dimz, NULL, NULL);
+        KS_DECREF(dimz);
+    } else {
+        KS_INCREF(z);
+    }
+
+    if (!nxar_get(z, NULL, &az, &rz)) {
+        KS_NDECREF(rx);
+        KS_NDECREF(ry);
+        KS_DECREF(z);
+        return NULL;
+    }
+
+    if (!nx_add(az, ax, ay)) {
+        KS_NDECREF(rx);
+        KS_NDECREF(ry);
+        KS_NDECREF(rz);
+        KS_DECREF(z);
+        return NULL;
+    }
+
+    KS_NDECREF(rx);
+    KS_NDECREF(ry);
+    KS_NDECREF(rz);
+    
+    
+    return z;
+}
+
+
+
 /* Export */
 
 ks_module _ksi_nx() {
@@ -121,18 +180,6 @@ ks_module _ksi_nx() {
         /* Submodules */
         {"rand",                   (kso)_ksi_nxrand()},
         
-        /* Datatypes */
-        {"float32",                (kso)(nx_float32 = nx_dtype_get_cfloat(32))},
-        {"float64",                (kso)(nx_float64 = nx_dtype_get_cfloat(64))},
-        {"complex32",              (kso)(nx_complex32 = nx_dtype_get_ccomplex(32))},
-        {"complex64",              (kso)(nx_complex64 = nx_dtype_get_ccomplex(64))},
-
-        /* Aliases */
-        {"float",                  KS_NEWREF(nxd_float = nx_float32)},
-        {"double",                 KS_NEWREF(nxd_double = nx_float64)},
-        {"complexfloat",           KS_NEWREF(nxd_complexfloat = nx_complex32)},
-        {"complexdouble",          KS_NEWREF(nxd_complexdouble = nx_complex64)},
-
         /* Types */
 
         {"dtype",                  KS_NEWREF(nxt_dtype)},
@@ -140,9 +187,19 @@ ks_module _ksi_nx() {
         {"array",                  KS_NEWREF(nxt_array)},
         {"view",                   KS_NEWREF(nxt_view)},
     
+        /* Datatypes */
+        {"float",                  (kso)nxd_float},
+        {"double",                 (kso)nxd_double},
+        {"longdouble",             (kso)nxd_longdouble},
+        {"float128",               (kso)nxd_float128},
+        {"complexfloat",           (kso)nxd_complexfloat},
+        {"complexdouble",          (kso)nxd_complexdouble},
+        {"complexlongdouble",      (kso)nxd_complexlongdouble},
+        {"complexfloat128",        (kso)nxd_complexfloat128},
 
         /* Functions */
-    
+        {"add",                    ksf_wrap(add_, M_NAME ".add(x, y, z=none)", "Computes elementwise addition")},
+
     ));
 
 

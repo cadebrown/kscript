@@ -168,7 +168,7 @@ KS_API kso ksffi_new_floatld(ks_type tp, long double val);
 #endif
 
 #ifdef KS_HAVE_float128
-KS_API kso ksffi_new_float12(ks_type tp, __float128 val);
+KS_API kso ksffi_new_float128(ks_type tp, __float128 val);
 #endif
 
 

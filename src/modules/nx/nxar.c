@@ -37,9 +37,9 @@ bool I_tostr(ksio_BaseIO sb, nxar_t A, int dep) {
     } while (0)
 
     if (A.rank == 0) {
-        ksio_add(sb, "[");
         ADDELEM(A.data);
-        return ksio_add(sb, "]");
+
+        return true;
 
     } else if (A.rank == 1) {
         /* 1d, output a list-like structure */
@@ -70,10 +70,32 @@ bool I_tostr(ksio_BaseIO sb, nxar_t A, int dep) {
     }
 }
 
-
-
 bool nxar_tostr(ksio_BaseIO bio, nxar_t A) {
     return I_tostr(bio, A, 0);
 }
 
+bool nxar_get(kso obj, nx_dtype dtype, nxar_t* res, kso* ref) {
+    if (kso_issub(obj->type, nxt_array)) {
+        /* Already exists, TODO: check if cast is needed */
+        *res = ((nx_array)obj)->ar;
+        *ref = NULL;
+        return true;
+    } else if (kso_issub(obj->type, nxt_view)) {
+        /* Already exists, TODO: check if cast is needed */
+        *res = ((nx_view)obj)->ar;
+        *ref = NULL;
+        return true;
+    } else {
+
+        nx_array newarr = nx_array_newo(nxt_array, obj, dtype);
+        if (!newarr) {
+            return false;
+        }
+        *res = newarr->ar;
+
+        /* Return reference */
+        *ref = (kso)newarr;
+        return true;
+    }
+}
 

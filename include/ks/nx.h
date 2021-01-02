@@ -74,6 +74,32 @@
 #endif
 
 
+/** C-style types **/
+
+/*** Integers ***/
+typedef   signed char  nxc_schar;
+typedef unsigned char  nxc_uchar;
+typedef   signed short nxc_sshort;
+typedef unsigned short nxc_ushort;
+typedef   signed int   nxc_sint;
+typedef unsigned int   nxc_uint;
+typedef   signed long long nxc_slong;
+typedef unsigned long long nxc_ulong;
+
+/*** Floats ***/
+typedef float nxc_float;
+typedef double nxc_double;
+typedef long double nxc_longdouble;
+typedef long double nxc_float128;
+
+/*** Complexes ***/
+typedef struct { nxc_float re, im; } nxc_complexfloat;
+typedef struct { nxc_double re, im; } nxc_complexdouble;
+typedef struct { nxc_longdouble re, im; } nxc_complexlongdouble;
+typedef struct { nxc_float128 re, im; } nxc_complexfloat128;
+
+
+
 
 /** Types **/
 
@@ -96,7 +122,6 @@ enum nx_dtype_kind {
 
 };
 
-
 /* 'nx.dtype' - type representing a data format
  *
  */
@@ -116,7 +141,6 @@ struct nx_dtype_struct_member {
     ks_str name;
 
 };
-
 
 struct nx_dtype_s {
     KSO_BASE
@@ -308,7 +332,6 @@ typedef int (*nx_vec_cf)(int N, nxar_t* inp, int len, void* _data);
 
 /** Macro/Utils **/
 
-
 /* Get-Element-Pointer (GEP) of an element of an array (located at '_data'),
  *   with a stride (of bytes) of '_stride', at index '_idx' (in elements)
  */
@@ -349,7 +372,6 @@ typedef int (*nx_vec_cf)(int N, nxar_t* inp, int len, void* _data);
 
 /*** Configuration/Operation Helpers ***/
 
-
 /* Calculate a broadcast size, returning an array of the dimsnions and setting '*orank' to the
  *   the rank (and thus size) of the result array.
  * 
@@ -365,11 +387,38 @@ KS_API ks_size_t* nx_calc_bcast(int N, nxar_t* inp, int* orank);
  */
 KS_API nx_dtype nx_calc_numcast(nx_dtype da, nx_dtype db);
 
+
+/** Application **/
+
+/* Apply an element-wise C-style function on a number of inputs
+ *
+ * Returns either 0 if all executions returned 0, or the first non-zero code
+ *   encountered
+ */
+KS_API int nx_apply_elem(nx_elem_cf cf, int N, nxar_t* inp, void* _data);
+
+
 /** Utils **/
+
+/* Convert 'obj' into a list of sizes. Essentially, expects an iterable of integers,
+ *   which are converted
+ * 
+ * Returns an allocated array (via ks_malloc()), or NULL if an error was thrown
+ */
+KS_API ks_size_t* nx_getsize(kso obj, int* num);
 
 /* Adds the string representation to an IO object
  */
 KS_API bool nxar_tostr(ksio_BaseIO bio, nxar_t A);
+
+/* Convert an object into an 'nxar_t' of a given type (or NULL to allow any/default)
+ *
+ * Sets 'res' to the result, and 'ref' to a reference that should be deleted using
+ *   'KS_NDECREF()' (as it may be NULL in the case no object was created)
+ * 
+ * Returns success, or throws an error
+ */
+KS_API bool nxar_get(kso obj, nx_dtype dtype, nxar_t* res, kso* ref);
 
 
 /** nx.dtype **/
@@ -390,8 +439,6 @@ KS_API bool nx_dtype_enc(nx_dtype dtype, kso obj, void* out);
  * Ensure that the 'out' holds 'dtype->size' bytes, and is valid
  */
 KS_API bool nx_dtype_dec(nx_dtype dtype, void* obj, kso* out);
-
-
 
 
 /** nx.array **/
@@ -424,20 +471,35 @@ static void* nx_get_ptr(void* data, int N, ks_size_t* dims, ks_ssize_t* strides,
 }
 
 
+/** Operations **/
+
+
+/* Compute 'A = B + C' */
+KS_API bool nx_add(nxar_t A, nxar_t B, nxar_t C);
+
+
+
 
 /** Submodule: 'nx.rand' **/
 
 
+/* Random state methods */
 
+/* If defined, use Mersenne Twister algorithm */
+#define NXRAND_MT
 
 
 /* nx.rand.State - Random number generator
  *
- * Based on the mersenne twister algorithm
+ * Based on the mersenne twister algorithm, and can generate bytes, ints, floats,
+ *   and then other distributions based on that
  * 
  */
 typedef struct nxrand_State_s {
     KSO_BASE
+
+/* Mersenne Twister */
+#ifdef NXRAND_MT
 
 /* Length of state vector (in units) */
 #define NXRAND_MT_N 624
@@ -446,11 +508,12 @@ typedef struct nxrand_State_s {
 /* Magic constant */
 #define NXRAND_MT_K 0x9908B0DFULL
 
-    /* State of generated words */
+    /* State of generated words (+1 is just for padding) */
     ks_uint32_t state[NXRAND_MT_N + 1];
 
-    /* Position within 'state' */
+    /* Position within 'state' (once it hits 'NXRAND_MT_N', it needs to be refilled) */
     int pos;
+#endif
 
 }* nxrand_State;
 
@@ -469,7 +532,18 @@ KS_API bool nxrand_get_i(nxrand_State self, int nout, ks_uint* out);
 /* Generate 'nout' uniformly distribute 'ks_cfloat's between 0.0 (inclusive) and 1.0 (exclusive) */
 KS_API bool nxrand_get_f(nxrand_State self, int nout, ks_cfloat* out);
 
+/** Random Number Generation **/
 
+/* Fills 'A' with random, uniform floats in [0, 1)
+ */
+KS_API bool nxrand_randf(nxrand_State self, nxar_t A);
+
+/* Fills 'A' with values in a normal (Guassian) distribution
+ *
+ *   u: The mean (default=0.0)
+ *   o: The standard deviation (default=1.0)
+ */
+KS_API bool nxrand_normal(nxrand_State self, nxar_t A, nxar_t u, nxar_t o);
 
 
 
@@ -507,13 +581,26 @@ KS_API extern nx_dtype
 ;
 
 
-/* Aliases */
+/* C types */
 KS_API extern nx_dtype
+    nxd_schar,
+    nxd_uchar,
+    nxd_sshort,
+    nxd_ushort,
+    nxd_sint,
+    nxd_uint,
+    nxd_slong,
+    nxd_ulong,
+
     nxd_float,
     nxd_double,
+    nxd_longdouble,
+    nxd_float128,
 
     nxd_complexfloat,
-    nxd_complexdouble
+    nxd_complexdouble,
+    nxd_complexlongdouble,
+    nxd_complexfloat128
 ;
 
 
