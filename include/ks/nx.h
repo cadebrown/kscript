@@ -506,7 +506,6 @@ KS_API bool nx_atanh(nxar_t r, nxar_t x);
 
 /** Submodule: 'nx.rand' **/
 
-
 /* Random state methods */
 
 /* If defined, use Mersenne Twister algorithm */

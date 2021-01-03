@@ -80,11 +80,13 @@ Optional Dependencies:
     * If this is not present, then the kscript interpreter will not have auto-completion and advanced line-editing features
   4. The Fastest Fourier Transform in the West (`fftw3`)
     * If this is not present, then the implementation of FFT plans may be slower
+  5. Libav (`libav`)
+    * If this is not present, then `mm` won't support nearly as many media formats
 
 
 For example, you can install these on various platforms:
 
-Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libreadline-dev libfftw3-dev`
+Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libreadline-dev libfftw3-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev`
 
 Now, once you have installed the dependencies you want, you can build the library via:
 

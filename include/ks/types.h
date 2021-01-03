@@ -863,8 +863,8 @@ struct ks_type_s {
     /* In kscript, types are their own constructor; you call them like a function to create a value of that type.
      *
      * For example, 'int("42")'. This is done via the following rules:
-     *   * First, an instance is generated via 'tmp = T.__new__(T, *args)'
-     *   * If 'T.__init__' is present, then: 'T.__init__(T, *args)' is called as well 
+     *   * First, an instance is generated via 'tmp = T.__new(T, *args)'
+     *   * If 'T.__init' is present, then: 'T.__init(T, *args)' is called as well 
      * 
      */
 
