@@ -1,3 +1,5 @@
+#!/usr/bin/env ks
+
 """ chess.ks - pure kscript chess engine
 
 @author: Cade Brown <cade@kscript.org>

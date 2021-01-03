@@ -2,6 +2,7 @@
  *
  * 
  * @author:    Cade Brown <cade@kscript.org>
+ *             Gregory Croisdale <greg@kscript.org>
  */
 #include <ks/impl.h>
 
@@ -68,15 +69,30 @@ ksos_path ksos_getcwd() {
 
 int ksos_exec(ks_str cmd) {
 #ifdef KS_HAVE_system
-    int ret = system(cmd->data);
+    int res = system(cmd->data);
 
-    if (ret < 0) {
+    if (res < 0) {
         KS_THROW(kst_OSError, "Failed to exec %R: %s", cmd, strerror(errno));
     }
 
-    return ret;
+    return res;
 #else
     KS_THROW(kst_OSError, "Failed to exec %R: platform did not provide a 'system()' function", cmd);
+    return -1;
+#endif
+}
+
+int ksos_fork() {
+#ifdef KS_HAVE_fork
+    int res = fork();
+
+    if (res < 0) {
+        KS_THROW(kst_OSError, "Failed to fork: %s", strerror(errno));
+    }
+
+    return res;
+#else
+    KS_THROW(kst_OSError, "Failed to fork: platform did not provide a 'fork()' function", cmd);
     return -1;
 #endif
 }
@@ -111,12 +127,18 @@ static KS_TFUNC(M, exec) {
 
     KS_ARGS("cmd:*", &cmd, kst_str);
 
-    int ret = ksos_exec(cmd);
-    if (ret < 0) return NULL;
+    int res = ksos_exec(cmd);
+    if (res < 0) return NULL;
 
-    return (kso) ks_int_new(ret);
+    return (kso) ks_int_new(res);
 }
 
+static KS_TFUNC(M, fork) {
+    int res = ksos_fork();
+    if (res < 0) return NULL;
+
+    return (kso) ks_int_new(res);
+}
 
 /* Export */
 
@@ -134,6 +156,7 @@ ks_module _ksi_os() {
     _ksi_os_thread();
     _ksi_os_path();
     _ksi_os_frame();
+    _ksi_os_proc();
 
     ksos_argv = ks_list_new(0, NULL);
     ks_str tmp = ks_str_new(1, "-");
@@ -148,6 +171,8 @@ ks_module _ksi_os() {
 
         /* Types */
         {"path",                   KS_NEWREF(ksost_path)},
+
+        {"proc",                   KS_NEWREF(ksost_proc)},
 
         {"thread",                 KS_NEWREF(ksost_thread)},
         {"frame",                  KS_NEWREF(ksost_frame)},
@@ -165,6 +190,7 @@ ks_module _ksi_os() {
         {"setenv",                 ksf_wrap(M_setenv_, M_NAME ".setenv(key, val)", "Sets an environment entry to another string value")},
         {"getcwd",                 ksf_wrap(M_getcwd_, M_NAME ".getcwd()", "Returns current working directory")},
         {"exec",                   ksf_wrap(M_exec_, M_NAME ".exec(cmd)", "Attempts to execute a command as if typed in console - returns exit code")},
+        {"fork",                   ksf_wrap(M_fork_, M_NAME ".fork()", "Creates a new process by duplicating the calling process - returns 0 in the child, PID > 0 in the parent, and -1 if there was an error")},
     ));
 
 

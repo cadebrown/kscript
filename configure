@@ -6,6 +6,7 @@
 # $ ./configure --help
 #
 # @author: Cade Brown <cade@kscript.org>
+#          Gregory Croisdale <greg@kscript.org>
 
 
 # -- Configuration (defaults) --
@@ -237,6 +238,7 @@ check_header SYS_TIME_H "sys/time.h" ""
 check_header SYS_TYPES_H "sys/types.h" ""
 check_header SYS_STAT_H "sys/stat.h" ""
 check_header SYS_SOCKET_H "sys/socket.h" ""
+check_header SYS_WAIT_H "sys/wait.h" ""
 
 check_header SIGNAL_H "signal.h" ""
 check_header DLFCN_H "dlfcn.h" ""
@@ -516,6 +518,9 @@ check_func() {
 #ifdef KS_HAVE_SYS_STAT_H
  #include <sys/stat.h>
 #endif
+#ifdef SYS_WAIT_H
+ #include <sys/wait.h>
+#endif
 
 int main(int argc, char** argv) {
     int i = 0;
@@ -650,7 +655,11 @@ check_func "lstat" "i" "s,&st"
 check_func "fstat" "i" "s,&st"
 check_func "realpath" "s" "s,NULL"
 
+check_func "waitpid" "i" "i,&i,i"
 check_func "fork" "i" ""
+
+check_func "kill" "i" "i,i"
+
 check_func "mkdir" "i" "s,i"
 check_func "_mkdir" "i" "s,i"
 check_func "remove" "i" "s"
