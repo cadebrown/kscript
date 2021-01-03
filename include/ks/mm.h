@@ -65,7 +65,7 @@ typedef struct ksmm_Stream_s {
         /* Whether the stream's codec is currently opened */
         bool is_open;
 
-#ifdef KS_HAVE_LIBAV
+#ifdef KS_HAVE_libav
 
         /* The specific stream */
         AVStream* stream;

@@ -8,6 +8,13 @@
 
 #define M_NAME "mm"
 
+
+#ifndef KS_HAVE_libav
+#warning Building kscript without libav support, so threading is disabled
+#endif
+
+
+
 /* C-API */
 
 
