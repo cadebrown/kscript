@@ -1,7 +1,8 @@
 /* ks/os.h - `os` module
  *
  * 
- * @author: Cade Brown <cade@kscript.org>
+ * @author:    Cade Brown <cade@kscript.org>
+ *             Gregory Croisdale <greg@kscript.org>
  */
 
 #pragma once
@@ -16,12 +17,19 @@
  #include <signal.h>
 #endif
 
+#ifdef KS_HAVE_SYS_TYPES_H
+ #include <sys/types.h>
+#endif
+
+#ifdef KS_HAVE_SYS_WAIT_H
+ #include <sys/wait.h>
+#endif
+
+#ifdef KS_HAVE_SYS_STAT_H
+ #include <sys/stat.h>
+#endif
 
 #include <dirent.h>
-
-#include <sys/types.h>
-#include <sys/stat.h>
-
 
 
 /** Constants **/
@@ -235,6 +243,24 @@ typedef struct ksos_mutex_s {
 
 }* ksos_mutex;
 
+/* 'os.proc' - A process which can be executed and redirected
+ *
+ */
+
+typedef struct ksos_proc_s {
+    KSO_BASE
+
+    /* Program being executed */
+    ks_tuple argv;
+
+    /* Process ID */
+    pid_t pid;
+
+    /* stdin, stdout, stderr */
+    ksio_FileIO v_in, v_out, v_err;
+
+} *ksos_proc;
+
 
 /** Functions **/
 
@@ -246,6 +272,11 @@ typedef struct ksos_mutex_s {
  * GREG TODO: i/o redirection, array parsing
  */
 KS_API int ksos_exec(ks_str cmd);
+
+/* Execute a command and wait as if run in shell - returns exit code
+ * GREG TODO: i/o redirection, array parsing
+ */
+KS_API int ksos_fork();
 
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found
@@ -389,7 +420,8 @@ KS_API extern ks_type
     ksost_path_walk,
     ksost_thread,
     ksost_frame,
-    ksost_mutex
+    ksost_mutex,
+    ksost_proc
 ;
 
 /* Globals */

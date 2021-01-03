@@ -71,6 +71,7 @@ void _ksi_os_mutex();
 void _ksi_os_thread();
 void _ksi_os_path();
 void _ksi_os_frame();
+void _ksi_os_proc();
 
 ks_module _ksi_m();
 
