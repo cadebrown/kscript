@@ -1,4 +1,4 @@
-/* add.c - 'add' kernel
+/* sub.c - 'sub' kernel
  *
  * @author: Cade Brown <cade@kscript.org>
  */
@@ -17,7 +17,7 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
 
 #define LOOP(TYPE) do { \
     for (i = 0; i < len; i++, pR += sR, pX += sX, pY += sY) { \
-        *(TYPE*)pR = *(TYPE*)pX + *(TYPE*)pY; \
+        *(TYPE*)pR = *(TYPE*)pX - *(TYPE*)pY; \
     } \
     return 0; \
 } while (0);
@@ -28,8 +28,8 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
 
 #define LOOP(TYPE) do { \
     for (i = 0; i < len; i++, pR += sR, pX += sX, pY += sY) { \
-        ((TYPE*)pR)->re = ((TYPE*)pX)->re + ((TYPE*)pY)->re; \
-        ((TYPE*)pR)->im = ((TYPE*)pX)->im + ((TYPE*)pY)->im; \
+        ((TYPE*)pR)->re = ((TYPE*)pX)->re - ((TYPE*)pY)->re; \
+        ((TYPE*)pR)->im = ((TYPE*)pX)->im - ((TYPE*)pY)->im; \
     } \
     return 0; \
 } while (0);
@@ -40,7 +40,7 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
     return 1;
 }
 
-bool nx_add(nxar_t r, nxar_t x, nxar_t y) {
+bool nx_sub(nxar_t r, nxar_t x, nxar_t y) {
 
     nxar_t tX, tY;
     kso rX, rY;

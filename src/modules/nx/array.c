@@ -10,6 +10,26 @@
 
 /* Internals */
 
+static int kern_copy(int N, nxar_t* inp, int len, void* _data) {
+    assert(N == 2);
+
+    ks_cint i;
+    nx_dtype dR = inp[0].dtype, dX = inp[1].dtype;
+    ks_uint pR = (ks_uint)inp[0].data, pX = (ks_uint)inp[1].data;
+    ks_cint sR = inp[0].strides[0], sX = inp[1].strides[0];
+
+    if (sR == inp[0].dtype->size && sX == sR) {
+        /* Contiguous */
+        memcpy((void*)pR, (void*)pX, inp[0].dtype->size * len);
+    } else {
+        for (i = 0; i < len; i++, pR += sR, pX += sX) {
+            memcpy((void*)pR, (void*)pX, inp[0].dtype->size);
+        }
+    }
+
+    return 0;
+
+}
 
 /* C-API */
 
@@ -44,6 +64,12 @@ nx_array nx_array_newc(ks_type tp, nx_dtype dtype, int rank, ks_size_t* dims, ks
         KS_DECREF(self);
         KS_THROW(kst_Error, "Failed to allocate tensor of large size");
         return NULL;
+    }
+
+    
+    if (data) {
+        /* Initialize with memory copying */
+        if (!nx_apply_elem(kern_copy, 2, (nxar_t[]){ self->ar, NXAR_(data, dtype, rank, dims, strides, NULL) }, NULL));
     }
 
     return self;

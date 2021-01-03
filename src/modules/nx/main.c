@@ -82,91 +82,397 @@ ks_size_t* nx_calc_bcast(int N, nxar_t* inp, int* orank) {
     return res;
 }
 
-nx_dtype nx_calc_numcast(nx_dtype da, nx_dtype db) {
-    if (da->kind == NX_DTYPE_KIND_CCOMPLEX|| db->kind == NX_DTYPE_KIND_CCOMPLEX) {
-        if (da->kind == NX_DTYPE_KIND_CCOMPLEX && db->kind == NX_DTYPE_KIND_CCOMPLEX) {
-            if (da->size > db->size) return (nx_dtype)KS_NEWREF(da);
-            else return (nx_dtype)KS_NEWREF(db);
+nx_dtype nx_calc_numcast(nx_dtype dR, nx_dtype dX) {
+    if (dR->kind == NX_DTYPE_KIND_CCOMPLEX|| dX->kind == NX_DTYPE_KIND_CCOMPLEX) {
+        if (dR->kind == NX_DTYPE_KIND_CCOMPLEX && dX->kind == NX_DTYPE_KIND_CCOMPLEX) {
+            if (dR->size > dX->size) return (nx_dtype)KS_NEWREF(dR);
+            else return (nx_dtype)KS_NEWREF(dX);
         }
-        if (da->kind == NX_DTYPE_KIND_CCOMPLEX && NX_DTYPE_ISARITH(db)) return (nx_dtype)KS_NEWREF(da);
-        if (db->kind == NX_DTYPE_KIND_CCOMPLEX && NX_DTYPE_ISARITH(da)) return (nx_dtype)KS_NEWREF(db);
-    } else if (da->kind == NX_DTYPE_KIND_CFLOAT || db->kind == NX_DTYPE_KIND_CFLOAT) {
-        if (da->kind == NX_DTYPE_KIND_CFLOAT && db->kind == NX_DTYPE_KIND_CFLOAT) {
-            if (da->size > db->size) return (nx_dtype)KS_NEWREF(da);
-            else return (nx_dtype)KS_NEWREF(db);
+        if (dR->kind == NX_DTYPE_KIND_CCOMPLEX && NX_DTYPE_ISARITH(dX)) return (nx_dtype)KS_NEWREF(dR);
+        if (dX->kind == NX_DTYPE_KIND_CCOMPLEX && NX_DTYPE_ISARITH(dR)) return (nx_dtype)KS_NEWREF(dX);
+    } else if (dR->kind == NX_DTYPE_KIND_CFLOAT || dX->kind == NX_DTYPE_KIND_CFLOAT) {
+        if (dR->kind == NX_DTYPE_KIND_CFLOAT && dX->kind == NX_DTYPE_KIND_CFLOAT) {
+            if (dR->size > dX->size) return (nx_dtype)KS_NEWREF(dR);
+            else return (nx_dtype)KS_NEWREF(dX);
         }
-        if (da->kind == NX_DTYPE_KIND_CFLOAT && NX_DTYPE_ISARITH(db)) return (nx_dtype)KS_NEWREF(da);
-        if (db->kind == NX_DTYPE_KIND_CFLOAT && NX_DTYPE_ISARITH(da)) return (nx_dtype)KS_NEWREF(db);
-    } else if (da->kind == NX_DTYPE_KIND_CINT && db->kind == NX_DTYPE_KIND_CINT) {
-        bool sgn = da->s_cint.sgn || db->s_cint.sgn;
-        int bits = da->s_cint.bits;
-        if (db->s_cint.bits > bits) bits = db->s_cint.bits;
-        return nx_dtype_get_cint(bits, sgn);
+        if (dR->kind == NX_DTYPE_KIND_CFLOAT && NX_DTYPE_ISARITH(dX)) return (nx_dtype)KS_NEWREF(dR);
+        if (dX->kind == NX_DTYPE_KIND_CFLOAT && NX_DTYPE_ISARITH(dR)) return (nx_dtype)KS_NEWREF(dX);
+    } else if (dR->kind == NX_DTYPE_KIND_CINT && dX->kind == NX_DTYPE_KIND_CINT) {
+        if (dR->size > dX->size) {
+            KS_INCREF(dR);
+            return dR;
+        } else {
+            KS_INCREF(dX);
+            return dX;
+        }
     }
 
-    KS_THROW(kst_TypeError, "Failed to calculate numeric type for result of %R and %R", da, db);
+    KS_THROW(kst_TypeError, "Failed to calculate numeric type for result of %R and %R", dR, dX);
     return NULL;
 }
 
 
 /* Module Functions */
 
+static KS_FUNC(cast) {
+    kso x;
+    nx_dtype to;
+    KS_ARGS("x to:*", &x, &to, nxt_dtype);
+
+    /* Get as array descriptor */
+    nxar_t aX;
+    kso rX;
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+
+    /* Calculate cast */
+    nxar_t aR;
+    kso rR;
+    if (!nx_getcast(aX, to, &aR, &rR)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    nx_array r = nx_array_newc(nxt_array, aR.dtype, aR.rank, aR.dims, aR.strides, aR.data);
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+
+    return (kso)r;
+}
+
 static KS_FUNC(add) {
-    kso x, y, z = KSO_NONE;
-    KS_ARGS("x y ?z", &x, &y, &z);
+    kso x, y, r = KSO_NONE;
+    KS_ARGS("x y ?r", &x, &y, &r);
 
-    nxar_t ax, ay, az;
-    kso rx, ry, rz;
+    nxar_t aX, aY, aR;
+    kso rX, rY, rR;
 
-    if (!nxar_get(x, NULL, &ax, &rx)) {
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+    if (!nxar_get(y, NULL, &aY, &rY)) {
+        KS_NDECREF(rX);
         return NULL;
     }
 
-    if (!nxar_get(y, NULL, &ay, &ry)) {
-        KS_NDECREF(rx);
-        return NULL;
-    }
-
-    if (z == KSO_NONE) {
-        /* Generate output */
-        int rankz;
-        ks_size_t* dimz = nx_calc_bcast(2, (nxar_t[]){ ax, ay }, &rankz);
-        if (!dimz) {
-            KS_NDECREF(rx);
-            KS_NDECREF(ry);
+    if (r == KSO_NONE) {
+        /* Generate output array */
+        nx_dtype r_dtype = nx_calc_numcast(aX.dtype, aY.dtype);
+        if (!r_dtype) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
             return NULL;
         }
 
-        z = (kso)nx_array_newc(nxt_array, ax.dtype, rankz, dimz, NULL, NULL);
-        KS_DECREF(dimz);
+        int r_rank;
+        ks_size_t* r_dims = nx_calc_bcast(2, (nxar_t[]){ aX, aY }, &r_rank);
+        if (!r_dims) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            KS_DECREF(r_dtype);
+            return NULL;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, r_dtype, r_rank, r_dims, NULL, NULL);
+        ks_free(r_dims);
+        KS_DECREF(r_dtype);
     } else {
-        KS_INCREF(z);
+        KS_INCREF(r);
     }
 
-    if (!nxar_get(z, NULL, &az, &rz)) {
-        KS_NDECREF(rx);
-        KS_NDECREF(ry);
-        KS_DECREF(z);
+    if (!nxar_get(r, NULL, &aR, &rR)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_DECREF(r);
         return NULL;
     }
 
-    if (!nx_add(az, ax, ay)) {
-        KS_NDECREF(rx);
-        KS_NDECREF(ry);
-        KS_NDECREF(rz);
-        KS_DECREF(z);
+    if (!nx_add(aR, aX, aY)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_NDECREF(rR);
+        KS_NDECREF(r);
         return NULL;
     }
 
-    KS_NDECREF(rx);
-    KS_NDECREF(ry);
-    KS_NDECREF(rz);
-    
-    
-    return z;
+    KS_NDECREF(rX);
+    KS_NDECREF(rY);
+    KS_NDECREF(rR);
+
+    return r;
+}
+
+static KS_FUNC(sub) {
+    kso x, y, r = KSO_NONE;
+    KS_ARGS("x y ?r", &x, &y, &r);
+
+    nxar_t aX, aY, aR;
+    kso rX, rY, rR;
+
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+    if (!nxar_get(y, NULL, &aY, &rY)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output array */
+        nx_dtype r_dtype = nx_calc_numcast(aX.dtype, aY.dtype);
+        if (!r_dtype) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            return NULL;
+        }
+
+        int r_rank;
+        ks_size_t* r_dims = nx_calc_bcast(2, (nxar_t[]){ aX, aY }, &r_rank);
+        if (!r_dims) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            KS_DECREF(r_dtype);
+            return NULL;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, r_dtype, r_rank, r_dims, NULL, NULL);
+        ks_free(r_dims);
+        KS_DECREF(r_dtype);
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nxar_get(r, NULL, &aR, &rR)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_sub(aR, aX, aY)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_NDECREF(rR);
+        KS_NDECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rY);
+    KS_NDECREF(rR);
+
+    return r;
 }
 
 
+static KS_FUNC(mul) {
+    kso x, y, r = KSO_NONE;
+    KS_ARGS("x y ?r", &x, &y, &r);
+
+    nxar_t aX, aY, aR;
+    kso rX, rY, rR;
+
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+    if (!nxar_get(y, NULL, &aY, &rY)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output array */
+        nx_dtype r_dtype = nx_calc_numcast(aX.dtype, aY.dtype);
+        if (!r_dtype) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            return NULL;
+        }
+
+        int r_rank;
+        ks_size_t* r_dims = nx_calc_bcast(2, (nxar_t[]){ aX, aY }, &r_rank);
+        if (!r_dims) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            KS_DECREF(r_dtype);
+            return NULL;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, r_dtype, r_rank, r_dims, NULL, NULL);
+        ks_free(r_dims);
+        KS_DECREF(r_dtype);
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nxar_get(r, NULL, &aR, &rR)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_mul(aR, aX, aY)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_NDECREF(rR);
+        KS_NDECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rY);
+    KS_NDECREF(rR);
+
+    return r;
+}
+
+static KS_FUNC(mod) {
+    kso x, y, r = KSO_NONE;
+    KS_ARGS("x y ?r", &x, &y, &r);
+
+    nxar_t aX, aY, aR;
+    kso rX, rY, rR;
+
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+    if (!nxar_get(y, NULL, &aY, &rY)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output array */
+        nx_dtype r_dtype = nx_calc_numcast(aX.dtype, aY.dtype);
+        if (!r_dtype) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            return NULL;
+        }
+
+        int r_rank;
+        ks_size_t* r_dims = nx_calc_bcast(2, (nxar_t[]){ aX, aY }, &r_rank);
+        if (!r_dims) {
+            KS_NDECREF(rX);
+            KS_NDECREF(rY);
+            KS_DECREF(r_dtype);
+            return NULL;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, r_dtype, r_rank, r_dims, NULL, NULL);
+        ks_free(r_dims);
+        KS_DECREF(r_dtype);
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nxar_get(r, NULL, &aR, &rR)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_mod(aR, aX, aY)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
+        KS_NDECREF(rR);
+        KS_NDECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rY);
+    KS_NDECREF(rR);
+
+    return r;
+}
+
+static KS_FUNC(sqrt) {
+    kso x, r = KSO_NONE;
+    KS_ARGS("x ?r", &x, &r);
+
+    nxar_t aX, aR;
+    kso rX, rR;
+
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+    if (r == KSO_NONE) {
+        /* Generate output array */
+        nx_dtype r_dtype = aX.dtype;
+        if (r_dtype->kind == NX_DTYPE_KIND_CINT) {
+            r_dtype = nxd_double;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, r_dtype, aX.rank, aX.dims, NULL, NULL);
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nxar_get(r, NULL, &aR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_sqrt(aR, aX)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_NDECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+
+    return r;
+}
+
+
+static KS_FUNC(sin) {
+    kso x, r = KSO_NONE;
+    KS_ARGS("x ?r", &x, &r);
+
+    nxar_t aX, aR;
+    kso rX, rR;
+
+    if (!nxar_get(x, NULL, &aX, &rX)) {
+        return NULL;
+    }
+    if (r == KSO_NONE) {
+        /* Generate output array */
+        nx_dtype r_dtype = aX.dtype;
+        if (r_dtype->kind == NX_DTYPE_KIND_CINT) {
+            r_dtype = nxd_double;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, r_dtype, aX.rank, aX.dims, NULL, NULL);
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nxar_get(r, NULL, &aR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_sin(aR, aX)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_NDECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+
+    return r;
+}
 
 /* Export */
 
@@ -198,13 +504,17 @@ ks_module _ksi_nx() {
         {"complexfloat128",        (kso)nxd_complexfloat128},
 
         /* Functions */
-        {"add",                    ksf_wrap(add_, M_NAME ".add(x, y, z=none)", "Computes elementwise addition")},
+        {"cast",                   ksf_wrap(cast_, M_NAME ".cast(dtype, obj)", "Casts to a datatype")},
+        {"add",                    ksf_wrap(add_, M_NAME ".add(x, y, r=none)", "Computes elementwise addition")},
+        {"sub",                    ksf_wrap(sub_, M_NAME ".sub(x, y, r=none)", "Computes elementwise subtraction")},
+        {"mul",                    ksf_wrap(mul_, M_NAME ".mul(x, y, r=none)", "Computes elementwise multiplication")},
+        {"mod",                    ksf_wrap(mod_, M_NAME ".mod(x, y, r=none)", "Computes elementwise modulo")},
+
+        {"sqrt",                   ksf_wrap(sqrt_, M_NAME ".sqrt(x, y, r=none)", "Computes elementwise square root")},
+
+        {"sin",                    ksf_wrap(sin_, M_NAME ".sin(x, r=none)", "Computes elementwise sine")},
 
     ));
-
-
-    
-
 
     return res;
 }

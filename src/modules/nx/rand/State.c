@@ -148,11 +148,11 @@ static int kern_randf(int N, nxar_t* inp, int len, void* _data) {
     struct kern_data* data = _data;
     assert(N == 1);
 
-    ks_uint pA = (ks_uint)inp[0].data;
+    ks_uint pR = (ks_uint)inp[0].data;
 
     ks_cint i;
-    for (i = 0; i < len; i++, pA += inp[0].strides[0]) {
-        *(double*)pA = mt_randf(data->s);
+    for (i = 0; i < len; i++, pR += inp[0].strides[0]) {
+        *(double*)pR = mt_randf(data->s);
     }
 
     return 0;
@@ -170,14 +170,14 @@ static int kern_normal(int N, nxar_t* inp, int len, void* _data) {
     struct kern_data* data = _data;
     assert(N == 3);
 
-    ks_uint pA = (ks_uint)inp[0].data, pu = (ks_uint)inp[1].data, po = (ks_uint)inp[2].data;
+    ks_uint pR = (ks_uint)inp[0].data, pu = (ks_uint)inp[1].data, po = (ks_uint)inp[2].data;
 
     /* We use the Box-Muller transform to generate pairs of numbers
      */
     ks_cfloat z0, z1;
 
     ks_cint i;
-    for (i = 0; i < len; i++, pA += inp[0].strides[0], pu += inp[1].strides[0], po += inp[2].strides[0]) {
+    for (i = 0; i < len; i++, pR += inp[0].strides[0], pu += inp[1].strides[0], po += inp[2].strides[0]) {
         /* Load the u/o values */
         ks_cfloat uv = *(double*)pu, ov = *(double*)po;
 
@@ -195,10 +195,10 @@ static int kern_normal(int N, nxar_t* inp, int len, void* _data) {
             z0 = r * ct;
             z1 = r * st;
 
-            *(double*)pA = z0 * ov + uv;
+            *(double*)pR = z0 * ov + uv;
         } else {
             /* Just use the other one that was already generated */
-            *(double*)pA = z1 * ov + uv;
+            *(double*)pR = z1 * ov + uv;
         }
     }
 
@@ -238,16 +238,16 @@ bool nxrand_get_f(nxrand_State self, int nout, ks_cfloat* out) {
 
 /** Random Number Generation **/
 
-bool nxrand_randf(nxrand_State self, nxar_t A) {
+bool nxrand_randf(nxrand_State self, nxar_t R) {
     struct kern_data data;
     data.s = self;
-    return !nx_apply_elem(kern_randf, 1, (nxar_t[]){ A }, (void*)&data);
+    return !nx_apply_elem(kern_randf, 1, (nxar_t[]){ R }, (void*)&data);
 }
 
-bool nxrand_normal(nxrand_State self, nxar_t A, nxar_t u, nxar_t o) {
+bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o) {
     struct kern_data data;
     data.s = self;
-    return !nx_apply_elem(kern_normal, 3, (nxar_t[]){ A, u, o }, (void*)&data);
+    return !nx_apply_elem(kern_normal, 3, (nxar_t[]){ R, u, o }, (void*)&data);
 }
 
 

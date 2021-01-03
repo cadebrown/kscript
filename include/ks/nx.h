@@ -99,8 +99,6 @@ typedef struct { nxc_longdouble re, im; } nxc_complexlongdouble;
 typedef struct { nxc_float128 re, im; } nxc_complexfloat128;
 
 
-
-
 /** Types **/
 
 enum nx_dtype_kind {
@@ -157,35 +155,6 @@ struct nx_dtype_s {
 
     /* specific kind information */
     union {
-
-        /* when kind==NX_DTYPE_KIND_CINT */
-        struct {
-            
-            /* whether the type is signed */
-            bool sgn;
-
-            /* number of bits in the size, must be divisible by 8 */
-            int bits;
-
-        } s_cint;
-
-        /* when kind==NX_DTYPE_KIND_CFLOAT */
-        struct {
-
-            /* number of bits, must be divisible by 8
-             * TODO: should this be generalized for support of any IEEE-like
-             *   floating point?
-             */
-            int nbits;
-
-        } s_cfloat;
-
-        /* when kind==NX_DTYPE_KIND_CCOMPLEX */
-        struct {
-
-            int nbits;
-
-        } s_ccomplex;
 
         /* when kind==NX_DTYPE_KIND_CSTRUCT */
         struct {
@@ -407,9 +376,17 @@ KS_API int nx_apply_elem(nx_elem_cf cf, int N, nxar_t* inp, void* _data);
  */
 KS_API ks_size_t* nx_getsize(kso obj, int* num);
 
+
+/* Cast 'x' to a requested type (keeping as is if it can) and store in B, and return success.
+ *
+ * If 'ref' is set to non-NULL, then you should KS_DECREF() that after you are done with '*r'
+ * 
+ */
+KS_API bool nx_getcast(nxar_t x, nx_dtype to, nxar_t* r, kso* ref);
+
 /* Adds the string representation to an IO object
  */
-KS_API bool nxar_tostr(ksio_BaseIO bio, nxar_t A);
+KS_API bool nxar_tostr(ksio_BaseIO bio, nxar_t x);
 
 /* Convert an object into an 'nxar_t' of a given type (or NULL to allow any/default)
  *
@@ -422,11 +399,6 @@ KS_API bool nxar_get(kso obj, nx_dtype dtype, nxar_t* res, kso* ref);
 
 
 /** nx.dtype **/
-
-/* Return a reference to a datatype */
-KS_API nx_dtype nx_dtype_get_cint(int nbits, bool is_signed);
-KS_API nx_dtype nx_dtype_get_cfloat(int nbits);
-KS_API nx_dtype nx_dtype_get_ccomplex(int nbits);
 
 /* Encode object into datatype, returning status
  *
@@ -474,10 +446,62 @@ static void* nx_get_ptr(void* data, int N, ks_size_t* dims, ks_ssize_t* strides,
 /** Operations **/
 
 
-/* Compute 'A = B + C' */
-KS_API bool nx_add(nxar_t A, nxar_t B, nxar_t C);
+/* Compute 'r = x', but type casted to 'r's type */
+KS_API bool nx_cast(nxar_t r, nxar_t x);
+
+/* Compute 'r = x + y' */
+KS_API bool nx_add(nxar_t r, nxar_t x, nxar_t y);
+
+/* Compute 'A = B - C' */
+KS_API bool nx_sub(nxar_t r, nxar_t x, nxar_t y);
+
+/* Compute 'A = B * C' */
+KS_API bool nx_mul(nxar_t r, nxar_t x, nxar_t y);
+
+/* Compute 'A = B % C' */
+KS_API bool nx_mod(nxar_t r, nxar_t x, nxar_t y);
 
 
+/*** Math Operations ***/
+
+/* r = sqrt(x) */
+KS_API bool nx_sqrt(nxar_t r, nxar_t x);
+
+/* r = cbrt(x) */
+KS_API bool nx_cbrt(nxar_t r, nxar_t x);
+
+/* r = pow(x, y) */
+KS_API bool nx_pow(nxar_t r, nxar_t x, nxar_t y);
+
+/* r = hypot(x, y) */
+KS_API bool nx_hypot(nxar_t r, nxar_t x, nxar_t y);
+
+/* Compute trig functions */
+
+/* r = sin(x) */
+KS_API bool nx_sin(nxar_t r, nxar_t x);
+/* r = cos(x) */
+KS_API bool nx_cos(nxar_t r, nxar_t x);
+/* r = tan(x) */
+KS_API bool nx_tan(nxar_t r, nxar_t x);
+/* r = asin(x) */
+KS_API bool nx_asin(nxar_t r, nxar_t x);
+/* r = acos(x) */
+KS_API bool nx_acos(nxar_t r, nxar_t x);
+/* r = atan(x) */
+KS_API bool nx_atan(nxar_t r, nxar_t x);
+/* r = sinh(x) */
+KS_API bool nx_sinh(nxar_t r, nxar_t x);
+/* r = cosh(x) */
+KS_API bool nx_cosh(nxar_t r, nxar_t x);
+/* r = atanh(x) */
+KS_API bool nx_tanh(nxar_t r, nxar_t x);
+/* r = asinh(x) */
+KS_API bool nx_asinh(nxar_t r, nxar_t x);
+/* r = acosh(x) */
+KS_API bool nx_acosh(nxar_t r, nxar_t x);
+/* r = atanh(x) */
+KS_API bool nx_atanh(nxar_t r, nxar_t x);
 
 
 /** Submodule: 'nx.rand' **/
@@ -521,7 +545,7 @@ typedef struct nxrand_State_s {
 KS_API nxrand_State nxrand_State_new(ks_uint seed);
 
 /* Fill 'A' with random numbers (for integers, random of their range, and for floats, random between 0.0 and 1.0) */
-KS_API bool nxrand_get_a(nxrand_State self, nxar_t A);
+KS_API bool nxrand_get_a(nxrand_State self, nxar_t x);
 
 /* Generate 'nout' uniformly distributed bytes */
 KS_API bool nxrand_get_b(nxrand_State self, int nout, unsigned char* out);
@@ -534,16 +558,16 @@ KS_API bool nxrand_get_f(nxrand_State self, int nout, ks_cfloat* out);
 
 /** Random Number Generation **/
 
-/* Fills 'A' with random, uniform floats in [0, 1)
+/* Fills 'R' with random, uniform floats in [0, 1)
  */
-KS_API bool nxrand_randf(nxrand_State self, nxar_t A);
+KS_API bool nxrand_randf(nxrand_State self, nxar_t R);
 
-/* Fills 'A' with values in a normal (Guassian) distribution
+/* Fills 'R' with values in a normal (Guassian) distribution
  *
  *   u: The mean (default=0.0)
  *   o: The standard deviation (default=1.0)
  */
-KS_API bool nxrand_normal(nxrand_State self, nxar_t A, nxar_t u, nxar_t o);
+KS_API bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o);
 
 
 

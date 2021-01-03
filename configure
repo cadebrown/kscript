@@ -572,38 +572,38 @@ check_func_math2() {
     check_func "${_name}f128" "f128" "f128,f128"
 }
 
-#check_func_math1 fabs
-#check_func_math1 ceil
-#check_func_math1 floor
-#check_func_math1 trunc
-#check_func_math1 sqrt
-#check_func_math1 cbrt
-#check_func_math1 exp
-#check_func_math1 log
+check_func_math1 fabs
+check_func_math1 ceil
+check_func_math1 floor
+check_func_math1 trunc
+check_func_math1 sqrt
+check_func_math1 cbrt
+check_func_math1 exp
+check_func_math1 log
 #check_func_math1 log1p
-#check_func_math1 erf
-#check_func_math1 erfc
+check_func_math1 erf
+check_func_math1 erfc
 #check_func_math1 tgamma
-#check_func_math1 sin
-#check_func_math1 cos
-#check_func_math1 tan
-#check_func_math1 asin
-#check_func_math1 acos
-#check_func_math1 atan
-#check_func_math1 sinh
-#check_func_math1 cosh
-#check_func_math1 tanh
-#check_func_math1 asinh
-#check_func_math1 acosh
-#check_func_math1 atanh
+check_func_math1 sin
+check_func_math1 cos
+check_func_math1 tan
+check_func_math1 asin
+check_func_math1 acos
+check_func_math1 atan
+check_func_math1 sinh
+check_func_math1 cosh
+check_func_math1 tanh
+check_func_math1 asinh
+check_func_math1 acosh
+check_func_math1 atanh
 #check_func_math2 copysign
 #check_func_math2 fmin
 #check_func_math2 fmax
-#check_func_math2 fmod
+check_func_math2 fmod
 #check_func_math2 nextafter
-#check_func_math2 hypot
+check_func_math2 hypot
 #check_func_math2 atan2
-#check_func_math2 pow
+check_func_math2 pow
 #check_func strfromf "i" "s,i,fmt,f"
 #check_func strfromd "i" "s,i,fmt,d"
 #check_func strfroml "i" "s,i,fmt,ld"

@@ -47,3 +47,26 @@ ks_size_t* nx_getsize(kso obj, int* num) {
         return res;
     }
 }
+
+bool nx_getcast(nxar_t x, nx_dtype to, nxar_t* r, kso* ref) {
+    if (x.dtype == to) {
+        *r = x;
+        *ref = NULL;
+        return true;
+    } else {
+        /* Attempt to create new array and cast it */
+        nx_array res = nx_array_newc(nxt_array, to, x.rank, x.dims, x.strides, NULL);
+        if (!res) return false;
+
+        if (!nx_cast(res->ar, x)) {
+            KS_DECREF(res);
+            return false;
+        }
+
+        *r = res->ar;
+        *ref = (kso)res;
+        return true;
+    }
+
+}
+
