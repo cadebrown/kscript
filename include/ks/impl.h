@@ -99,14 +99,20 @@ void _ksi_nx_view();
 ks_module _ksi_nxrand();
 void _ksi_nxrand_State();
 
-
 ks_module _ksi_re();
 ks_module _ksi_gram();
 ks_module _ksi_ucd();
 
+ks_module _ksi_mm();
+void _ksi_mm_MediaFile();
+void _ksi_mm_Stream();
+void _ksi_mm_AVFormatContext();
+
 void _ksi_parser();
 void _ksi_funcs();
 void _ksi_import();
+
+
 
 
 /* Initialize type */

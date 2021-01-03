@@ -246,6 +246,26 @@ static KS_TFUNC(T, str) {
 }
 
 
+static KS_TFUNC(T, getattr) {
+    nx_array self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, nxt_array, &attr, kst_str);
+    
+    if (ks_str_eq_c(attr, "shape", 5)) {
+        ks_tuple res = ks_tuple_newe(self->ar.rank);
+
+        int i;
+        for (i = 0; i < self->ar.rank; ++i) {
+            res->elems[i] = (kso)ks_int_new(self->ar.dims[i]);
+        }
+
+        return (kso)res;
+    }
+    
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+
+}
 /* Export */
 
 static struct ks_type_s tp;
@@ -261,7 +281,12 @@ void _ksi_nx_array() {
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
 
+
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+
     ));
+
+
 }
 
 

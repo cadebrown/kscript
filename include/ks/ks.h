@@ -920,6 +920,11 @@ KS_API bool ks_list_del(ks_list self, ks_cint idx);
 KS_API ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems);
 KS_API ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems);
 
+
+/* Create empty, uninitialize tuple: WARNING: only internal use
+ */
+KS_API ks_tuple ks_tuple_newe(ks_ssize_t len);
+
 /* Creates a tuple from an iterable, converting all elements
  * NOTE: if the object is already a tuple, a new reference is returned
  */

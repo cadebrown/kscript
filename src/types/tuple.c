@@ -32,6 +32,14 @@ ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems) {
 
     return self;
 }
+ks_tuple ks_tuple_newe(ks_ssize_t len) {
+    ks_tuple self = KSO_NEW(ks_tuple, kst_tuple);
+
+    self->len = len;
+    self->elems = ks_zmalloc(sizeof(*self->elems), len);
+
+    return self;
+}
 
 ks_tuple ks_tuple_newit(ks_type tp, kso objs) {
     ks_tuple res = KSO_NEW(ks_tuple, tp);

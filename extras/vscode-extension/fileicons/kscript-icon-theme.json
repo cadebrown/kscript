@@ -1,0 +1,15 @@
+{
+    "iconDefinitions": {
+        "_kscript": {
+            "fontCharacter": "ks",
+            "fontColor": "#cd617a",
+            "fontSize": ".01"
+        }
+    },
+    "languageIds": {
+        "kscript": "_kscript"
+    },
+    "fileExtensions": {
+        "ks": "_kscript"
+    }
+}

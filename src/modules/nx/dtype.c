@@ -211,6 +211,9 @@ void _ksi_nx_dtype() {
 
     ));
 
+    
+    nxd_uchar = dtype_get_cint("uchar", sizeof(nxc_uchar));
+
     nxd_float = dtype_get_cfloat("float", sizeof(nxc_float));
     nxd_double = dtype_get_cfloat("double", sizeof(nxc_double));
     nxd_longdouble = dtype_get_cfloat("longdouble", sizeof(nxc_longdouble));

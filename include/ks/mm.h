@@ -38,54 +38,112 @@
 
 /* Types */
 
+#ifdef KS_HAVE_libav
+
+/* mm._AVFormatContext - internal wrapper for the AVFormatContext* in C
+ *
+ */
+typedef struct ksmm_AVFormatContext_s {
+    KSO_BASE
+
+    /* Wrapped value */
+    AVFormatContext* val;
+
+}* ksmm_AVFormatContext;
+
+#endif
+
+/* mm.MediaFile - represents a media item with multiple possible streams
+ *
+ */
+typedef struct ksmm_MediaFile_s {
+    KSO_BASE
+
+    /* source of stream */
+    ks_str src;
+
+    /* List of 'mm.Stream' objects representing the individual streams */
+    ks_list streams;
+
+#ifdef KS_HAVE_libav
+    /* Handle to the current context and format being used for this media file */
+    ksmm_AVFormatContext fmtctx;
+#endif
 
 
+}* ksmm_MediaFile;
 
-/* mm.Stream - audio/video stream that can be opened by any URL
+
+/* mm.Stream - single audio/video stream
  *
  */
 typedef struct ksmm_Stream_s {
     KSO_BASE
 
-#ifdef KS_HAVE_libav
+    /* source of stream */
+    ks_str src;
 
-    /* Handle to the current context and format being used */
-    AVFormatContext* fmtctx;
+    /* Index of stream */
+    int idx;
 
-#endif
-
-    /* Number of substreams */
-    int nsub;
-
-    /* Subtream, for a specific media type
-     *
-     */
-    struct ksmm_SubStream_s {
-
-        /* Whether the stream's codec is currently opened */
-        bool is_open;
+    /* Whether or not the stream has been opened */
+    bool is_open;
 
 #ifdef KS_HAVE_libav
 
-        /* The specific stream */
-        AVStream* stream;
+    /* Format context describing the stream */
+    ksmm_AVFormatContext fmtctx;
 
-        /* Codec context for decoding/encoding stream values */
-        AVCodecContext* codec_ctx;
+    /* libav stream */
+    AVStream* stream;
 
 #endif
-
-    }* sub;
 
 }* ksmm_Stream;
 
 
+
+
 /* Functions */
 
-/* Open a stream from a given resource URL
- */
-KS_API ksmm_Stream ksmm_Stream_open(ks_type tp, ks_str url);
 
+#ifdef KS_HAVE_libav
+
+/* Wrap an AVFormatContext
+ */
+KS_API ksmm_AVFormatContext ksmm_AVFormatContext_wrap(AVFormatContext* val);
+
+/* Custom callback negotiator for 'codctx->get_format' to pick our preferred formats
+ */
+KS_API enum AVPixelFormat ksmm_AV_getformat(struct AVCodecContext* codctx, const enum AVPixelFormat* fmt);
+
+/* Filtering bad pixel formats and returning a better one (retains memory layout)
+ * SEE: https://stackoverflow.com/questions/23067722/swscaler-warning-deprecated-pixel-format-used
+ */
+KS_API enum AVPixelFormat ksmm_AV_filterfmt(enum AVPixelFormat pix_fmt);
+
+
+
+#endif
+
+
+/* Open a media file
+ */
+KS_API ksmm_MediaFile ksmm_MediaFile_open(ks_type tp, ks_str src);
+
+
+/* Read an image from a stream
+ */
+KS_API nx_array ksmm_get_image(ksmm_Stream self);
+
+
+/* Export */
+
+KS_API extern ks_type
+    ksmmt_AVFormatContext,
+    ksmmt_MediaFile,
+    ksmmt_Stream
+;
 
 
 #endif /* KSMM_H__ */

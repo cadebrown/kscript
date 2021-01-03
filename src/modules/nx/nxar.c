@@ -56,7 +56,6 @@ bool I_tostr(ksio_BaseIO sb, nxar_t x, int dep) {
         /* must use recursion */
 
         ksio_add(sb, "[");
-
         /* loop over outer dimension, adding each inner dimension*/
         ks_size_t i;
         nxar_t inner = NXAR_(x.data, x.dtype, x.rank-1, x.dims+1, x.strides+1, NULL);

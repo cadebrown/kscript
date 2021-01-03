@@ -1,0 +1,594 @@
+---
+name: kscript
+scopeName: source.kscript
+fileTypes:
+  - ks
+  - kscript
+firstLineMatch: ^#![ \t]*/.*\bks[\d\.]*\b
+patterns:
+    - include: '#stmt'
+    - include: '#expr'
+    - include: '#comments'
+  
+repository:
+  impossible:
+    comment: Special rule when no match is desired. Just matches so the tokenizer can move on
+    match: '$.^'
+
+  comments:
+    patterns:
+      - name: comment.line.number-sign.kscript
+        begin: '\#'
+        end: '$'
+
+  punctuation:
+    patterns:
+      - name: punctuation.separator.colon.kscript
+        match: ":"
+      - name: punctuation.separator.element.kscript
+        match: ","
+
+  statement:
+    patterns:
+      - include: '#import'
+      - include: '#statement-keyword'
+
+  statement-keyword:
+    patterns:
+      - name: keyword.control.flow.kscript
+        comment: |
+          if `as` is eventually followed by `:` or line continuation
+          it's probably control flow like:
+              with foo as bar, \
+                   Foo as Bar:
+                try:
+                  do_stuff()
+                except Exception as e:
+                  pass
+        match: \b(?<!\.)as\b(?=.*[:\\])
+      - name: keyword.control.import.kscript
+        comment: other legal use of `as` is in an import
+        match: \b(?<!\.)as\b
+      - name: keyword.control.flow.kscript
+        match: |
+          (?x)
+            \b(?<!\.)(
+                cont | del | assert | break | finally | for
+              | from | elif | else | if | except | throw
+              | ret | try | while | with
+            )\b
+      - name: storage.modifier.declaration.kscript
+        match: |
+          (?x)
+            \b(?<!\.)(
+              global
+            )\b
+
+  expr:
+    comment: valid kscript expressions with comments and line continuation
+    patterns:
+      - include: '#punctuation'
+      - include: '#illegal-names'
+      - include: '#builtin-functions'
+      - include: '#builtin-types'
+      - include: '#magic-names'
+      - include: '#operator'
+      - include: '#literal'
+      - include: '#func'
+      - include: '#type'
+
+  operator:
+    match: |
+      (?x)
+          \b(?<!\.)
+            (?:
+              (and | or | not | in | is)                         (?# 1)
+              |
+              (for | if | else)  (?# 2)
+            )
+          (?!\s*:)\b
+          | (<< | >> | & | \| | \^ | ~)                          (?# 3)
+          | (\*\* | \* | \+ | - | % | // | / | @)                (?# 4)
+          | (!= | == | >= | <= | < | > | <=>)                    (?# 5)
+    captures:
+      '1': {name: keyword.operator.logical.kscript}
+      '2': {name: keyword.control.flow.kscript}
+      '3': {name: keyword.operator.bitwise.kscript}
+      '4': {name: keyword.operator.arithmetic.kscript}
+      '5': {name: keyword.operator.comparison.kscript}
+
+  illegal-names:
+    match: |
+      (?x)
+        \b(?:
+          (
+            and | assert | async | await | break | extends | continue
+            | del | elif | else | except | finally | for | from | global
+            | if | in | is | (?<=\.)lambda | lambda(?=\s*[\.=])
+            | nonlocal | not | or | pass | raise | ret | try | while | with
+            | yield
+          ) | (
+            as | import
+          )
+        )\b
+    captures:
+      '1': {name: keyword.control.flow.kscript}
+      '2': {name: keyword.control.import.kscript}
+
+  builtin-functions:
+    patterns:
+      - name: support.function.builtin.kscript
+        match: |
+          (?x)
+            (?<!\.) \b(
+              __import__ | abs | all | any | ascii | bin | breakpoint | callable
+              | chr | compile | copyright | credits | delattr | dir | divmod
+              | enumerate | eval | exec | exit | filter | format | getattr
+              | globals | hasattr | hash | help | hex | id | input
+              | isinstance | issubclass | iter | len | license | locals | map
+              | max | memoryview | min | next | oct | open | ord | pow | print
+              | quit | range | reload | repr | reversed | round
+              | setattr | sorted | sum | vars | zip
+            )\b
+      - name: variable.legacy.builtin.kscript
+        match: |
+          (?x)
+            (?<!\.) \b(
+              file | reduce | intern | raw_input | unicode | cmp | basestring
+              | execfile | long | xrange
+            )\b
+  builtin-types:
+    name: support.type.kscript
+    match: |
+      (?x)
+        (?<!\.) \b(
+          bool | bytearray | bytes | classmethod | complex | dict
+          | float | frozenset | int | list | object | property
+          | set | slice | staticmethod | str | tuple | type
+          (?# Although 'super' is not a type, it's related to types,
+              and is special enough to be highlighted differently from
+              other built-ins)
+          | super
+        )\b
+
+  
+  magic-function-names:
+    comment: |
+      these methods have magic interpretation by kscript and are generally called
+      indirectly through syntactic constructs
+    match: |
+      (?x)
+        \b(
+          __(?:
+            abs | add | aenter | aexit | aiter | and | anext | await
+            | bool | call | ceil | cmp | coerce | complex | contains
+            | copy | deepcopy | del | delattr | delete | delitem
+            | delslice | dir | div | divmod | enter | eq | exit | float
+            | floor | floordiv | format | ge | get | getattr
+            | getattribute | getinitargs | getitem | getnewargs
+            | getslice | getstate | gt | hash | hex | iadd | iand | idiv
+            | ifloordiv | ilshift | imod | imul | index | init
+            | instancecheck | int | invert | ior | ipow | irshift | isub
+            | iter | itruediv | ixor | le | len | long | lshift | lt
+            | missing | mod | mul | ne | neg | new | next | nonzero | oct | or
+            | pos | pow | radd | rand | rdiv | rdivmod | reduce
+            | reduce_ex | repr | reversed | rfloordiv | rlshift | rmod
+            | rmul | ror | round | rpow | rrshift | rshift | rsub
+            | rtruediv | rxor | set | setattr | setitem | setslice
+            | setstate | sizeof | str | sub | subclasscheck | truediv
+            | trunc | unicode | xor | matmul | rmatmul | imatmul
+            | init_subclass | set_name | fspath | bytes | prepare
+          )__
+        )\b
+    captures:
+      '1': {name: support.function.magic.kscript}
+
+  magic-variable-names:
+    comment: magic variables which a class/module may have.
+    match: |
+      (?x)
+        \b(
+          __(?:
+            all | bases | builtins | class | class_getitem | code | debug
+            | defaults | dict | doc | file | func | kwdefaults | members
+            | metaclass | methods | module | mro | mro_entries | name
+            | fullname | self | signature | slots | subclasses
+            | version | weakref | wrapped | annotations | classcell
+            | spec | path | package | future | traceback
+          )__
+        )\b
+    captures:
+      '1': {name: support.variable.magic.kscript}
+
+  magic-names:
+    patterns:
+      - include: '#magic-function-names'
+      - include: '#magic-variable-names'
+
+  literal:
+    patterns:
+      - name: constant.language.kscript
+        match: \b(true|false|inf|nan|none|undefined)\b
+      - include: '#regex'
+      - include: '#number'
+      - include: '#docstring'
+
+  number:
+    name: constant.numeric.kscript
+    patterns:
+      - include: '#number-dec'
+      - include: '#number-hex'
+      - include: '#number-oct'
+      - include: '#number-bin'
+      - name: invalid.illegal.name.kscript
+        match: \b[0-9]+\w+
+
+  number-dec:
+    name: constant.numeric.dec.kscript
+    match: |
+      (?x)
+        (?:0[dD])?
+        (?:
+          [0-9]+
+          |
+          [0-9]+\.[0-9]*
+          |
+          \.[0-9]+
+        )([eE][\+\-]?[0-9]+)?([iI]?)\b
+    captures:
+      '2': {name: storage.type.imaginary.number.kscript}
+
+  number-hex:
+    name: constant.numeric.hex.kscript
+    match: |
+      (?x)
+        (?:0[xX])
+        (?:
+          [0-9a-fA-F]+
+          |
+          [0-9a-fA-F]+\.[0-9a-fA-F]*
+          |
+          \.[0-9a-fA-F]+
+        )([pP][\+\-]?[0-9]+)?([iI]?)\b
+    captures:
+      '2': {name: storage.type.imaginary.number.kscript}
+
+  number-oct:
+    name: constant.numeric.ict.kscript
+    match: |
+      (?x)
+        (?:0[oO])
+        (?:
+          [0-7]+
+          |
+          [0-7]+\.[0-7]*
+          |
+          \.[0-7]+
+        )([pP][\+\-]?[0-9]+)?([iI]?)\b
+    captures:
+      '2': {name: storage.type.imaginary.number.kscript}
+
+  number-bin:
+    name: constant.numeric.bin.kscript
+    match: |
+      (?x)
+        (?:0[bB])
+        (?:
+          [0-1]+
+          |
+          [0-1]+\.[0-1]*
+          |
+          \.[0-1]+
+        )([pP][\+\-]?[0-9]+)?([iI]?)\b
+    captures:
+      '2': {name: storage.type.imaginary.number.kscript}
+
+  regex:
+    patterns:
+      - name: string.regexp.kscript
+        begin: (\`)
+        end: (\1)|(\n)
+        patterns:
+          - include: '#regexp-quantifier'
+          - include: '#regexp-base-common'
+
+  regexp-base-common:
+    patterns:
+      - name: support.other.match.any.regexp
+        match: \.
+      - name: support.other.match.begin.regexp
+        match: \^
+      - name: support.other.match.end.regexp
+        match: \$
+      - name: keyword.operator.quantifier.regexp
+        match: '[+*?]\??'
+      - name: keyword.operator.disjunction.regexp
+        match: \|
+      - include: '#regexp-escape-sequence'
+
+  regexp-quantifier:
+    name: keyword.operator.quantifier.regexp
+    match: |
+      (?x)
+        \{(
+          \d+ | \d+,(\d+)? | ,\d+
+        )\}
+
+  regexp-backreference-number:
+    name: meta.backreference.regexp
+    match: (\\[1-9]\d?)
+    captures:
+      '1': {name: entity.name.tag.backreference.regexp}
+
+  regexp-backreference:
+    name: meta.backreference.named.regexp
+    match: |
+      (?x)
+        (\()  (\?P= \w+(?:\s+[[:alnum:]]+)?)  (\))
+    captures:
+      '1': {name: punctuation.parenthesis.backreference.named.begin.regexp
+                  support.other.parenthesis.regexp}
+      '2': {name: entity.name.tag.named.backreference.regexp}
+      '3': {name: punctuation.parenthesis.backreference.named.end.regexp
+                  support.other.parenthesis.regexp}
+
+  regexp-flags:
+    name: storage.modifier.flag.regexp
+    match: \(\?[aiLmsux]+\)
+
+  regexp-escape-special:
+    name: support.other.escape.special.regexp
+    match: \\([AbBdDsSwWZ])
+
+  regexp-escape-character:
+    name: constant.character.escape.regexp
+    match: |
+      (?x)
+        \\ (
+              x[0-9A-Fa-f]{2}
+              | 0[0-7]{1,2}
+              | [0-7]{3}
+          )
+
+  regexp-escape-unicode:
+    name: constant.character.unicode.regexp
+    match: |
+      (?x)
+        \\ (
+              u[0-9A-Fa-f]{4}
+              | U[0-9A-Fa-f]{8}
+          )
+
+  regexp-escape-catchall:
+    name: constant.character.escape.regexp
+    match: \\(.|\n)
+
+  regexp-escape-sequence:
+    patterns:
+      - include: '#regexp-escape-special'
+      - include: '#regexp-escape-character'
+      - include: '#regexp-escape-unicode'
+      - include: '#regexp-backreference-number'
+      - include: '#regexp-escape-catchall'
+
+  docstring:
+    patterns:
+      - name: string.quoted.docstring.multi.kscript
+        begin: (\'\'\'|\"\"\")
+        end: (\1)
+        beginCaptures:
+          '1': {name: punctuation.definition.string.begin.kscript}
+        endCaptures:
+          '1': {name: punctuation.definition.string.end.kscript}
+        patterns:
+          - include: '#docstring-prompt'
+          - include: '#codetags'
+          - include: '#docstring-guts-unicode'
+
+      - name: string.quoted.docstring.raw.multi.kscript
+        begin: ([rR])(\'\'\'|\"\"\")
+        end: (\2)
+        beginCaptures:
+          '1': {name: storage.type.string.kscript}
+          '2': {name: punctuation.definition.string.begin.kscript}
+        endCaptures:
+          '1': {name: punctuation.definition.string.end.kscript}
+        patterns:
+          - include: '#string-consume-escape'
+          - include: '#docstring-prompt'
+          - include: '#codetags'
+
+      - name: string.quoted.docstring.single.kscript
+        begin: (\'|\")
+        end: (\1)|(\n)
+        beginCaptures:
+          '1': {name: punctuation.definition.string.begin.kscript}
+        endCaptures:
+          '1': {name: punctuation.definition.string.end.kscript}
+          '2': {name: invalid.illegal.newline.kscript}
+        patterns:
+          - include: '#codetags'
+          - include: '#docstring-guts-unicode'
+
+      - name: string.quoted.docstring.raw.single.kscript
+        begin: ([rR])(\'|\")
+        end: (\2)|(\n)
+        beginCaptures:
+          '1': {name: storage.type.string.kscript}
+          '2': {name: punctuation.definition.string.begin.kscript}
+        endCaptures:
+          '1': {name: punctuation.definition.string.end.kscript}
+          '2': {name: invalid.illegal.newline.kscript}
+        patterns:
+          - include: '#string-consume-escape'
+          - include: '#codetags'
+
+
+
+  docstring-guts-unicode:
+    patterns:
+      - include: '#escape-sequence-unicode'
+      - include: '#escape-sequence'
+      - include: '#string-line-continuation'
+
+  escape-sequence-unicode:
+    patterns:
+      - name: constant.character.escape.kscript
+        match: |
+          (?x)
+            \\ (
+                  u[0-9A-Fa-f]{4}
+                  | U[0-9A-Fa-f]{8}
+                  | N\[[\w\s]+?\]
+               )
+
+  escape-sequence:
+    name: constant.character.escape.kscript
+    match: |
+      (?x)
+        \\ (
+              x[0-9A-Fa-f]{2}
+              | [0-7]{1,3}
+              | [\\"'abfnrtv]
+           )
+
+  string-line-continuation:
+    name: constant.language.kscript
+    match: \\$
+
+
+  func:
+    name: meta.function.kscript
+    begin: |
+      (?x)
+        \s*
+        (?:\b(async) \s+)? \b(func)\s+
+    end: (\{|(?=[#'"\n]))
+    beginCaptures:
+      '1': {name: storage.type.function.async.kscript}
+      '2': {name: storage.type.function.kscript}
+
+    endCaptures:
+      '1': {name: punctuation.section.function.begin.kscript}
+
+    patterns:
+      - include: '#function-def-name'
+      - include: '#parameters'
+
+
+  function-def-name:
+    patterns:
+      - include: '#illegal-object-name'
+      - include: '#builtin-possible-callables'
+      - name: entity.name.function.kscript
+        match: |
+          (?x)
+            \b\w+\b
+  
+  parameters:
+    name: meta.function.parameters.kscript
+    begin: (\()
+    end: (\))
+    beginCaptures:
+      '1': {name: punctuation.definition.parameters.begin.kscript}
+    endCaptures:
+      '1': {name: punctuation.definition.parameters.end.kscript}
+
+    patterns:
+      - name: keyword.operator.unpacking.parameter.kscript
+        match: (\*\*|\*)
+      - include: '#lambda-incomplete'
+      - include: '#illegal-names'
+      - include: '#illegal-object-name'
+      - include: '#parameter-special'
+      - match: |
+          (?x)
+            ([[:alpha:]_]\w*)
+              \s* (?: (,) | (?=[)#\n=]))
+        captures:
+          '1': {name: variable.parameter.function.language.kscript}
+          '2': {name: punctuation.separator.parameters.kscript}
+      - include: '#comments'
+      - include: '#loose-default'
+
+
+  parameter-special:
+    match: |
+      (?x)
+        \b ((self)|(tp)) \b \s*(?:(,)|(?=\)))
+    captures:
+      '1': {name: variable.parameter.function.language.kscript}
+      '2': {name: variable.parameter.function.language.special.self.kscript}
+      '3': {name: variable.parameter.function.language.special.cls.kscript}
+      '4': {name: punctuation.separator.parameters.kscript}
+
+  loose-default:
+    begin: (=)
+    end: (,)|(?=\))
+    beginCaptures:
+      '1': {name: keyword.operator.kscript}
+    endCaptures:
+      '1': {name: punctuation.separator.parameters.kscript}
+    patterns:
+      - include: '#expression'
+
+  type:
+    name:  meta.class.kscript
+    begin: |
+          (?x)
+            \s*(type)\s+
+    end: (\{|(?=[#'"\n]))
+    beginCaptures:
+      '1': {name: storage.type.class.kscript}
+    endCaptures:
+      '1': {name: punctuation.section.class.begin.kscript}
+    patterns:
+      - include: '#class-name'
+      - include: '#class-inheritance'
+
+  class-name:
+    name: entity.name.type.class.kscript
+    match: |
+      (?x)
+        ([[:alpha:]_]\w*) \b \s*
+
+  class-inheritance:
+    name: meta.class.inheritance.kscript
+    begin: |
+      (?x)
+        (extends)
+    end: (\{)
+    beginCaptures:
+      '1': {name: punctuation.definition.inheritance.begin.kscript}
+    endCaptures:
+      '1': {name: punctuation.definition.inheritance.end.kscript}
+    patterns:
+      - include: '#expr'
+
+  illegal-object-name:
+    name: keyword.illegal.name.kscript
+    match: \b(true | false | none | nan | inf | undefined | extends)\b
+
+  line-continuation:
+    patterns:
+      - match: '(\\)\s*(\S.*$\n?)'
+        captures:
+          '1': {name: punctuation.separator.continuation.line.kscript}
+          '2': {name: invalid.illegal.line.continuation.kscript}
+      - begin: '(\\)\s*$\n?'
+        # Line continuation matching ends on anything that is not a
+        # potential docstring. For docstring-like strings we explicitly
+        # match regexp and string.
+        end: |
+          (?x)
+            (?=^\s*$)
+            |
+            (?! (\s* [rR]? (\'\'\'|\"\"\"|\'|\"))
+                |
+                (\G $)  (?# '\G' is necessary for ST)
+            )
+        beginCaptures:
+          '1': {name: punctuation.separator.continuation.line.kscript}
+        patterns:
+          - include: '#regexp'
+          - include: '#string'
