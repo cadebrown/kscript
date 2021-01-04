@@ -17,6 +17,8 @@ ks_func
 
     ksf_eval,
     ksf_exec,
+    
+    ksf_exit,
 
     ksf_print,
 
@@ -99,6 +101,16 @@ static KS_FUNC(len) {
 
     KS_THROW_METH(obj, "__len");
     return NULL;
+}
+
+
+static KS_FUNC(exit) {
+    ks_cint code = 0;
+    KS_ARGS("?code:cint", &code);
+
+    exit(code);
+
+    return KSO_NONE;
 }
 
 
@@ -223,6 +235,8 @@ void _ksi_funcs() {
     F(abs, "abs(obj)", "Computes absolute value of an object\n\n    Delegates to 'type(obj).__abs(obj)'");
     F(len, "len(obj)", "Computes the length of an object, which is normally the number of elements in a collection\n\n    Delegates to 'type(obj).__hash(obj)'");
     F(repr, "repr(obj)", "Computes the string representation of an object, which aims to be a string that can either be executed and result in the same value, or give as much information as possible\n\n    Delegates to 'type(obj).__repr(obj)'");
+
+    F(exit, "exit(code=0)", "Exit the program with a given exit code")
 
     F(pow, "pow(L, R, M=none)", "Computes exponentiation (i.e. 'L ** R'), or modular exponentiation ('L ** R % m'), if 'M' is given")
 
