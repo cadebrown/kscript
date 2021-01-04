@@ -5,19 +5,15 @@
  */
 #include <ks/impl.h>
 #include <ks/mm.h>
+#include <ks/cext.h>
 
 #define M_NAME "mm"
 
-
 #ifndef KS_HAVE_libav
-#warning Building kscript without libav support, so threading is disabled
+#warning Building kscript without libav support, so most media formats are not supported
 #endif
 
-
-
 /* Utils */
-
-
 
 /* C-API */
 
@@ -105,7 +101,7 @@ static KS_TFUNC(M, open) {
 
 /* Export */
 
-ks_module _ksi_mm() {
+static ks_module get() {
     _ksi_mm_MediaFile();
     _ksi_mm_Stream();
 #ifdef KS_HAVE_libav
@@ -136,3 +132,7 @@ ks_module _ksi_mm() {
 
     return res;
 }
+
+/* Loader function */
+KS_CEXT_DECL(get);
+

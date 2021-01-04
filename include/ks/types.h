@@ -984,6 +984,14 @@ typedef struct ks_module_s {
 }* ks_module;
 
 
+
+/* C-style extension initializer */
+struct ks_cextinit {
+
+    ks_module (*loadfunc)();
+
+};
+
 /* C-style function wrapper */
 typedef kso (*ks_cfunc)(int _nargs, kso* _args);
 

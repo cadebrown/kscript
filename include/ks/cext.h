@@ -7,10 +7,6 @@
 #ifndef KS_CEXT_H__
 #define KS_CEXT_H__
 
-#ifndef KS_CEXT_NAME
-#error 'KS_CEXT_NAME' is not defined; when including `ks/cext.h`, you must define a extension name!
-#endif
-
 #include <ks/ks.h>
 
 
@@ -32,12 +28,12 @@
  *
  */
 #ifdef __cplusplus
-#define KS_CEXT_DECL(_load_func) struct ks_cextinit _KS_CEXTINIT_SYMBOL = { \
-    _load_func \
+#define KS_CEXT_DECL(_loadfunc) struct ks_cextinit _KS_CEXTINIT_SYMBOL = { \
+    _loadfunc \
 }
 #else
-#define KS_CEXT_DECL(_load_func) struct ks_cextinit _KS_CEXTINIT_SYMBOL = (struct ks_cextinit) { \
-    .load_func = _load_func \
+#define KS_CEXT_DECL(_loadfunc) struct ks_cextinit _KS_CEXTINIT_SYMBOL = (struct ks_cextinit) { \
+    .loadfunc = _loadfunc \
 }
 #endif
 
@@ -49,6 +45,5 @@ extern "C"
 extern
 #endif
     struct ks_cextinit _KS_CEXTINIT_SYMBOL;
-
 
 #endif /* KS_CEXT_H__ */

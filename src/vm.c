@@ -680,9 +680,29 @@ kso _ks_exec(ks_code bc, ks_type _in) {
             name = (ks_str)VC(arg);
             assert(name->type == kst_str);
 
-            V = (kso)ks_import(name);
-            if (!V) goto thrown;
-            ks_list_pushu(stk, V);
+            ks_list spl = ks_str_split_c(name->data, ".");
+            ks_module mod = ks_import((ks_str)spl->elems[0]);
+            if (!mod) {
+                KS_DECREF(spl);
+                goto thrown;
+            }
+            KS_INCREF(mod);
+            ks_module sub = mod;
+
+            for (i = 1; i < spl->len; ++i) {
+                ks_module nsub = ks_import_sub(sub, (ks_str)spl->elems[i]);
+                KS_DECREF(sub);
+                if (!sub) {
+                    KS_DECREF(spl);
+                    KS_DECREF(mod);
+                    goto thrown;
+                }
+
+                sub = nsub;
+            }
+            KS_DECREF(spl);
+
+            ks_list_pushu(stk, (kso)mod);
 
         VMD_OP_END
 

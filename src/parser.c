@@ -1053,6 +1053,7 @@ RULE(E14) {
                 res = tup;
             }
         }
+        res->tok = ks_tok_combo(t, res->tok);
 
     } else if (TOK.kind == KS_TOK_LBRK) {
         /* List constructor */

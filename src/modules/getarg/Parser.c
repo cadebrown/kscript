@@ -494,6 +494,7 @@ static KS_TFUNC(T, free) {
         KS_DECREF(a.name);
         KS_DECREF(a.doc);
         KS_DECREF(a.opts);
+        KS_DECREF(a.action);
     }
     for (j = 0; j < self->n_opt; ++j) {
         struct ksga_opt a = self->opt[j];

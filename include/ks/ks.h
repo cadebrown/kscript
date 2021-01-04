@@ -598,13 +598,17 @@ KS_API bool kso_catch_ignore_print();
  */
 KS_API void kso_exit_if_err();
 
-/* Import a module with a given name
+
+/*** Importing Modules ***/
+
+/* Import a base module (i.e. should not have any '.' in the name)
  */
 KS_API ks_module ks_import(ks_str name);
 
-/* Import submodule
+/* Import submodule of another module
  */
 KS_API ks_module ks_import_sub(ks_module of, ks_str sub);
+
 
 /* Run the interactive shell
  */

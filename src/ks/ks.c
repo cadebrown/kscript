@@ -120,6 +120,17 @@ static KS_FUNC(import) {
 
     return KSO_NONE;
 }
+static KS_FUNC(verbose) {
+    kso parser;
+    ks_str name, arg;
+    KS_ARGS("parser name:* arg:*", &parser, &name, kst_str, &arg, kst_str);
+
+    ks_logger lg = ks_logger_get_c("ks");
+    lg->level -= 10;
+    KS_DECREF(lg);
+
+    return KSO_NONE;
+}
 
 
 int main(int argc, char** argv) {
@@ -136,13 +147,16 @@ int main(int argc, char** argv) {
     p->stop_at_pos = true;
 
     kso on_import = ksf_wrap(import_, "on_import(name)", "Imports a module name to the global interpreter vars");
+    kso on_verbose = ksf_wrap(verbose_, "on_verbose(name)", "Increases verbosity");
 
     ksga_opt(p, "import", "Imports a module name before running anything", "-i,--import", on_import, KSO_NONE);
+    ksga_flag(p, "verbose", "Increase the default verbosity", "-v,--verbose", on_verbose);
     ksga_opt(p, "expr", "Compiles and runs an expression", "-e,--expr", NULL, KSO_NONE);
     ksga_opt(p, "code", "Compiles and runs code", "-c,--code", NULL, KSO_NONE);
     ksga_pos(p, "args", "File to run and arguments given to it", NULL, -1);
 
     KS_DECREF(on_import);
+    KS_DECREF(on_verbose);
 
     ks_dict args = ksga_parse(p, ksos_argv);
     kso_exit_if_err();

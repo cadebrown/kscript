@@ -922,8 +922,10 @@ echo "  Done!"
 
 # ---------------------------------------
 
+
 T=makefile
 echo "Generating '$T' ..."
+
 
 echo "# Makefile (GENERATED) - auto-generated build script" > $T
 echo "" >> $T
@@ -954,14 +956,22 @@ echo "docs_PDF         := docs/kscript.pdf" >> $T
 echo "docs_HTML_MONO   := docs/kscript.html" >> $T
 echo "docs_HTML_DIR    := docs/kscript" >> $T
 echo "" >> $T
+printf "libksmext        := " >> $T
+for dir in src/extmodules/*; do
+    printf "lib/libksm_%s%s" "${dir##*/}" "$EXTSHARED" >> $T
+done
+echo "" >> $T
+
+
 echo "" >> $T
 echo "# -*- Rules -*-" >> $T
 echo "" >> $T
 echo ".PHONY: default lib bin check install uninstall clean docs FORCE" >> $T
 echo "" >> $T
 echo "# meta-rules that just are shorthands for other ones" >> $T
-echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN)" >> $T
-echo "lib: \$(libks_SHARED) \$(libks_STATIC)" >> $T
+echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN) \$(libksmext)" >> $T
+echo "lib: \$(libks_SHARED) \$(libks_STATIC) \$(libksmext)" >> $T
+
 echo "bin: \$(ks_BIN)" >> $T
 echo "clean: FORCE" >> $T
 echo "	rm -rf \$(wildcard .tmp debian/usr build lib bin *.deb)" >> $T
@@ -1019,7 +1029,26 @@ echo "" >> $T
 echo "\$(docs_HTML_DIR): \$(docs_TEXI)" >> $T
 echo "	\$(MAKEINFO) --html --css-include=\$(docs_CSS) $^ -o \$@" >> $T
 echo "" >> $T
+echo "# -*- External Modules -*-" >> $T
+for dir in src/extmodules/*; do
+    mn="${dir##*/}"
+    printf "libksm_%s_C := \$(wildcard %s/*.c)\n" "$mn" "$dir" >> $T
+    printf "libksm_%s_O := \$(patsubst %%.c,.tmp/%%.o,\$(libksm_%s_C))" "$mn" "$mn" >> $T
+    echo "" >> $T
+    printf "lib/libksm_%s%s: \$(libksm_%s_O) \$(all_H)" "$mn" "$EXTSHARED" "$mn" >> $T
+    echo "" >> $T
+    echo "	@mkdir -p \$(dir \$@)" >> $T
+    echo "	\$(CC) -L./lib \\" >> $T
+    printf "		\$(libksm_%s_O) \\" "$mn" >> $T
+    echo "" >> $T
+    echo "		\$(LDFLAGS) -fPIC -shared -o \$@" >> $T
+done
 echo "" >> $T
+echo "" >> $T
+echo "" >> $T
+
+
+
 
 echo "  Done!"
 
