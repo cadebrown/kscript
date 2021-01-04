@@ -64,8 +64,9 @@ ksmm_MediaFile ksmm_MediaFile_open(ks_type tp, ks_str src) {
 static KS_TFUNC(T, free) {
     ksmm_MediaFile self;
     KS_ARGS("self:*", &self, ksmmt_MediaFile);
-
+#ifdef KS_HAVE_libav
     KS_NDECREF(self->fmtctx);
+#endif
     KS_NDECREF(self->streams);
     KS_NDECREF(self->src);
 

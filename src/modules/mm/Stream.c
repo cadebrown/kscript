@@ -371,7 +371,10 @@ static KS_TFUNC(T, free) {
     KS_ARGS("self:*", &self, ksmmt_Stream);
 
     KS_NDECREF(self->src);
+
+#ifdef KS_HAVE_libav
     KS_NDECREF(self->fmtctx);
+#endif
 
     KSO_DEL(self);
     return KSO_NONE;

@@ -109,6 +109,7 @@ ks_module _ksi_mm() {
     _ksi_mm_MediaFile();
     _ksi_mm_Stream();
 #ifdef KS_HAVE_libav
+    av_register_all();
     _ksi_mm_AVFormatContext();
 #endif
 
