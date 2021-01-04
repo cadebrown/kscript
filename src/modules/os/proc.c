@@ -147,7 +147,7 @@ static KS_TFUNC(T, init) {
         if (ksos_dup2(cstdout[1], STDOUT_FILENO) < 0) exit(1);
         if (ksos_dup2(cstderr[1], STDERR_FILENO) < 0) exit(1);
 
-        exit(execv(cargv[0], cargv + 1));
+        exit(execv(cargv[0], cargv));
         assert(false);
     }
     self->pid = res;
