@@ -116,57 +116,67 @@ static KS_TFUNC(T, init) {
         cargv[i] = s->data;
     }
 
-    int cstdin[2]  = {-1, -1};
-    int cstdout[2] = {-1, -1};
-    int cstderr[2] = {-1, -1};
-
-    int res;
-
-    /* attempt to open 3 pipes and fork
-    */
-    if (ksos_pipe(cstdin) < 0 || ksos_pipe(cstdout) < 0 || ksos_pipe(cstderr) < 0 || (res = ksos_fork()) < 0) {
+    /* Create pipes */
+    int pin[2];
+    int pout[2];
+    int perr[2];
+    if (ksos_pipe(pin) < 0 || ksos_pipe(pout) || ksos_pipe(perr)) {
+        if (pin[0] >= 0) close(pin[0]);
+        if (pin[1] >= 0) close(pin[1]);
+        if (pout[0] >= 0) close(pout[0]);
+        if (pout[1] >= 0) close(pout[1]);
+        if (perr[0] >= 0) close(perr[0]);
+        if (perr[1] >= 0) close(perr[1]);
         ks_free(cargv);
-
-        if (cstdin[0] >= 0) close(cstdin[0]);
-        if (cstdin[1] >= 0) close(cstdin[1]);
-        if (cstdout[0] >= 0) close(cstdout[0]);
-        if (cstdout[1] >= 0) close(cstdout[1]);
-        if (cstderr[0] >= 0) close(cstderr[0]);
-        if (cstderr[1] >= 0) close(cstderr[1]);
         return NULL;
     }
 
-    if (res == 0) {
-        /* close irrelevant fds and replace stdin, stdout, stderr with pipe
-        */
-        close(cstdin[1]);
-        close(cstdout[0]);
-        close(cstderr[0]);
-
-        if (ksos_dup2(cstdin[0], STDIN_FILENO) < 0) exit(1);
-        if (ksos_dup2(cstdout[1], STDOUT_FILENO) < 0) exit(1);
-        if (ksos_dup2(cstderr[1], STDERR_FILENO) < 0) exit(1);
-
-        exit(execv(cargv[0], cargv));
-        assert(false);
+    pid_t pid;
+    if ((pid = ksos_fork()) < 0) {
+        if (pin[0] >= 0) close(pin[0]);
+        if (pin[1] >= 0) close(pin[1]);
+        if (pout[0] >= 0) close(pout[0]);
+        if (pout[1] >= 0) close(pout[1]);
+        if (perr[0] >= 0) close(perr[0]);
+        if (perr[1] >= 0) close(perr[1]);
+        ks_free(cargv);
+        return NULL;
     }
-    self->pid = res;
 
-    close(cstdin[0]);
-    close(cstdout[1]);
-    close(cstderr[1]);
+    if (pid == 0) {
+        /* We are the child process */
+        dup2(pin[0], STDIN_FILENO);
+        dup2(pout[1], STDOUT_FILENO);
+        dup2(perr[1], STDERR_FILENO);
+
+        close(pin[0]);
+        close(pin[1]);
+        close(pout[0]);
+        close(pout[1]);
+        close(perr[0]);
+        close(perr[1]);
+
+        int rc = execv(cargv[0], cargv);
+        exit(1);
+    }
+
+    /* Close unused pipes */
+    close(pin[0]);
+    close(pout[1]);
+    close(perr[1]);
 
     ks_str v_in_src = ks_fmt("%i:stdin", self->pid);
     ks_str v_out_src = ks_fmt("%i:stdout", self->pid);
     ks_str v_err_src = ks_fmt("%i:stderr", self->pid);
 
-    self->v_in = ksio_FileIO_fdopen(cstdin[1], false, true, true, v_in_src);
-    self->v_out = ksio_FileIO_fdopen(cstdout[0], true, false, true, v_out_src);
-    self->v_err = ksio_FileIO_fdopen(cstderr[0], true, false, true, v_err_src);
+    self->v_in = ksio_FileIO_fdopen(pin[1], false, true, false, v_in_src);
+    self->v_out = ksio_FileIO_fdopen(pout[0], true, false, false, v_out_src);
+    self->v_err = ksio_FileIO_fdopen(perr[0], true, false, false, v_err_src);
 
     KS_DECREF(v_in_src);
     KS_DECREF(v_out_src);
     KS_DECREF(v_err_src);
+    free(cargv);
 
     return KSO_NONE;
 }
