@@ -4,6 +4,16 @@
  */
 #include <ks/impl.h>
 
+#if defined(KS_HAVE_readline)
+
+/* Use GNU readline */
+#include <readline/readline.h>
+#include <readline/history.h>
+
+#endif
+
+
+
 ks_func 
     ksf_any,
     ksf_all,
@@ -227,6 +237,21 @@ static KS_FUNC(input) {
     ks_str prompt = NULL;
     KS_ARGS("?prompt:*", &prompt, kst_str);
 
+
+#ifdef KS_HAVE_readline
+
+    char* line = readline(prompt ? prompt->data : "");
+    if (!line) {
+        KS_THROW(kst_Error, "readline() returned NULL");
+        return NULL;
+    }
+    ks_str res = ks_str_new(-1, line);
+    free(line);
+
+    return (kso)res;
+
+#else
+
     if (prompt) {
         if (!ks_printf("%S", prompt)) return NULL;
     }
@@ -237,6 +262,7 @@ static KS_FUNC(input) {
     }
 
     return res;
+#endif
 }
 
 void _ksi_funcs() {
