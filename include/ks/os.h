@@ -284,6 +284,21 @@ KS_API int ksos_pipe(int* fd);
  */
 KS_API int ksos_dup2(int oldfd, int newfd);
 
+
+/* Wait for a pid, and calculate the status
+ */
+KS_API bool ksos_waitpid(pid_t pid, int* status);
+
+/* Tell whether 'pid' refers to an alive process
+ */
+KS_API bool ksos_isalive(pid_t pid, bool* out);
+
+/* Attempt to send a signal to a pid
+ */
+KS_API bool ksos_kill(pid_t pid, int sig);
+
+
+
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found
  * Returns whether one was found

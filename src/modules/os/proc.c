@@ -7,62 +7,60 @@
 
 #define T_NAME "os.proc"
 
-int ksos_waitpid(pid_t pid);
-
-int ksos_kill(pid_t pid, int sig);
-
-int ksos_isalive(pid_t pid);
-
 /* C-API */
 
-int ksos_waitpid(pid_t pid) {
+bool ksos_waitpid(pid_t pid, int* status) {
 #ifdef KS_HAVE_waitpid
-    int status;
-
-    if (waitpid(pid, &status, 0) < 0) {
+    if (waitpid(pid, status, 0) < 0) {
         KS_THROW(kst_OSError, "Failed to waitpid: error using waitpid(%i)", pid);
+        return false;
     }
 
-    return status;
+    return true;
 #else
     KS_THROW(kst_OSError, "Failed to waitpid: platform did not provide a 'waitpid()' function");
-    return -1;
+    return false;
 #endif
 }
 
-int ksos_kill(pid_t pid, int sig) {
+bool ksos_kill(pid_t pid, int sig) {
 #ifdef KS_HAVE_kill
     int res = kill(pid, sig);
-
     if (res < 0) {
-            KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", pid, sig, strerror(errno));
+        KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", pid, sig, strerror(errno));
+        return false;
     }
 
-    return res;
+    return true;
 #else
     KS_THROW(kst_OSError, "Failed to kill: platform did not provide a 'kill()' function");
-    return -1;
+    return false;
 #endif
 }
 
-int ksos_isalive(pid_t pid) {
+bool ksos_isalive(pid_t pid, bool* out) {
 #ifdef KS_HAVE_kill
     // attempt send empty signal
     int res = kill(pid, 0);
 
     // if res < 0 and ESRCH, pid has no process. Otherwise, print error.a
     if (res < 0) {
-        if (errno == ESRCH) return 0;
+        if (errno == ESRCH) {
+            *out = false;
+            return true;
+        }
         else {
             KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", pid, 0, strerror(errno));
+            return false;
         }
     // if res >= 0, pid has a process
     } else {
-        return 1;
+        *out = true;
+        return true;
     }
 #else
     KS_THROW(kst_OSError, "Failed to isalive(%i): platform did not provide a 'kill()' function", pid);
-    return -1;
+    return false;
 #endif
 }
 
@@ -214,20 +212,25 @@ static KS_TFUNC(T, join) {
     ksos_proc self;
     KS_ARGS("self:*", &self, ksost_proc);
 
-    return (kso) ks_int_new(ksos_waitpid(self->pid));
+    int res;
+    if (!ksos_waitpid(self->pid, &res)) return NULL;
+
+    return (kso) ks_int_new(res);
 }
 
 static KS_TFUNC(T, isalive) {
     ksos_proc self;
     KS_ARGS("self:*", &self, ksost_proc);
 
-    if (ksos_kill(self->pid, 0) < 0) {
-        if (errno == ESRCH) (kso) ks_int_new(0);
-        else {
+    if (!ksos_kill(self->pid, 0)) {
+        if (errno == ESRCH) {
+            return KSO_FALSE;
+        } else {
             KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", self->pid, 0, strerror(errno));
+            return NULL;
         }
     } else {
-        return (kso) ks_int_new(1);
+        return KSO_TRUE;
     }
 }
 
@@ -236,14 +239,18 @@ static KS_TFUNC(T, signal) {
     ks_cint sig;
     KS_ARGS("self:* signal:cint", &self, ksost_proc, &sig);
 
-    return (kso) ks_int_new(ksos_kill(self->pid, (int) sig));
+    if (!ksos_kill(self->pid, (int) sig)) return NULL;
+
+    return KSO_NONE;
 }
 
 static KS_TFUNC(T, kill) {
     ksos_proc self;
     KS_ARGS("self:*", &self, ksost_proc);
 
-    return (kso) ks_int_new(ksos_kill(self->pid, SIGKILL));
+    if (!ksos_kill(self->pid, SIGKILL)) return NULL;
+
+    return KSO_NONE;
 }
 
 /* Export */
