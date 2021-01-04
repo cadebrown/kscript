@@ -27,6 +27,54 @@ ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, boo
     return self;
 }
 
+ksio_FileIO ksio_FileIO_fdopen(int fd, bool is_r, bool is_w, bool is_bin, ks_str src_name) {
+    const char* mode = NULL;
+    
+    if (is_r && is_w) {
+        if (is_bin) {
+            mode = "rb+";
+        }
+        else {
+            mode = "r+";
+        }
+    }
+    else if (is_r) {
+        if (is_bin) {
+            mode = "rb";
+        }
+        else {
+            mode = "r";
+        }
+    }
+    else if (is_w) {
+        if (is_bin) {
+            mode = "wb";
+        }
+        else {
+            mode = "w";
+        }
+    }
+    else {
+        assert(false);
+    }
+
+#ifdef KS_HAVE_fdopen
+    FILE* res = fdopen(fd, mode);
+
+    if (!res) {
+        KS_THROW(kst_OSError, "Failed to fdopen %i: %s", fd, strerror(errno));
+        return NULL;
+    }
+
+    return ksio_FileIO_wrap(ksiot_FileIO, res, true, is_r, is_w, is_bin, src_name);
+
+#else
+    KS_THROW(kst_OSError, "Failed to fdopen: platform did not provide a 'fdopen()' function");
+    return -1;
+#endif
+}
+
+
 /* Type Functions */
 
 static KS_TFUNC(T, init) {

@@ -224,7 +224,7 @@ _KS_DO_SPEC(_KSACT)
         {"len", (kso)ksf_len},
         {"repr", (kso)ksf_repr},
 
-        {"exit", (kso)ksf_exit},
+        //{"exit", (kso)ksf_exit},
 
         {"iter", (kso)ksf_iter},
         {"next", (kso)ksf_next},

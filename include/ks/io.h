@@ -252,6 +252,10 @@ KS_API ksio_RawIO ksio_RawIO_wrap(ks_type tp, int fd, bool do_close, bool is_r, 
  */
 KS_API ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, bool is_w, bool is_bin, ks_str src_name);
 
+/* Return a wrapper around a file descriptor
+*/
+KS_API ksio_FileIO ksio_FileIO_fdopen(int fd, bool is_r, bool is_w, bool is_bin, ks_str src_name);
+
 /* Create a new StringIO
  */
 KS_API ksio_StringIO ksio_StringIO_new();

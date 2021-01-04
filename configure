@@ -428,6 +428,7 @@ check_struct "time_t" "time_t"
 check_struct "clock_t" "clock_t"
 check_struct "struct_timespec" "struct timespec"
 check_struct "struct_stat" "struct stat"
+check_struct "FILE" "FILE*"
 
 echo ""
 echo " -- Members -- "
@@ -554,6 +555,10 @@ int main(int argc, char** argv) {
      struct stat* st_p = &st;
     #endif
 
+    #ifdef KS_HAVE_FILE
+     FILE* F;
+    #endif
+
     $assignto $1($3);
     return 0;
 }
@@ -657,9 +662,11 @@ check_func "realpath" "s" "s,NULL"
 
 check_func "waitpid" "i" "i,&i,i"
 check_func "fork" "i" ""
-
+check_func "pipe" "i" "&i"
+check_func "dup2" "i" "i,i"
 check_func "kill" "i" "i,i"
 
+check_func "fdopen" "F" "i,s"
 check_func "mkdir" "i" "s,i"
 check_func "_mkdir" "i" "s,i"
 check_func "remove" "i" "s"

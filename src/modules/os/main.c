@@ -92,7 +92,37 @@ int ksos_fork() {
 
     return res;
 #else
-    KS_THROW(kst_OSError, "Failed to fork: platform did not provide a 'fork()' function", cmd);
+    KS_THROW(kst_OSError, "Failed to fork: platform did not provide a 'fork()' function");
+    return -1;
+#endif
+}
+
+int ksos_pipe(int* fd) {
+#ifdef KS_HAVE_pipe
+    int res = pipe(fd);
+
+    if (res < 0) {
+        KS_THROW(kst_OSError, "Failed to pipe: %s", strerror(errno));
+    }
+
+    return res;
+#else
+    KS_THROW(kst_OSError, "Failed to pipe: platform did not provide a 'pipe(int*)' function");
+    return -1;
+#endif
+}
+
+int ksos_dup2(int oldfd, int newfd) {
+#ifdef KS_HAVE_dup2
+    int res = dup2(oldfd, newfd);
+
+    if (res < 0) {
+        KS_THROW(kst_OSError, "Failed to dup2: %s", strerror(errno));
+    }
+
+    return res;
+#else
+    KS_THROW(kst_OSError, "Failed to dup2: platform did not provide a 'dup2(int, int)' function");
     return -1;
 #endif
 }

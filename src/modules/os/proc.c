@@ -11,6 +11,8 @@ int ksos_waitpid(pid_t pid);
 
 int ksos_kill(pid_t pid, int sig);
 
+int ksos_isalive(pid_t pid);
+
 /* C-API */
 
 int ksos_waitpid(pid_t pid) {
@@ -98,6 +100,73 @@ static KS_TFUNC(T, init) {
 
     if (!self->argv) return NULL;
 
+    char** cargv = ks_malloc(self->argv->len * sizeof(*cargv));
+    
+    int i;
+    for (i = 0; i < self->argv->len; i++) {
+        ks_str s = (ks_str) self->argv->elems[i];
+
+        if (!kso_issub(s->type, kst_str)) {
+            ks_free(cargv);
+            KS_THROW(kst_TypeError, "expected all arguments to be of type 'str', but got object of type '%T'", s->type);
+            return NULL;
+        }
+
+        cargv[i] = s->data;
+    }
+
+    int cstdin[2]  = {-1, -1};
+    int cstdout[2] = {-1, -1};
+    int cstderr[2] = {-1, -1};
+
+    int res;
+
+    /* attempt to open 3 pipes and fork
+    */
+    if (ksos_pipe(cstdin) < 0 || ksos_pipe(cstdout) < 0 || ksos_pipe(cstderr) < 0 || (res = ksos_fork()) < 0) {
+        ks_free(cargv);
+
+        if (cstdin[0] >= 0) close(cstdin[0]);
+        if (cstdin[1] >= 0) close(cstdin[1]);
+        if (cstdout[0] >= 0) close(cstdout[0]);
+        if (cstdout[1] >= 0) close(cstdout[1]);
+        if (cstderr[0] >= 0) close(cstderr[0]);
+        if (cstderr[1] >= 0) close(cstderr[1]);
+        return NULL;
+    }
+
+    if (res == 0) {
+        /* close irrelevant fds and replace stdin, stdout, stderr with pipe
+        */
+        close(cstdin[1]);
+        close(cstdout[0]);
+        close(cstderr[0]);
+
+        if (ksos_dup2(STDIN_FILENO, cstdin[0]) < 0) exit(1);
+        if (ksos_dup2(STDOUT_FILENO, cstdout[1]) < 0) exit(1);
+        if (ksos_dup2(STDERR_FILENO, cstderr[1]) < 0) exit(1);
+
+        exit(execv(cargv[0], cargv + 1));
+        assert(false);
+    }
+    self->pid = res;
+
+    close(cstdin[0]);
+    close(cstdout[1]);
+    close(cstderr[1]);
+
+    ks_str v_in_src = ks_fmt("%i:stdin", self->pid);
+    ks_str v_out_src = ks_fmt("%i:stdout", self->pid);
+    ks_str v_err_src = ks_fmt("%i:stderr", self->pid);
+
+    self->v_in = ksio_FileIO_fdopen(cstdin[1], false, true, true, v_in_src);
+    self->v_out = ksio_FileIO_fdopen(cstdout[0], true, false, true, v_out_src);
+    self->v_err = ksio_FileIO_fdopen(cstderr[0], true, false, true, v_err_src);
+
+    KS_DECREF(v_in_src);
+    KS_DECREF(v_out_src);
+    KS_DECREF(v_err_src);
+
     return KSO_NONE;
 }
 
@@ -107,15 +176,15 @@ static KS_TFUNC(T, getattr) {
 
     KS_ARGS("self:* attr:*", &self, ksost_proc, &attr, kst_str);
 
-    if (ks_str_eq_c(attr, "argv", sizeof("argv"))) {
+    if (ks_str_eq_c(attr, "argv", sizeof("argv") - 1)) {
         return KS_NEWREF(self->argv);
-    } else if (ks_str_eq_c(attr, "pid", sizeof("pid"))) {
+    } else if (ks_str_eq_c(attr, "pid", sizeof("pid") - 1)) {
         return (kso)ks_int_new(self->pid);
-    } else if (ks_str_eq_c(attr, "stdin", sizeof("stdin"))) {
+    } else if (ks_str_eq_c(attr, "stdin", sizeof("stdin") - 1)) {
         return KS_NEWREF(self->v_in);
-    } else if (ks_str_eq_c(attr, "stdout", sizeof("stdout"))) {
+    } else if (ks_str_eq_c(attr, "stdout", sizeof("stdout") - 1)) {
         return KS_NEWREF(self->v_out);
-    } else if (ks_str_eq_c(attr, "stderr", sizeof("stderr"))) {
+    } else if (ks_str_eq_c(attr, "stderr", sizeof("stderr") - 1)) {
         return KS_NEWREF(self->v_err);
     }
 
@@ -184,6 +253,5 @@ void _ksi_os_proc() {
         {"isalive",                ksf_wrap(T_isalive_, T_NAME ".isalive(self)", "Returns True if process is still running, False if dead")},
         {"signal",                 ksf_wrap(T_signal_, T_NAME ".signal(self, code)", "Sends a signal to process and returns the return code")},
         {"kill",                   ksf_wrap(T_kill_, T_NAME ".kill(self)", "Sends -9 to the process and returns the return code")},
-
     ));
 }
