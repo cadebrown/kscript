@@ -296,6 +296,7 @@ KS_API extern ks_func
 
     ksf_eval,
     ksf_exec,
+    ksf_exit,
 
     ksf_print,
 

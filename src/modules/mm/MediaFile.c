@@ -34,6 +34,8 @@ ksmm_MediaFile ksmm_MediaFile_open(ks_type tp, ks_str src) {
     for (i = 0; i < self->fmtctx->val->nb_streams; ++i) {
         ksmm_Stream s = KSO_NEW(ksmm_Stream, ksmmt_Stream);
 
+        KS_INCREF(src);
+        s->src = src;
         s->is_open = false;
         s->idx = i;
         s->stream = self->fmtctx->val->streams[i];
@@ -64,17 +66,21 @@ static KS_TFUNC(T, free) {
     ksmm_MediaFile self;
     KS_ARGS("self:*", &self, ksmmt_MediaFile);
 
+    KS_NDECREF(self->fmtctx);
+    KS_NDECREF(self->streams);
+    KS_NDECREF(self->src);
 
     KSO_DEL(self);
     return KSO_NONE;
 }
+
 static KS_TFUNC(T, str) {
     ksmm_MediaFile self;
     KS_ARGS("self:*", &self, ksmmt_MediaFile);
 
     return (kso)ks_fmt("<%T src=%R>", self, self->src);
-
 }
+
 static KS_TFUNC(T, getattr) {
     ksmm_MediaFile self;
     ks_str attr;
@@ -87,6 +93,7 @@ static KS_TFUNC(T, getattr) {
     KS_THROW_ATTR(self, attr);
     return NULL;
 }
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -98,7 +105,6 @@ void _ksi_mm_MediaFile() {
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
-
     ));
 }
 

@@ -35,8 +35,12 @@
 #endif
 
 
-
 /* Types */
+
+enum {
+    KSMM_MEDIA_AUDIO  = 0,
+};
+
 
 #ifdef KS_HAVE_libav
 
@@ -86,8 +90,9 @@ typedef struct ksmm_Stream_s {
     /* Index of stream */
     int idx;
 
-    /* Whether or not the stream has been opened */
-    bool is_open;
+    /* Whether the stream is writeable */
+    bool is_w;
+
 
 #ifdef KS_HAVE_libav
 
@@ -100,8 +105,6 @@ typedef struct ksmm_Stream_s {
 #endif
 
 }* ksmm_Stream;
-
-
 
 
 /* Functions */
@@ -122,8 +125,6 @@ KS_API enum AVPixelFormat ksmm_AV_getformat(struct AVCodecContext* codctx, const
  */
 KS_API enum AVPixelFormat ksmm_AV_filterfmt(enum AVPixelFormat pix_fmt);
 
-
-
 #endif
 
 
@@ -134,7 +135,14 @@ KS_API ksmm_MediaFile ksmm_MediaFile_open(ks_type tp, ks_str src);
 
 /* Read an image from a stream
  */
-KS_API nx_array ksmm_get_image(ksmm_Stream self);
+KS_API nx_array ksmm_read_image(ksmm_Stream self);
+
+/* Write an image to a stream
+ */
+KS_API bool ksmm_write_image(ksmm_Stream self, nxar_t img);
+
+
+
 
 
 /* Export */
