@@ -154,7 +154,7 @@ static KS_TFUNC(T, init) {
         close(perr[0]);
         close(perr[1]);
 
-        int rc = execv(cargv[0], cargv);
+        int rc = execvp(cargv[0], cargv);
         exit(1);
     }
 
