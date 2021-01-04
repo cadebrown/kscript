@@ -100,7 +100,8 @@ static KS_TFUNC(T, init) {
 
     if (!self->argv) return NULL;
 
-    char** cargv = ks_malloc(self->argv->len * sizeof(*cargv));
+    char** cargv = ks_malloc((self->argv->len + 1) * sizeof(*cargv));
+    cargv[self->argv->len] = NULL;
     
     int i;
     for (i = 0; i < self->argv->len; i++) {
@@ -142,9 +143,9 @@ static KS_TFUNC(T, init) {
         close(cstdout[0]);
         close(cstderr[0]);
 
-        if (ksos_dup2(STDIN_FILENO, cstdin[0]) < 0) exit(1);
-        if (ksos_dup2(STDOUT_FILENO, cstdout[1]) < 0) exit(1);
-        if (ksos_dup2(STDERR_FILENO, cstderr[1]) < 0) exit(1);
+        if (ksos_dup2(cstdin[0], STDIN_FILENO) < 0) exit(1);
+        if (ksos_dup2(cstdout[1], STDOUT_FILENO) < 0) exit(1);
+        if (ksos_dup2(cstderr[1], STDERR_FILENO) < 0) exit(1);
 
         exit(execv(cargv[0], cargv + 1));
         assert(false);
