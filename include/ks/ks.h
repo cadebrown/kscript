@@ -311,6 +311,7 @@ KS_API extern ks_func
 
     ksf_issub,
     ksf_isinst,
+    ksf_input,
     
     ksf_iter,
     ksf_next

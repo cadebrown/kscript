@@ -31,6 +31,8 @@ ks_func
     ksf_ord,
     ksf_chr,
 
+    ksf_input,
+
     ksf_issub,
     ksf_isinst,
     
@@ -221,6 +223,21 @@ static KS_FUNC(id) {
     return (kso)ks_int_newu((ks_uint)obj);
 }
 
+static KS_FUNC(input) {
+    ks_str prompt = NULL;
+    KS_ARGS("?prompt:*", &prompt, kst_str);
+
+    if (prompt) {
+        if (!ks_printf("%S", prompt)) return NULL;
+    }
+
+    kso res = kso_next((kso)ksos_stdin);
+    if (!res) {
+        return NULL;
+    }
+
+    return res;
+}
 
 void _ksi_funcs() {
 
@@ -248,6 +265,7 @@ void _ksi_funcs() {
 
     F(iter, "iter(obj)", "Returns an iterator over the contents of 'obj'\n\n    Delegates to 'type(obj).__iter'")
     F(next, "next(obj)", "Returns the next object in an iterator\n\n    Delegates to 'type(obj).__next', or 'next(iter(obj))'")
+    F(input, "input(prompt='')", "Print an (optional) prompt and then return the next line of user input")
 
     F(id, "id(obj)", "Return the id of an object, which is its memory location");
 

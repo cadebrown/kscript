@@ -230,6 +230,7 @@ _KS_DO_SPEC(_KSACT)
         {"next", (kso)ksf_next},
         {"issub", (kso)ksf_issub},
         {"isinst", (kso)ksf_isinst},
+        {"input", (kso)ksf_input},
     
         {"chr", (kso)ksf_chr},
         {"ord", (kso)ksf_ord},
