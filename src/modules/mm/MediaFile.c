@@ -36,7 +36,6 @@ ksmm_MediaFile ksmm_MediaFile_open(ks_type tp, ks_str src) {
 
         KS_INCREF(src);
         s->src = src;
-        s->is_open = false;
         s->idx = i;
         s->stream = self->fmtctx->val->streams[i];
         s->fmtctx = self->fmtctx;

@@ -354,126 +354,6 @@ bool ksmm_write_image(ksmm_Stream self, nxar_t img) {
     // whether or not to add alpha component
     bool frame_has_alpha = false;
 
-    // write to 'frame'
-    if (frame_pix_fmt == AV_PIX_FMT_RGBA || frame_pix_fmt == AV_PIX_FMT_RGB24 || frame_pix_fmt == AV_PIX_FMT_RGB0) {
-        // we can do it without using swscale
-
-        /**/ if (false) {}        
-        else if (frame_pix_fmt == AV_PIX_FMT_RGBA)  { frame_chn = 4; frame_chn_stride = 4; frame_has_alpha = true; }
-        else if (frame_pix_fmt == AV_PIX_FMT_RGB24) { frame_chn = 3; frame_chn_stride = 3; }
-        else if (frame_pix_fmt == AV_PIX_FMT_RGB0)  { frame_chn = 3; frame_chn_stride = 4; }
-
-        // all these formats are uint8
-        frame_dtype = nxd_uchar;
-
-
-        assert (frame_chn > 0 && frame_chn_stride > 0 && frame_dtype && "layout was not computed correctly!");
-
-        // create a nxar describing the frame data
-        nxar_t frame_ar = (nxar_t){
-            .data = (void*)frame->data[0],
-            .dtype = frame_dtype,
-            .rank = 3,
-            .dim = (nx_size_t[]){ h, w, frame_chn },
-            .stride = (nx_size_t[]){ frame->linesize[0], frame_chn_stride * frame_dtype->size, frame_dtype->size },
-        };
-
-        // scaling factor;
-        // for converting from float->int, since
-        //   integers are fixed point
-        double scale_fac = 1.0;
-
-        if (frame_ar.dtype->kind == NX_DTYPE_KIND_CINT && (img.dtype->kind == NX_DTYPE_KIND_CFLOAT || img.dtype->kind == NX_DTYPE_KIND_CCOMPLEX)) {
-            scale_fac = (1ULL << (frame_ar.dtype->size * 8)) - 1;
-        }
-
-        // minimum channels
-        int min_chn = frame_chn < d ? frame_chn : d;
-
-
-        // set all shared channels at once
-        if (!nx_T_mul(
-            (nxar_t) {
-                .data = img.data,
-                .dtype = img.dtype,
-                .rank = 3,
-                .dim = (nx_size_t[]){ h, w, min_chn },
-                .stride = (nx_size_t[]){ img.stride[0], img.stride[1], img.stride[2] },
-            },
-            (nxar_t) {
-                .data = (void*)&scale_fac,
-                .dtype = nx_dtype_fp64,
-                .rank = 1,
-                .dim = (nx_size_t[]){ 1 },
-                .stride = (nx_size_t[]){ 0 },
-            },
-            (nxar_t) {
-                .data = frame_ar.data,
-                .dtype = frame_ar.dtype,
-                .rank = 3,
-                .dim = (nx_size_t[]){ h, w, min_chn },
-                .stride = (nx_size_t[]) { frame_ar.stride[0], frame_ar.stride[1], frame_ar.stride[2] },
-            }
-        )) {
-            goto end_write_image;
-        }
-
-        //printf("%i,%i\n", min_chn, frame_chn);
-        // convert the rest over here
-        while (min_chn < frame_chn) {
-
-            // calculate fill value
-            uint8_t vu8 = (min_chn == (frame_chn - 1) && frame_has_alpha) ? 255 : 0;
-
-            // fill value up
-            if (!nx_T_cast(
-                (nxar_t) {
-                    .data = (void*)&vu8,
-                    .dtype = nx_dtype_uint8,
-                    .rank = 1,
-                    .dim = (nx_size_t[]){ 1 },
-                    .stride = (nx_size_t[]){ 0 },
-                },
-                (nxar_t) {
-                    .data = (void*)((intptr_t)frame_ar.data + frame_ar.stride[2] * min_chn),
-                    .dtype = frame_ar.dtype,
-                    .rank = 2,
-                    .dim = (nx_size_t[]){ h, w },
-                    .stride = (nx_size_t[]) { frame_ar.stride[0], frame_ar.stride[1] },
-                }
-            )) {
-                goto end_write_image;
-            }
-
-
-            min_chn++;
-        }
-
-        frame->pts = 1;
-
-        /* encode the image */
-        if (!my_encode(codec_ctx, frame, packet, fp)) goto end_write_image;
-        if (!my_encode(codec_ctx, NULL, packet, fp)) goto end_write_image;
-
-        fwrite(endcode, 1, sizeof(endcode), fp);
-
-    } else {
-        // we need to convert what we have to it
-        ks_throw(ks_type_ToDoError, "Need to implement swscale for other formats");
-
-        goto end_write_image;
-    }
-
-
-
-    // cleanup
-    if (codec_ctx) avcodec_close(codec_ctx);
-    av_frame_free(&frame);
-    av_packet_free(&packet);
-    if (fp) fclose(fp);
-
-    return rst;
-
 #else
     KS_THROW(kst_Error, "Cannot write image to stream, no libav");
     return NULL;
@@ -511,7 +391,7 @@ static KS_TFUNC(T, readimg) {
     ksmm_Stream self;
     KS_ARGS("self:*", &self, ksmmt_Stream);
     
-    return (kso)ksmm_get_image(self);
+    return (kso)ksmm_read_image(self);
 }
 
 static KS_TFUNC(T, isaudio) {
@@ -542,9 +422,9 @@ static KS_TFUNC(T, next) {
 
 #ifdef KS_HAVE_libav
     if (self->stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
-        return (kso)ksmm_get_image(self);
+        return (kso)ksmm_read_image(self);
     } else {
-        return (kso)ksmm_get_image(self);
+        return (kso)ksmm_read_image(self);
     }
 
 #else
