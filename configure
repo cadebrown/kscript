@@ -36,6 +36,8 @@ WITH_libav="auto"
 WITH_pthreads="auto"
 WITH_readline="auto"
 WITH_fftw3="auto"
+WITH_opengl="auto"
+WITH_x="auto"
 
 #CHECKTO="/dev/null"
 : ${CHECKTO:="/dev/null"}
@@ -64,6 +66,8 @@ case $1 in
         echo "  --with-pthreads V       Whether or not to use pthreads (Posix-threads) for threading interface (default: auto)"
         echo "  --with-ffi V            Whether or not to use ffi from libffi (Foreign Function Interface) for C-function interop (default: auto)"
         echo "  --with-fftw3 V          Whether or not to use FFTW3 for Fast-Fourier-Transforms (default: auto)"
+        echo "  --with-opengl V         Whether or not to use OpenGL for graphics acceleration (default: auto)"
+        echo "  --with-x V              Whether or not to use XLib for graphics (default: auto)"
         echo ""
         echo "Any questions, comments, or concerns can be sent to:"
         echo "Cade Brown <cade@kscript.org>"
@@ -247,8 +251,12 @@ check_header ARPA_INET_H "arpa/inet.h" ""
 check_header NETDB_H "netdb.h" ""
 check_header NETINET_IN_H "netinet/in.h" ""
 
+check_header WINDOWS_H "windows.h" ""
+
 check_header WINSOCK2_H "winsock2.h" ""
 check_header WS2TCPIP_H "Ws2tcpip.h" ""
+
+check_header GL_GL_H "gl/GL.h" ""
 
 
 echo ""
@@ -370,6 +378,31 @@ int main(int argc, char** argv) {
     return 0;
 }
 "
+
+check_clib opengl "$WITH_opengl" "" "-lGL" "
+#ifdef KS_HAVE_WINDOWS_H
+ #include <windows.h>
+#endif
+
+int main(int argc, char** argv) {
+    glLoadIdentity();
+    return 0;
+}
+"
+check_clib x "$WITH_x" "" "-lX11" "
+#ifdef KS_HAVE_WINDOWS_H
+ #include <windows.h>
+#endif
+
+#include <X11/Xlib.h>
+
+int main(int argc, char** argv) {
+    XOpenDisplay(NULL);
+    return 0;
+}
+"
+
+
 
 echo ""
 echo " -- Structures -- "
@@ -956,9 +989,9 @@ echo "docs_PDF         := docs/kscript.pdf" >> $T
 echo "docs_HTML_MONO   := docs/kscript.html" >> $T
 echo "docs_HTML_DIR    := docs/kscript" >> $T
 echo "" >> $T
-printf "libksmext        := " >> $T
+printf "libksmext        :=" >> $T
 for dir in src/extmodules/*; do
-    printf "lib/libksm_%s%s" "${dir##*/}" "$EXTSHARED" >> $T
+    printf " lib/libksm_%s%s" "${dir##*/}" "$EXTSHARED" >> $T
 done
 echo "" >> $T
 

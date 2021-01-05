@@ -158,7 +158,6 @@ ks_module ks_import(ks_str name) {
     BIMOD(ucd)
     BIMOD(net)
     BIMOD(nx)
-//  BIMOD(mm)
 
 
     /* Capture thread for exception */

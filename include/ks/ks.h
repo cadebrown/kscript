@@ -786,6 +786,16 @@ KS_API int ks_str_cmp(ks_str L, ks_str R);
 KS_API bool ks_str_eq(ks_str L, ks_str R);
 KS_API bool ks_str_eq_c(ks_str L, const char* data, ks_ssize_t len_b);
 
+
+/* Attempts to find 'substr' in 'self' (within 'min_c' and 'max_c', inclusive and exclusive, respectively)
+ *
+ * 
+ * Returns -1 if not found
+ */
+KS_API ks_ssize_t ks_str_find(ks_str self, ks_str substr, ks_ssize_t min_c, ks_ssize_t max_c, ks_ssize_t* idx_b);
+
+
+
 /* Convert between strings of length 1 and ordinal codepoints
  */
 KS_API ks_str ks_str_chr(ks_ucp ord);

@@ -388,6 +388,15 @@ static KS_TFUNC(T, add) {
     return (kso)ks_fmt("%S%S", L, R);
 }
 
+static KS_TFUNC(T, contains) {
+    ks_str self;
+    ks_str sub;
+    KS_ARGS("self:* sub:*", &self, kst_str, &sub, kst_str);
+
+    ks_ssize_t idx = ks_str_find(self, sub, 0, self->len_c, NULL);
+    
+    return KSO_BOOL(idx >= 0);
+}
 
 static KS_TFUNC(T, startswith) {
     ks_str self;
@@ -453,6 +462,7 @@ static KS_TFUNC(T, endswith) {
         return NULL;
     }
 }
+
 
 static KS_TFUNC(T, find) {
     ks_str self;
@@ -657,6 +667,7 @@ void _ksi_str() {
         {"__bytes",              ksf_wrap(T_bytes_, T_NAME ".__bytes(self)", "")},
 
         {"__len",                ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
+        {"__contains",           ksf_wrap(T_contains_, T_NAME ".__contains(self, elem)", "")},
 
         {"__iter",               KS_NEWREF(kst_str_iter)},
 
