@@ -17,14 +17,14 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
 
 #define LOOP(TYPE) do { \
     for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        *(ATYPE*)pR = *(TYPE*)pX; \
+        *(RTYPE*)pR = *(TYPE*)pX; \
     } \
     return 0; \
 } while (0);
 
 #define LOOPC(TYPE) do { \
     for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        *(ATYPE*)pR = ((TYPE*)pX)->re; \
+        *(RTYPE*)pR = ((TYPE*)pX)->re; \
     } \
     return 0; \
 } while (0);
@@ -36,45 +36,44 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
 }
 
     if (false) {}
-#define ATYPE nxc_uchar
+#define RTYPE nxc_uchar
     CASE_NUM(nxd_uchar)
-#undef ATYPE
-#define ATYPE nxc_schar
+#undef RTYPE
+#define RTYPE nxc_schar
     CASE_NUM(nxd_schar)
-#undef ATYPE
-#define ATYPE nxc_ushort
+#undef RTYPE
+#define RTYPE nxc_ushort
     CASE_NUM(nxd_ushort)
-#undef ATYPE
-#define ATYPE nxc_sshort
+#undef RTYPE
+#define RTYPE nxc_sshort
     CASE_NUM(nxd_sshort)
-#undef ATYPE
-#define ATYPE nxc_uint
+#undef RTYPE
+#define RTYPE nxc_uint
     CASE_NUM(nxd_uint)
-#undef ATYPE
-#define ATYPE nxc_sint
+#undef RTYPE
+#define RTYPE nxc_sint
     CASE_NUM(nxd_sint)
-#undef ATYPE
-#define ATYPE nxc_ulong
+#undef RTYPE
+#define RTYPE nxc_ulong
     CASE_NUM(nxd_ulong)
-#undef ATYPE
-#define ATYPE nxc_slong
+#undef RTYPE
+#define RTYPE nxc_slong
     CASE_NUM(nxd_slong)
-#undef ATYPE
+#undef RTYPE
 
 
-
-#define ATYPE nxc_float
+#define RTYPE nxc_float
     CASE_NUM(nxd_float)
-#undef ATYPE
-#define ATYPE nxc_double
+#undef RTYPE
+#define RTYPE nxc_double
     CASE_NUM(nxd_double)
-#undef ATYPE
-#define ATYPE nxc_longdouble
+#undef RTYPE
+#define RTYPE nxc_longdouble
     CASE_NUM(nxd_longdouble)
-#undef ATYPE
-#define ATYPE nxc_float128
+#undef RTYPE
+#define RTYPE nxc_float128
     CASE_NUM(nxd_float128)
-#undef ATYPE
+#undef RTYPE
 
 
 #undef LOOP
@@ -83,16 +82,16 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
 
 #define LOOP(TYPE) do { \
     for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        ((ATYPE*)pR)->re = *(TYPE*)pX; \
-        ((ATYPE*)pR)->im = 0; \
+        ((RTYPE*)pR)->re = *(TYPE*)pX; \
+        ((RTYPE*)pR)->im = 0; \
     } \
     return 0; \
 } while (0);
 
 #define LOOPC(TYPE) do { \
     for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        ((ATYPE*)pR)->re = ((TYPE*)pX)->re; \
-        ((ATYPE*)pR)->im = ((TYPE*)pX)->im; \
+        ((RTYPE*)pR)->re = ((TYPE*)pX)->re; \
+        ((RTYPE*)pR)->im = ((TYPE*)pX)->im; \
     } \
     return 0; \
 } while (0);
@@ -103,18 +102,18 @@ static int kern(int N, nxar_t* inp, int len, void* _data) {
     NXT_DO_COMPLEXS(dX, LOOPC); \
 }
 
-#define ATYPE nxc_complexfloat
+#define RTYPE nxc_complexfloat
     CASE_NUM(nxd_complexfloat)
-#undef ATYPE
-#define ATYPE nxc_complexdouble
+#undef RTYPE
+#define RTYPE nxc_complexdouble
     CASE_NUM(nxd_complexdouble)
-#undef ATYPE
-#define ATYPE nxc_complexlongdouble
+#undef RTYPE
+#define RTYPE nxc_complexlongdouble
     CASE_NUM(nxd_complexlongdouble)
-#undef ATYPE
-#define ATYPE nxc_complexfloat128
+#undef RTYPE
+#define RTYPE nxc_complexfloat128
     CASE_NUM(nxd_complexfloat128)
-#undef ATYPE
+#undef RTYPE
 
 
     return 1;

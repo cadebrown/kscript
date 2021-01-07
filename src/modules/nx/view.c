@@ -23,8 +23,11 @@ static KS_TFUNC(T, free) {
     KS_DECREF(self->ar.dtype);
     ks_free(self->ar.dims);
     ks_free(self->ar.strides);
-    KS_DECREF(self->ar.obj);
+    KS_NDECREF(self->ref);
+
+
     KSO_DEL(self);
+
 
     return KSO_NONE;
 }
@@ -52,7 +55,7 @@ ks_type nxt_view = &tp;
 
 void _ksi_nx_view() {
     
-    _ksinit(nxt_view, kst_object, T_NAME, sizeof(struct nx_view_s), -1, "Multidimesional array view", KS_IKV(
+    _ksinit(nxt_view, nxt_array, T_NAME, sizeof(struct nx_view_s), -1, "Multidimesional array view", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         //{"__init__",               kso_func_new(T_init_, T_NAME ".__init__(self, name, version, desc, authors)", "")},
 

@@ -66,11 +66,20 @@ static int I_apply(nx_elem_cf cf, int N, nxar_t* inp, nxar_t* inp_1d, ks_ssize_t
 int nx_apply_elem(nx_elem_cf cf, int N, nxar_t* inp, void* _data) {
     assert(N > 0);
 
+    /* Error check */
+    int eor;
+    ks_size_t* ebc = nx_calc_bcast(N, inp, &eor);
+    if (!ebc) {
+        return -1;
+    }
+    ks_free(ebc);
+
     ks_cint i, j, jr;
     int max_rank = inp[0].rank;
     for (i = 1; i < N; ++i) {
         if (inp[i].rank > max_rank) max_rank = inp[i].rank;
     }
+    
 
     /* Create new arrays with padded dimensions to the maximum rank */
     nxar_t* new_inp = ks_zmalloc(sizeof(*new_inp), N);
@@ -105,7 +114,11 @@ int nx_apply_elem(nx_elem_cf cf, int N, nxar_t* inp, void* _data) {
 
         /* Update maximum dimension */
         for (j = 0; j < max_rank; ++j) if (new_inp[i].dims[j] > max_dims[j]) max_dims[j] = new_inp[i].dims[j];
+
     }
+
+
+
 
     int res = I_apply(cf, N, new_inp, new_inp_1d, max_dims, idxs, _data);
 

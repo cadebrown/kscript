@@ -97,6 +97,9 @@ void _ksi_nx_dtype();
 void _ksi_nx_array();
 void _ksi_nx_view();
 
+void _ksi_nk_Context();
+void _ksi_nk_Image();
+
 ks_module _ksi_nxrand();
 void _ksi_nxrand_State();
 
@@ -104,10 +107,8 @@ ks_module _ksi_re();
 ks_module _ksi_gram();
 ks_module _ksi_ucd();
 
-ks_module _ksi_mm();
-void _ksi_mm_MediaFile();
-void _ksi_mm_Stream();
-void _ksi_mm_AVFormatContext();
+ks_module _ksi_av();
+void _ksi_av_IO();
 
 void _ksi_parser();
 void _ksi_funcs();

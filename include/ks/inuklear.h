@@ -1,3 +1,15 @@
+/* ks/inuklear.h - bundled internal version of Nuklear UI library
+ *
+ * This is the implementation; don't include this file and instead include 'ks/nuklear.h',
+ *   which is the kscript binding of it
+ * 
+ * 
+ * SEE: https://github.com/Immediate-Mode-UI/Nuklear
+ * 
+ * @author: Cade Brown <brown.cade@gmail.com>
+ */
+
+
 /*
 /// # Nuklear
 /// ![](https://cloud.githubusercontent.com/assets/8057201/11761525/ae06f0ca-a0c6-11e5-819d-5610b25f6ef4.gif)

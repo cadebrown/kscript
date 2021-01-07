@@ -69,7 +69,7 @@ nx_array nx_array_newc(ks_type tp, nx_dtype dtype, int rank, ks_size_t* dims, ks
     
     if (data) {
         /* Initialize with memory copying */
-        if (!nx_apply_elem(kern_copy, 2, (nxar_t[]){ self->ar, NXAR_(data, dtype, rank, dims, strides, NULL) }, NULL));
+        if (!nx_apply_elem(kern_copy, 2, (nxar_t[]){ self->ar, NXAR_(data, dtype, rank, dims, strides) }, NULL));
     }
 
     return self;
@@ -285,7 +285,6 @@ void _ksi_nx_array() {
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
 
     ));
-
 
 }
 

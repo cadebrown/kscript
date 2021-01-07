@@ -1,3 +1,14 @@
+/* ks/inuklear_xlib_gl3.h - bundled internal version of Nuklear UI library, implemented in
+ *                            GLFW and OpenGL
+ *
+ * Don't include this; instead include 'ks/nuklear.h', which is the module
+ * 
+ * SEE: https://github.com/Immediate-Mode-UI/Nuklear
+ * 
+ * @author: Cade Brown <brown.cade@gmail.com>
+ */
+
+
 /*
  * Nuklear - 1.32.0 - public domain
  * no warrenty implied; use at your own risk.

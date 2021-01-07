@@ -3,16 +3,14 @@
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
-#include <ks/mm.h>
 
 #define T_NAME "mm.Stream"
-
+#if 0
 /* Internals */
 
 /* C-API */
 
 nx_array ksmm_read_image(ksmm_Stream self) {
-
 #ifdef KS_HAVE_libav
 
     /* Format for a 2D image */
@@ -28,9 +26,6 @@ nx_array ksmm_read_image(ksmm_Stream self) {
     /* Get the stream we are reading from */
     AVStream* stream = fmtctx->streams[self->idx];
 
-    /* Options dictionary */
-    AVDictionary* opt = NULL;
-
     /* Data */
     AVFrame* frame = NULL;
     AVPacket* packet = NULL;
@@ -44,19 +39,8 @@ nx_array ksmm_read_image(ksmm_Stream self) {
     /* Get a context for the specific codec 
      * TODO: is there a better way? I get deprecated warnings when using this
      */
-    AVCodecContext* codctx = avcodec_alloc_context3(stream->codec->codec);
-    if (!codctx) {
-        KS_THROW(kst_Error, "Failed: 'avcodec_alloc_context3()'");
-        avcodec_free_context(&codctx);
-        return NULL;
-    }
-
-    /* Get parameters */
-    if ((avst = avcodec_parameters_to_context(codctx, codpar)) < 0) {
-        KS_THROW(kst_Error, "Failed 'avcodec_parameters_to_context()': %s [%i]", av_err2str(avst), avst);
-        avcodec_free_context(&codctx);
-        return NULL;
-    }
+    AVCodecContext* codctx = self->codctx;
+    
 
     /* Allocate data buffers */
     if (!(frame = av_frame_alloc())) {
@@ -68,19 +52,6 @@ nx_array ksmm_read_image(ksmm_Stream self) {
         KS_THROW(kst_Error, "Failed 'av_packet_alloc()'");
         avcodec_free_context(&codctx);
         av_frame_free(&frame);
-        return NULL;
-    }
-
-    /* Set options */
-    av_dict_set(&opt, "thread_type", "slice", 0);
-
-    /* Set pixel format negotiator */
-    codctx->get_format = ksmm_AV_getformat;
-
-
-    /* Open the codec context */
-    if ((avst = avcodec_open2(codctx, codctx->codec, &opt)) < 0) {
-        KS_THROW(kst_Error, "Failed to open codec for %R: %s [%i]", self->src, av_err2str(avst), avst);
         return NULL;
     }
 
@@ -288,6 +259,8 @@ bool ksmm_write_image(ksmm_Stream self, nxar_t img) {
     /* Height, width, and depth of image */
     int h = img.dims[0], w = img.dims[1], d = img.dims[2];
 
+    AVStream* stream = self->fmtctx->val->streams[self->idx];
+
     /* Data buffers */
     AVFrame* frame = NULL;
     AVPacket* packet = NULL;
@@ -326,10 +299,10 @@ bool ksmm_write_image(ksmm_Stream self, nxar_t img) {
 
     /* Set timestamp information */
 	frame->pts = 1;
-	frame->quality = self->stream->codec->global_quality;
+	frame->quality = self->codctx->global_quality;
     
     // copy to frame
-    frame->format = self->stream->codec->pix_fmt;
+    frame->format = self->codctx->pix_fmt;
     frame->width = w;
     frame->height = h;
 
@@ -384,7 +357,9 @@ static KS_TFUNC(T, str) {
     ksmm_Stream self;
     KS_ARGS("self:*", &self, ksmmt_Stream);
 #ifdef KS_HAVE_libav
-    return (kso)ks_fmt("<%T (src=%R, idx=%i, kind=%s)>", self, self->src, self->idx, self->stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO ? "AUDIO" : "VIDEO");
+    AVStream* stream = self->fmtctx->val->streams[self->idx];
+    return (kso)ks_fmt("<%T (src=%R, idx=%i)>", self, self->src, self->idx);
+    //return (kso)ks_fmt("<%T (src=%R, idx=%i, kind=%s, codec='%s')>", self, self->src, self->idx, stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO ? "AUDIO" : "VIDEO", stream->codec->codec->name);
 #else
     return (kso)ks_fmt("%O", self);
 #endif
@@ -402,7 +377,8 @@ static KS_TFUNC(T, isaudio) {
     KS_ARGS("self:*", &self, ksmmt_Stream);
 
 #ifdef KS_HAVE_libav
-    return KSO_BOOL(self->stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO);
+    AVStream* stream = self->fmtctx->val->streams[self->idx];
+    return KSO_BOOL(stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO);
 #else
     return KSO_FALSE;
 #endif
@@ -413,7 +389,8 @@ static KS_TFUNC(T, isvideo) {
     KS_ARGS("self:*", &self, ksmmt_Stream);
 
 #ifdef KS_HAVE_libav
-    return KSO_BOOL(self->stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO);
+    AVStream* stream = self->fmtctx->val->streams[self->idx];
+    return KSO_BOOL(stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO);
 #else
     return KSO_FALSE;
 #endif
@@ -424,7 +401,8 @@ static KS_TFUNC(T, next) {
     KS_ARGS("self:*", &self, ksmmt_Stream);
 
 #ifdef KS_HAVE_libav
-    if (self->stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
+    AVStream* stream = self->fmtctx->val->streams[self->idx];
+    if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
         return (kso)ksmm_read_image(self);
     } else {
         return (kso)ksmm_read_image(self);
@@ -458,3 +436,4 @@ void _ksi_mm_Stream() {
     ));
 }
 
+#endif

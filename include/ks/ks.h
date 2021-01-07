@@ -140,7 +140,7 @@
 #else
  #define KS_INT_GMP
  #define KS_INT_MINIGMP
- #include <ks/minigmp.h>
+ #include <ks/iminigmp.h>
 #endif
 
 

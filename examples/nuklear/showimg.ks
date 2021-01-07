@@ -12,28 +12,38 @@ SEE: https://github.com/Immediate-Mode-UI/Nuklear
 # These are typically included in the standard library, unless explicitly disabled (or a package is missing)
 import nuklear
 import nx
+import av
 
 # create a context, with a given (w, h, title)
 # this will be the state of the application, and will handle everything
-ctx = nuklear.Context("Basic Application Window", 640, 480)
+ctx = nuklear.Context("Basic Application Window", 900, 720)
 
 
-s = nx.rand.State()
+#imgs = av.open("./assets/vid/rabbitman.mp4")
+imgs = av.open("../../Downloads/ex0.webp")
+svid = imgs.best_video()
+#imgs = mm.open("./assets/img/monarch.png")[0]
+#imgs = mm.open("../../Downloads/ex0.webp")[0]
 
-# You can use the `for' loop, which makes it easy to continually loop every frame, until the 'x' button has been hit,
-#   or there has been another action that would normally cause the application to quit
-# Alternatively, you can do the more fine-graind syntax shown in the triple quote comment below:
-"""
-while ctx.start_frame() {
-    # rendering code here
-    if !ctx.end_frame(), break
+
+curimg = none
+
+func nextimg() {
+    for (s, img) in imgs {
+        if s == svid {
+            ret nuklear.Image(img)
+        }
+    }
+
+    ret none
 }
-"""
+
+
 for frame in ctx {
 
     # 'begin' starts a new panel, with (x, y, w, h) size, and (optional) extra flags from the `nuklear.Window.*` enums
     # the body of the 'if' block is executed only if the window is active & visible
-    if ctx.begin("Inner Window", 50, 50, 400, 400, nuklear.Window.TITLE | nuklear.Window.BORDER | nuklear.Window.MINIMIZABLE | nuklear.Window.MOVABLE | nuklear.Window.SCALABLE) {
+    if ctx.begin("Inner Window", 50, 50, 600, 600, nuklear.Window.TITLE | nuklear.Window.BORDER | nuklear.Window.MINIMIZABLE | nuklear.Window.MOVABLE | nuklear.Window.SCALABLE) {
     
         # create a row given (height, item_width, cols=1)
         ctx.layout_row_static(30, 80, 1)
@@ -45,9 +55,11 @@ for frame in ctx {
         }
 
 
-        ctx.layout_row_dynamic(200, 1)
+        ctx.layout_row_dynamic(360, 1)
         # Output a random image
-        #ctx.image(nuklear.Image(s.randf((16, 16, 3))))
+        curimg = nextimg() || curimg
+        ctx.image(curimg)
     }
     ctx.end()
 }
+

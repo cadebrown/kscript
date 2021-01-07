@@ -1,3 +1,13 @@
+
+/* ks/igl3w_gl3.h - bundled internal version of the gl3w OpenGL loader
+ *
+ * This is the implementation; you shouldn't need to include this directly
+ * 
+ * SEE: https://github.com/skaslev/gl3w
+ * 
+ * @author: Cade Brown <brown.cade@gmail.com>
+ */
+
 /*
  * This file was generated with gl3w_gen.py, part of gl3w
  * (hosted at https://github.com/skaslev/gl3w)

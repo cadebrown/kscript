@@ -1,4 +1,4 @@
-/* minigmp.c - implementation of multiprecision routines for embedding in kscript
+/* iminigmp.c - implementation of multiprecision routines for embedding in kscript
  *
  * Copied from GMP, and basic search and replace was performed
  * 

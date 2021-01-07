@@ -1,3 +1,10 @@
+/* ks/igl3w_gl3.h - implementation of the OpenGL loader
+ *
+ * SEE: https://github.com/skaslev/gl3w
+ * 
+ * @author: Cade Brown <brown.cade@gmail.com>
+ */
+
 /*
  * This file was generated with gl3w_gen.py, part of gl3w
  * (hosted at https://github.com/skaslev/gl3w)
@@ -26,10 +33,14 @@
  * OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#include <ks/ks.h>
 
-#include "./ext/gl3w_gl3.h"
-#include <stdlib.h>
+#include <ks/impl.h>
+
+/* OpenGL */
+#include <ks/igl3w_gl3.h>
+
+#if defined(KS_HAVE_opengl)
+
 
 #define ARRAY_SIZE(x)  (sizeof(x) / sizeof((x)[0]))
 
@@ -844,3 +855,5 @@ static void load_procs(GL3WGetProcAddressProc proc)
 	for (i = 0; i < ARRAY_SIZE(proc_names); i++)
 		gl3wProcs.ptr[i] = proc(proc_names[i]);
 }
+
+#endif

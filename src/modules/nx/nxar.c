@@ -58,7 +58,7 @@ bool I_tostr(ksio_BaseIO sb, nxar_t x, int dep) {
         ksio_add(sb, "[");
         /* loop over outer dimension, adding each inner dimension*/
         ks_size_t i;
-        nxar_t inner = NXAR_(x.data, x.dtype, x.rank-1, x.dims+1, x.strides+1, NULL);
+        nxar_t inner = NXAR_(x.data, x.dtype, x.rank-1, x.dims+1, x.strides+1);
         for (i = 0; i < x.dims[0]; ++i, inner.data = (void*)((ks_uint)inner.data + x.strides[0])) {
             if (i > 0) ksio_add(sb, ",\n%.*c", dep+1, ' ');
 

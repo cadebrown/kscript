@@ -20,7 +20,7 @@ Optional Dependencies:
   4. The Fastest Fourier Transform in the West (`fftw`)
     * If this is not present, then the implementation of FFT plans may be slower
   5. Libav (`libav`)
-    * If this is not present, then `mm` won't support nearly as many media formats
+    * If this is not present, then `av` won't support nearly as many media formats
 
 
 For example, you can install these on various platforms:

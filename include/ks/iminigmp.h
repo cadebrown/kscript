@@ -1,7 +1,7 @@
-/* ks/minigmp.h - miniature version of GMP, used when the full library
+/* ks/iminigmp.h - miniature version of GMP, used when the full library
  *                   is not present on the build system.
  *
- * The implementation is in `src/ks_mini-gmp.c`
+ * The implementation file is in `src/iminigmp.c`
  * 
  * 
  * More information: https://gmplib.org/devel/mini-gmp-status
@@ -46,8 +46,8 @@ see https://www.gnu.org/licenses/.  */
 
    This file defines the public interface. */
 
-#ifndef KS_MINIGMP_H__
-#define KS_MINIGMP_H__
+#ifndef KS_IMINIGMP_H__
+#define KS_IMINIGMP_H__
 
 #include <ks/ks.h>
 
@@ -308,4 +308,4 @@ size_t mpz_out_str (FILE *, int, const mpz_t);
 void mpz_import (mpz_t, size_t, int, size_t, int, size_t, const void *);
 void *mpz_export (void *, size_t *, int, size_t, int, size_t, const mpz_t);
 
-#endif /* __MINI_GMP_H__ */
+#endif /* KS_IMINIGMP_H__ */

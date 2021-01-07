@@ -1,10 +1,10 @@
-/* module.c - source code for the built-in 'mm' module
+/* main.c - source code for the built-in 'av' module
  *
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
-#include <ks/mm.h>
+#include <ks/av.h>
 #include <ks/cext.h>
 
 #define M_NAME "mm"
@@ -19,7 +19,7 @@
 
 #ifdef KS_HAVE_libav
 
-enum AVPixelFormat ksmm_AV_getformat(struct AVCodecContext* codctx, const enum AVPixelFormat* fmt) {
+enum AVPixelFormat ksav_AV_getformat(struct AVCodecContext* codctx, const enum AVPixelFormat* fmt) {
     /* List of formats we can handle */
     static const enum AVPixelFormat best_formats[] = {
         AV_PIX_FMT_RGBA,
@@ -49,7 +49,7 @@ enum AVPixelFormat ksmm_AV_getformat(struct AVCodecContext* codctx, const enum A
     return avcodec_default_get_format(codctx, fmt);
 }
 
-enum AVPixelFormat ksmm_AV_filterfmt(enum AVPixelFormat pix_fmt) {
+enum AVPixelFormat ksav_AV_filterfmt(enum AVPixelFormat pix_fmt) {
 
     #define _PFC(_old, _new) else if (pix_fmt == _old) return _new;
 
@@ -72,11 +72,14 @@ enum AVPixelFormat ksmm_AV_filterfmt(enum AVPixelFormat pix_fmt) {
 #endif
 
 
+
+
 /* Module Functions */
 
 static KS_TFUNC(M, open) {
     kso fname;
-    KS_ARGS("fname", &fname);
+    ks_str mode = _ksv_r;
+    KS_ARGS("fname ?mode:*", &fname, &mode, kst_str);
 
     ks_str sf = NULL;
     if (kso_issub(fname->type, kst_str)) {
@@ -91,7 +94,7 @@ static KS_TFUNC(M, open) {
 
     if (!sf) return NULL;
 
-    ksmm_MediaFile res = ksmm_MediaFile_open(ksmmt_MediaFile, sf);
+    ksav_IO res = ksav_open(ksavt_IO, sf, mode);
     KS_DECREF(sf);
     if (!res) return NULL;
 
@@ -102,12 +105,7 @@ static KS_TFUNC(M, open) {
 /* Export */
 
 static ks_module get() {
-    _ksi_mm_MediaFile();
-    _ksi_mm_Stream();
-#ifdef KS_HAVE_libav
-    av_register_all();
-    _ksi_mm_AVFormatContext();
-#endif
+    _ksi_av_IO();
 
     ks_str nxk = ks_str_new(-1, "nx");
     if (!ks_import(nxk)) {
@@ -115,18 +113,12 @@ static ks_module get() {
     }
     KS_DECREF(nxk);
 
-    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'mm' - multimedia module\n\n    This module implements common media operations", KS_IKV(
+    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'av' - audio-video module\n\n    This module implements common media operations", KS_IKV(
         /* Types */
-        {"MediaFile",              (kso)ksmmt_MediaFile},
-        {"Stream",                 (kso)ksmmt_Stream},
-
-
-#ifdef KS_HAVE_libav
-        {"_AVFormatContext",       (kso)ksmmt_AVFormatContext},
-#endif
+        {"IO",                     (kso)ksavt_IO},
 
         /* Functions */
-        {"open",                   ksf_wrap(M_open_, M_NAME ".open(fname)", "Opens a media file")},
+        {"open",                   ksf_wrap(M_open_, M_NAME ".open(fname, mode='r')", "Opens a media file")},
 
     ));
 

@@ -28,96 +28,90 @@ static void my_sincos(double x, double* sinx, double* cosx) {
 }
 
 
-/** Mersenne Twister Implementation **/
 
-/* Mask of the highest bit of 'u' */
-#define hi_bit(u)       ((u) & 0x80000000U)
-/* Mask of the lowest bit of 'u' */
-#define lo_bit(u)       ((u) & 0x00000001U)
+/** Internal Generator Routines **/
 
-/* Mask of all but the highest bit of 'u' */
-#define lo_bits(u)      ((u) & 0x7FFFFFFFU)
-/* Take the highest bit of 'u' and the lowest bits of 'v' */
-#define mix_bits(u, v)  (hi_bit(u) | lo_bits(v))
 
-/* Re-seeds a state with a given seed */
-static void mt_seed(nxrand_State self, ks_uint seed) {
-    ks_uint x = (seed | 1ULL) & 0xFFFFFFFFULL;
-
-    int i;
-    for (i = 0; i < NXRAND_MT_N; ++i) {
-        self->state[i] = x & 0xFFFFFFFFULL;
-        x *= 69069ULL;
-    }
-}
-
-/* Reload the internal buffer of random bits (refills 'self->state' with 'NXRAND_MT_N' random numbers) */
-static void mt_reload(nxrand_State self) {
-    ks_uint32_t *p0 = self->state, *p2 = self->state + 2, *pM = self->state + NXRAND_MT_M;
-    ks_uint32_t s0, s1;
-    int i;
-
+/* Fill 'data' with new random words and reset 'pos' */
+static void rs_fill(nxrand_State self) {
     self->pos = 0;
+    ks_uint x = self->lw;
+    int i;
+    for (i = 0; i < NXRAND_N; ++i) {
 
-    for (s0 = self->state[0], s1 = self->state[1], i = NXRAND_MT_N - NXRAND_MT_M + 1; --i; s0 = s1, s1 = *p2++) {
-        *p0++ = *pM++ ^ (mix_bits(s0, s1) >> 1) ^ (lo_bit(s1) ? NXRAND_MT_K : 0);
+        /* Generate */
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+
+        self->data[i] = x;
     }
 
-    for (pM = self->state, i = NXRAND_MT_M; --i; s0 = s1, s1 = *p2++) {
-        *p0++ = *pM++ ^ (mix_bits(s0, s1) >> 1) ^ (lo_bit(s1) ? NXRAND_MT_K : 0);
-    }
-
-    s1 = self->state[1];
-    *p0 = *pM ^ (mix_bits(s0, s1) >> 1) ^ (lo_bit(s1) ? NXRAND_MT_K : 0);
+    self->lw = x;
 }
 
-/* Internal method to generate a number of random bytes */
-static void mt_randb(nxrand_State self, int nout, unsigned char* out) {
+/* Seed a random state */
+static void rs_seed(nxrand_State self, ks_uint seed) {
+
+    /* Initialize the last word */
+    self->lw = seed | 1ULL;
+
+    /* Refill */
+    rs_fill(self);
+
+}
+
+/* Generate 'nout' bytes and store in 'out' */
+static void rs_bytes(nxrand_State self, int nout, unsigned char* out) {
+
     int i = 0;
     while (i < nout) {
-        /* If we are at the end of the generated numbers, reload the internal state */
-        if (self->pos >= NXRAND_MT_N) mt_reload(self);
+        if (self->pos >= NXRAND_N) rs_fill(self);
 
-        /* Maximum number of words to use */
-        int mxw = NXRAND_MT_N - self->pos;
-        /* Make sure we don't generate more bytes than we asked for */
-        if (nout - i < mxw) mxw = nout - i;
 
+#if 0
+        /* Copy from entire integers (assumes no zero space) */
+
+        /* Calculate the number of bytes we can copy directly over */
+        int nb = (NXRAND_N - self->pos) * sizeof(*self->data);
+        if (nout - i < nb) nb = nout - i;
+
+        /* Just copy bytes */
+        memcpy(&out[i], &self->data[self->pos], nb);
+
+        /* Consume integers */
+        self->pos += (nb + sizeof(*self->data) - 1) / sizeof(*self->data);
+        i += nb;
+#else
+        /* Take each byte as the lowest byte of each word */
+
+        /* Calculate the number of bytes we can copy directly over */
+        int nb = NXRAND_N - self->pos;
+        if (nout - i < nb) nb = nout - i;
+        
         int j;
-        for (j = 0; j < mxw; ++j) {
-            /* Calculate word from mersenne algorithm */
-            ks_uint32_t y = self->state[self->pos++];
-            y ^= (y >> 11);
-            y ^= (y <<  7) & 0x9D2C5680U;
-            y ^= (y << 15) & 0xEFC60000U;
-            y ^= y >> 18;
-
-            /* Now, set a single byte from a single word 
-             * TODO: we could skip 4 at a time
-             */
-            out[i + j] = y & 0xFF;
+        for (j = 0; j < nb; ++j) {
+            out[i + j] = self->data[self->pos + j];
         }
 
-        i += mxw;
+        i += nb;
+        self->pos += nb;
+
+#endif
     }
 }
 
-/* Internal method to return a random 32 bit integer */
-static ks_uint32_t mt_randi(nxrand_State self) {
-    if (self->pos >= NXRAND_MT_N) mt_reload(self);
 
-    ks_uint32_t y = self->state[self->pos++];
-    y ^= (y >> 11);
-    y ^= (y <<  7) & 0x9D2C5680U;
-    y ^= (y << 15) & 0xEFC60000U;
-    y ^= y >> 18;
+/* Return a random integer */
+static ks_uint rs_randu(nxrand_State self) {
+    if (self->pos >= NXRAND_N) rs_fill(self);
 
-    return y;
+    return self->data[self->pos++];
 }
 
 /* Internal method to return a random float in [0, 1) */
-static ks_cfloat mt_randf(nxrand_State self) {
-    ks_uint x = mt_randi(self);
+static ks_cfloat rs_randf(nxrand_State self) {
+    ks_uint x = rs_randu(self);
     return (ks_cfloat)(x & 0xFFFFFFFFULL) / 0xFFFFFFFFULL;
 }
 
@@ -127,10 +121,8 @@ static ks_cfloat mt_randf(nxrand_State self) {
 
 /* Each of these kernels (unless otherwise noted) takes a single input, which should
  *   be a floating-point type (it should give an error otherwise)
- *
  * 
  */
-
 
 /* Data passed to each kernel (for state, and parameters) */
 struct kern_data {
@@ -147,12 +139,13 @@ struct kern_data {
 static int kern_randf(int N, nxar_t* inp, int len, void* _data) {
     struct kern_data* data = _data;
     assert(N == 1);
+    assert(inp[0].dtype == nxd_double);
 
     ks_uint pR = (ks_uint)inp[0].data;
 
     ks_cint i;
     for (i = 0; i < len; i++, pR += inp[0].strides[0]) {
-        *(double*)pR = mt_randf(data->s);
+        *(nxc_double*)pR = rs_randf(data->s);
     }
 
     return 0;
@@ -169,6 +162,7 @@ static int kern_randf(int N, nxar_t* inp, int len, void* _data) {
 static int kern_normal(int N, nxar_t* inp, int len, void* _data) {
     struct kern_data* data = _data;
     assert(N == 3);
+    assert(inp[0].dtype == nxd_double && inp[1].dtype == nxd_double && inp[2].dtype == nxd_double);
 
     ks_uint pR = (ks_uint)inp[0].data, pu = (ks_uint)inp[1].data, po = (ks_uint)inp[2].data;
 
@@ -179,11 +173,11 @@ static int kern_normal(int N, nxar_t* inp, int len, void* _data) {
     ks_cint i;
     for (i = 0; i < len; i++, pR += inp[0].strides[0], pu += inp[1].strides[0], po += inp[2].strides[0]) {
         /* Load the u/o values */
-        ks_cfloat uv = *(double*)pu, ov = *(double*)po;
+        ks_cfloat uv = *(nxc_double*)pu, ov = *(nxc_double*)po;
 
         if (i % 2 == 0) {
             /* Generate 2 new numbers */
-            ks_cfloat t0 = mt_randf(data->s), t1 = mt_randf(data->s);
+            ks_cfloat t0 = rs_randf(data->s), t1 = rs_randf(data->s);
 
             /* Apply transform */
             ks_cfloat theta = 2 * KSM_PI * t1;
@@ -195,10 +189,10 @@ static int kern_normal(int N, nxar_t* inp, int len, void* _data) {
             z0 = r * ct;
             z1 = r * st;
 
-            *(double*)pR = z0 * ov + uv;
+            *(nxc_double*)pR = z0 * ov + uv;
         } else {
             /* Just use the other one that was already generated */
-            *(double*)pR = z1 * ov + uv;
+            *(nxc_double*)pR = z1 * ov + uv;
         }
     }
 
@@ -211,27 +205,13 @@ static int kern_normal(int N, nxar_t* inp, int len, void* _data) {
 nxrand_State nxrand_State_new(ks_uint seed) {
     nxrand_State self = KSO_NEW(nxrand_State, nxrandt_State);
 
-    mt_seed(self, seed);
+    rs_seed(self, seed);
 
     return self;
 }
 
-bool nxrand_get_b(nxrand_State self, int nout, unsigned char* out) {
-    mt_randb(self, nout, out);
-    return true;
-}
-
-bool nxrand_get_i(nxrand_State self, int nout, ks_uint* out) {
-    return nxrand_get_b(self, nout * sizeof(*out), (unsigned char*)out);
-}
-
-bool nxrand_get_f(nxrand_State self, int nout, ks_cfloat* out) {
-    int i;
-    for (i = 0; i < nout; ++i) {
-        ks_uint x = mt_randi(self);
-        out[i] = (ks_cfloat)(x & 0xFFFFFFFF) / 0xFFFFFFFF;
-    }
-
+bool nxrand_randb(nxrand_State self, int nout, unsigned char* out) {
+    rs_bytes(self, nout, out);
     return true;
 }
 
@@ -249,7 +229,6 @@ bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o) {
     data.s = self;
     return !nx_apply_elem(kern_normal, 3, (nxar_t[]){ R, u, o }, (void*)&data);
 }
-
 
 
 /* Type Functions */
@@ -271,10 +250,7 @@ static KS_TFUNC(T, next) {
     nxrand_State self;
     KS_ARGS("self:*", &self, nxrandt_State);
 
-    ks_cfloat x;
-    if (!nxrand_get_f(self, 1, &x)) return NULL;
-
-    return (kso)ks_float_new(x);
+    return (kso)ks_float_new(rs_randf(self));
 }
 
 static KS_TFUNC(T, randb) {
@@ -283,7 +259,7 @@ static KS_TFUNC(T, randb) {
     KS_ARGS("self:* ?num:cint", &self, nxrandt_State, &num);
     
     unsigned char* data = ks_malloc(num);
-    mt_randb(self, num, data);
+    nxrand_randb(self, num, data);
     return (kso)ks_bytes_newn(num, data);
 }
 

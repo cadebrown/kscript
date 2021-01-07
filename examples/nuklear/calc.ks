@@ -32,7 +32,7 @@ ops = "+-*/"
 input_str = "0"
 
 # values
-vals = [0.0, 0.0]
+vals = (0.0, 0.0)
 cur_op = ""
 
 # perfor operation
@@ -77,7 +77,6 @@ for frame in ctx {
         for row in calc_buttons {
             for bt in row {
                 if ctx.button_label(bt) {
-                    # remove 0s at the beginning
                     if `\d`.exact(bt) {
                         input_str = input_str + bt
                     } else if bt in ops {
@@ -87,7 +86,7 @@ for frame in ctx {
                             vals[0] = 0.0
                         } else {
                             # cycle the values
-                            vals[0] = vals[1]; vals[1] = float(input_str)
+                            vals = (vals[1], float(input_str))
                         }
 
                         # reset the input string
@@ -96,7 +95,7 @@ for frame in ctx {
                         cur_op = bt
                     } else if bt == "=" {
                         # cycle the values
-                        vals[0] = vals[1]; vals[1] = float(input_str)
+                        vals = (vals[1], float(input_str))
                         # reset the input string
                         input_str = "0"
 
@@ -107,11 +106,11 @@ for frame in ctx {
                         cur_op = ""
 
                         # reset internal values
-                        vals[0] = vals[1] = 0.0
+                        vals = (0.0, 0.0)
 
                         input_str = str(out)
                     } else if bt == "C" {
-                        vals[0] = vals[1] = 0.0
+                        vals = (0.0, 0.0)
                         input_str = "0"
                         cur_op = ""
                     }

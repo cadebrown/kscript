@@ -4,6 +4,15 @@
  *   math. It deals (typically) with a tensor (C-type: 'nxar_t') that has a given data type ('nx_dtype', 
  *   which may be a C-style type, or 'object' for generic operations), as well as dimensions and strides.
  * 
+ * Submodules:
+ * 
+ *   nx.rand: Random number generation
+ *   nx.la: Linear algebra routines
+ *   nx.fft: Fast Fourier Transform (FFT) routines
+ *   nx.cv: Computer vision routines (includes image processing)
+ *   nx.ch: Computer hearing routines (includes audio processing)
+ * 
+ * 
  * Scalars can be represented with a rank of 0, which still holds 1 element
  *
  * Operations are applied by vectorization -- which is to say per each element independently, with results not affecting
@@ -85,6 +94,29 @@ typedef   signed int   nxc_sint;
 typedef unsigned int   nxc_uint;
 typedef   signed long long nxc_slong;
 typedef unsigned long long nxc_ulong;
+
+
+#define nxc_schar_MIN (-128)
+#define nxc_schar_MAX (127)
+#define nxc_uchar_MIN (0)
+#define nxc_uchar_MAX (255)
+
+#define nxc_sshort_MIN (-32768)
+#define nxc_sshort_MAX (32767)
+#define nxc_ushort_MIN (0)
+#define nxc_ushort_MAX (65536)
+
+#define nxc_sint_MIN (-2147483648LL)
+#define nxc_sint_MAX (2147483647LL)
+#define nxc_uint_MIN (0ULL)
+#define nxc_uint_MAX (4294967295ULL)
+
+#define nxc_slong_MIN (-9223372036854775807LL-1)
+#define nxc_slong_MAX (9223372036854775807LL)
+#define nxc_ulong_MIN (0ULL)
+#define nxc_ulong_MAX (1844674407370955161ULL)
+
+
 
 /*** Floats ***/
 typedef float nxc_float;
@@ -209,11 +241,6 @@ typedef struct {
      */
     ks_ssize_t* strides;
 
-    /* Object the data comes from, or NULL
-     * 
-     */
-    kso obj;
-
 } nxar_t;
 
 /* 'nx.array' - N-dimensional tensor/array type
@@ -232,13 +259,12 @@ typedef struct nx_array_s {
 
 /* Create 'nxar_t' from C-style initializers
  */
-#define NXAR_(_data, _dtype, _rank, _dims, _strides, __obj) ((nxar_t){ \
+#define NXAR_(_data, _dtype, _rank, _dims, _strides) ((nxar_t){ \
     .data = (_data), \
     .dtype = (_dtype), \
     .rank = (_rank), \
     .dims = (_dims), \
     .strides = (_strides), \
-    .obj = (kso)(__obj), \
 })
 
 /* Return whether the array descriptor is a scalar (0D), vector (1D), or matrix (2D) */
@@ -258,10 +284,12 @@ typedef struct nx_array_s {
 typedef struct nx_view_s {
     KSO_BASE
 
-    /* Array descriptor, which does NOT own the 'data' pointer, and 'obj' contains the object
-     *   that we should free once it is over
+    /* Array descriptor, which does NOT own the 'data' pointer
      */
     nxar_t ar;
+
+    /* Reference to free (the data is from this object) */
+    kso ref;
 
 }* nx_view;
 
@@ -443,26 +471,36 @@ static void* nx_get_ptr(void* data, int N, ks_size_t* dims, ks_ssize_t* strides,
 }
 
 
-/** Operations **/
+/** Conversions **/
 
-
-/* Compute 'r = x', but type casted to 'r's type */
+/* Compute 'r = x', but type casted to 'r's type. Both must be numeric */
 KS_API bool nx_cast(nxar_t r, nxar_t x);
 
-/* Compute 'r = x + y' */
+/* Compute 'r = x', but with floating/fixed point conversions automatic
+ *
+ * For examples, floats are normally in the range [-1, 1], and integers have
+ *   their own ranges. 
+ * 
+ * Unsigned integers are converted into their appropriate float range in [0, 1], 
+ *   and signed integers are converted to floats between [-1, 1]. The reverse is also true
+ */
+KS_API bool nx_fpcast(nxar_t r, nxar_t x);
+
+
+
+/** Math Operations **/
+
+/* r = x + y */
 KS_API bool nx_add(nxar_t r, nxar_t x, nxar_t y);
 
-/* Compute 'A = B - C' */
+/* r = x - y */
 KS_API bool nx_sub(nxar_t r, nxar_t x, nxar_t y);
 
-/* Compute 'A = B * C' */
+/* r = x * y */
 KS_API bool nx_mul(nxar_t r, nxar_t x, nxar_t y);
 
-/* Compute 'A = B % C' */
+/* r = x % y */
 KS_API bool nx_mod(nxar_t r, nxar_t x, nxar_t y);
-
-
-/*** Math Operations ***/
 
 /* r = sqrt(x) */
 KS_API bool nx_sqrt(nxar_t r, nxar_t x);
@@ -476,84 +514,80 @@ KS_API bool nx_pow(nxar_t r, nxar_t x, nxar_t y);
 /* r = hypot(x, y) */
 KS_API bool nx_hypot(nxar_t r, nxar_t x, nxar_t y);
 
-/* Compute trig functions */
-
 /* r = sin(x) */
 KS_API bool nx_sin(nxar_t r, nxar_t x);
+
 /* r = cos(x) */
 KS_API bool nx_cos(nxar_t r, nxar_t x);
+
 /* r = tan(x) */
 KS_API bool nx_tan(nxar_t r, nxar_t x);
+
 /* r = asin(x) */
 KS_API bool nx_asin(nxar_t r, nxar_t x);
+
 /* r = acos(x) */
 KS_API bool nx_acos(nxar_t r, nxar_t x);
+
 /* r = atan(x) */
 KS_API bool nx_atan(nxar_t r, nxar_t x);
+
 /* r = sinh(x) */
 KS_API bool nx_sinh(nxar_t r, nxar_t x);
+
 /* r = cosh(x) */
 KS_API bool nx_cosh(nxar_t r, nxar_t x);
+
 /* r = atanh(x) */
 KS_API bool nx_tanh(nxar_t r, nxar_t x);
+
 /* r = asinh(x) */
 KS_API bool nx_asinh(nxar_t r, nxar_t x);
+
 /* r = acosh(x) */
 KS_API bool nx_acosh(nxar_t r, nxar_t x);
+
 /* r = atanh(x) */
 KS_API bool nx_atanh(nxar_t r, nxar_t x);
 
 
 /** Submodule: 'nx.rand' **/
 
-/* Random state methods */
 
-/* If defined, use Mersenne Twister algorithm */
-#define NXRAND_MT
-
+/* Number of elements in the state */
+#define NXRAND_N 1024
 
 /* nx.rand.State - Random number generator
  *
- * Based on the mersenne twister algorithm, and can generate bytes, ints, floats,
- *   and then other distributions based on that
+ * Based on a variety of algorithms, this is essentially a buffered generator which generates
+ *   'NXRAND_N' random numbers every time it needs to be filled up, and stores in 'data'
+ * 
+ * Algorithms used:
+ *   * Xorshift
  * 
  */
 typedef struct nxrand_State_s {
     KSO_BASE
 
-/* Mersenne Twister */
-#ifdef NXRAND_MT
-
-/* Length of state vector (in units) */
-#define NXRAND_MT_N 624
-/* Period parameter */
-#define NXRAND_MT_M 397
-/* Magic constant */
-#define NXRAND_MT_K 0x9908B0DFULL
-
-    /* State of generated words (+1 is just for padding) */
-    ks_uint32_t state[NXRAND_MT_N + 1];
-
-    /* Position within 'state' (once it hits 'NXRAND_MT_N', it needs to be refilled) */
+    /* Position within 'data' (once it hits 'NXRAND_MT_N', it needs to be refilled) */
     int pos;
-#endif
+
+    /* Current data */
+    ks_uint data[NXRAND_N];
+
+
+    /* Last word (used in xorshift) */
+    ks_uint lw;
 
 }* nxrand_State;
 
 /* Create a new random number generator state */
 KS_API nxrand_State nxrand_State_new(ks_uint seed);
 
-/* Fill 'A' with random numbers (for integers, random of their range, and for floats, random between 0.0 and 1.0) */
-KS_API bool nxrand_get_a(nxrand_State self, nxar_t x);
 
 /* Generate 'nout' uniformly distributed bytes */
-KS_API bool nxrand_get_b(nxrand_State self, int nout, unsigned char* out);
+KS_API bool nxrand_randb(nxrand_State self, int nout, unsigned char* out);
 
-/* Generate 'nout' uniformly distributed 'ks_uint's (i.e. from 0 to 'KS_UINT_MAX') and store in 'out' */
-KS_API bool nxrand_get_i(nxrand_State self, int nout, ks_uint* out);
-
-/* Generate 'nout' uniformly distribute 'ks_cfloat's between 0.0 (inclusive) and 1.0 (exclusive) */
-KS_API bool nxrand_get_f(nxrand_State self, int nout, ks_cfloat* out);
 
 /** Random Number Generation **/
 
@@ -568,6 +602,12 @@ KS_API bool nxrand_randf(nxrand_State self, nxar_t R);
  */
 KS_API bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o);
 
+/** Submodule: 'nx.la' (linear algebra) **/
+
+/** Submodule: 'nx.cv' (computer vision / image processing) **/
+
+
+/** Submodule: 'nx.ch' (computer hearing / audio processing) **/
 
 
 /*  */
