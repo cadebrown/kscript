@@ -106,6 +106,7 @@ static KS_TFUNC(M, open) {
 
 static ks_module get() {
     _ksi_av_IO();
+    _ksi_av_Stream();
 
     ks_str nxk = ks_str_new(-1, "nx");
     if (!ks_import(nxk)) {
@@ -116,6 +117,7 @@ static ks_module get() {
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'av' - audio-video module\n\n    This module implements common media operations", KS_IKV(
         /* Types */
         {"IO",                     (kso)ksavt_IO},
+        {"Stream",                 (kso)ksavt_Stream},
 
         /* Functions */
         {"open",                   ksf_wrap(M_open_, M_NAME ".open(fname, mode='r')", "Opens a media file")},

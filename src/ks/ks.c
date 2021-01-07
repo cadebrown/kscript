@@ -10,7 +10,7 @@
 static ks_dict vars = NULL;
 
 /* Compile and run generically */
-static kso do_gen(ks_str fname, ks_str src) {
+static kso do_gen(ks_str fname, ks_str src, ks_dict usedict) {
     /* Turn the input code into a list of tokens */
     ks_tok* toks = NULL;
     ks_ssize_t n_toks = ks_lex(fname, src, &toks);
@@ -66,7 +66,7 @@ static kso do_gen(ks_str fname, ks_str src) {
     ks_ssize_t sz_w = ksos_stdout->sz_w;
 
     /* Execute the program, which should return the value */
-    kso res = kso_call_ext((kso)code, 0, NULL, ksg_inter_vars, NULL);
+    kso res = kso_call_ext((kso)code, 0, NULL, usedict, NULL);
     KS_DECREF(code);
     if (!res) return NULL;
 
@@ -82,7 +82,7 @@ static bool do_e(ks_str src) {
     ks_str fname = ks_fmt("<expr>");
 
 
-    kso res = do_gen(fname, src);
+    kso res = do_gen(fname, src, ksg_inter_vars);
     KS_DECREF(fname);
     if (!res) return NULL;
 
@@ -96,7 +96,7 @@ static bool do_f(ks_str fname) {
     ks_str src = ksio_readall(fname);
     if (!src) return false;
 
-    kso res = do_gen(fname, src);
+    kso res = do_gen(fname, src, NULL);
     KS_DECREF(src);
     if (!res) return false;
 

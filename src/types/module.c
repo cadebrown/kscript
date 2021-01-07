@@ -32,6 +32,9 @@ static KS_TFUNC(T, free) {
     ks_module self;
     KS_ARGS("self:*", &self, kst_module);
 
+    if (self->dlhandle) {
+        int rc = dlclose(self->dlhandle);
+    }
     
     KSO_DEL(self);
 

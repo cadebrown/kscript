@@ -25,6 +25,12 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
     KS_INCREF(mode);
     self->mode = mode;
 
+    /* Create a mutex */
+    self->mut = ksos_mutex_new(ksost_mutex);
+
+    /* Initialize the queue to empty */
+    self->queue_first = self->queue_last = NULL;
+
     if (!ks_str_eq_c(mode, "r", 1)) {
         KS_THROW(kst_Error, "Only 'r' mode is supported right now");
         KS_DECREF(self);
@@ -33,6 +39,9 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
 
     /* TODO: custom IO objects? */
     self->iio = KSO_NONE;
+
+    /* Lock the mutex to create anything */
+    ksos_mutex_lock(self->mut);
 
     /* libav status */
     int avst;
@@ -52,17 +61,16 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
     }
 
     /* Allocate data buffers */
-    if (!(self->qf = av_frame_alloc())) {
+    if (!(self->frame = av_frame_alloc())) {
         KS_THROW(kst_Error, "Failed 'av_frame_alloc()'");
         KS_DECREF(self);
         return NULL;
     }
-    if (!(self->qp = av_packet_alloc())) {
+    if (!(self->packet = av_packet_alloc())) {
         KS_THROW(kst_Error, "Failed 'av_packet_alloc()'");
         KS_DECREF(self);
         return NULL;
     }
-
 
     int i;
 
@@ -108,6 +116,8 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
         }
     }
 
+    /* Done creating stuff */
+    ksos_mutex_unlock(self->mut);
     return self;
 #else
     KS_THROW(kst_Error, "Failed to open media %R: was not compiled with 'libav'", src);
@@ -115,64 +125,21 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
 #endif
 }
 
-kso ksav_next(ksav_IO self, int* sidx) {
-#ifdef KS_HAVE_libav
 
-    /* Get quick buffers (TODO: allocate if being used) */
-    AVFrame* frame = self->qf;
-    self->qf = NULL;
-    assert(frame);
-    AVPacket* packet = self->qp;
-    self->qp = NULL;
-    assert(packet);
 
+static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
+    struct ksav_IO_stream* s = &self->streams[sidx];
+    AVStream* stream = self->fmtctx->streams[s->fcidx];
     int avst;
 
-    /* Read a frame (still encoded) into packet */
-    if ((avst = av_read_frame(self->fmtctx, packet)) < 0) {
-        if (avst == AVERROR_EOF) {
-            KS_OUTOFITER();
-            self->qf = frame;
-            self->qp = packet;
-            return NULL;
-        }
-        self->qf = frame;
-        self->qp = packet;
-        KS_THROW(kst_Error, "Failed to read frame from file %R: %s [%i]", self->src, av_err2str(avst), avst);
-        return NULL;
-    }
-
-    assert (packet->stream_index >= 0 && packet->stream_index < self->nstreams);
-    struct ksav_IO_stream* s = &self->streams[packet->stream_index];
-    assert(s->fcidx == packet->stream_index);
-
-    AVStream* stream = self->fmtctx->streams[s->fcidx];
-    *sidx = s->fcidx;
-
-    /* Send packet to the decode */
+    /* Send packet to the decoder */
     if ((avst = avcodec_send_packet(s->codctx, packet)) < 0) {
-        if (avst == AVERROR_EOF) {
-            self->qf = frame;
-            self->qp = packet;
-            KS_OUTOFITER();
-            return NULL;
-        }
         KS_THROW(kst_Error, "Failed to read frame from file %R: %s [%i]", self->src, av_err2str(avst), avst);
-        self->qf = frame;
-        self->qp = packet;
         return NULL;
     }
 
     /* Receive a frame back */
-    if ((avst = avcodec_receive_frame(s->codctx, frame)) < 0) {
-        if (avst == AVERROR_EOF) {
-            KS_OUTOFITER();
-            self->qf = frame;
-            self->qp = packet;
-            return NULL;
-        }
-        self->qf = frame;
-        self->qp = packet;
+    if ((avst = avcodec_receive_frame(s->codctx, self->frame)) < 0) {
         KS_THROW(kst_Error, "Failed to read frame from file %R: %s [%i]", self->src, av_err2str(avst), avst);
         return NULL;
     }
@@ -181,13 +148,13 @@ kso ksav_next(ksav_IO self, int* sidx) {
     if (stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO) {
 
         /* Size of the image (in pixels) */
-        int w = frame->width, h = frame->height;
+        int w = self->frame->width, h = self->frame->height;
 
         /*  Channel depth */
         int d = -1;
 
         /* Actual pixel format we are going to use (filter bad ones) */
-        enum AVPixelFormat pix_fmt = ksav_AV_filterfmt(frame->format);
+        enum AVPixelFormat pix_fmt = ksav_AV_filterfmt(self->frame->format);
 
         /* Now, specify input and output */
         nx_dtype idt = NULL, odt = nxd_float;
@@ -218,22 +185,17 @@ kso ksav_next(ksav_IO self, int* sidx) {
             nx_array res = nx_array_newc(nxt_array, odt, 3, (ks_size_t[]){ h, w, d }, NULL, NULL);
 
             if (!nx_fpcast(res->ar, (nxar_t) {
-                frame->data[0],
+                self->frame->data[0],
                 idt,
                 3,
                 (ks_size_t[]) { h, w, d },
-                (ks_ssize_t[]){ frame->linesize[0], stride * idt->size, idt->size }
+                (ks_ssize_t[]){ self->frame->linesize[0], stride * idt->size, idt->size }
             })) {
                 KS_DECREF(res);
-                self->qf = frame;
-                self->qp = packet;
                 return NULL;
             }
 
             /* Restore quick data buffers */
-            self->qf = frame;
-            self->qp = packet;
-
             return (kso)res;
 
 
@@ -288,7 +250,7 @@ kso ksav_next(ksav_IO self, int* sidx) {
             char* tmp_data = ks_malloc(linesize * h);
 
             /* Convert data into 'tmp_data' */
-            sws_scale(sws_context, (const uint8_t* const*)frame->data, frame->linesize, 0, h, (uint8_t* const[]){ tmp_data, NULL, NULL, NULL }, (int[]){ linesize, 0, 0, 0 });
+            sws_scale(sws_context, (const uint8_t* const*)self->frame->data, self->frame->linesize, 0, h, (uint8_t* const[]){ tmp_data, NULL, NULL, NULL }, (int[]){ linesize, 0, 0, 0 });
 
             /* Construct result */
             nx_array res = nx_array_newc(nxt_array, odt, 3, (ks_size_t[]){ h, w, d }, NULL, NULL);
@@ -303,38 +265,125 @@ kso ksav_next(ksav_IO self, int* sidx) {
                 (ks_ssize_t[]){ linesize, stride * idt->size, idt->size }
             })) {
                 KS_DECREF(res);
-                self->qf = frame;
-                self->qp = packet;
-                free(tmp_data);
+                ks_free(tmp_data);
                 return NULL;
             }
 
-            free(tmp_data);
-            /* Restore quick data buffers */
-            self->qf = frame;
-            self->qp = packet;
-
+            ks_free(tmp_data);
             return (kso)res;
         }
 
     } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
         /* Return audio data */
 
-
-        /* Restore quick data buffers */
-        self->qf = frame;
-        self->qp = packet;
-
         return KSO_NONE;
     } else {
         /* Restore quick data buffers */
-        KS_THROW(kst_Error, "Don't know what to return for stream #%i in %R (unknown type, not video or audio)", *sidx, self->src);
-
-        self->qf = frame;
-        self->qp = packet;
+        KS_THROW(kst_Error, "Don't know what to return for stream #%i in %R (unknown type, not video or audio)", sidx, self->src);
         return NULL;
     }
+}
 
+
+kso ksav_next(ksav_IO self, int* sidx, int nvalid, int* valid) {
+#ifdef KS_HAVE_libav
+    int i, avst;
+
+    /* Iterate over the queue of items already read, but not consumed */
+    struct ksav_IO_queue_item *it = NULL, *lit = NULL;
+    it = self->queue_first;
+    int ct =0;
+    while (it) {
+        ct++;
+        it = it->next;
+    }
+
+    it = self->queue_first;
+    lit = NULL;
+    while (it) {
+        /* Check if this stream should be consumed */
+        bool g = nvalid < 0;
+        if (!g) {
+            for (i = 0; !g && i < nvalid; ++i) {
+                g = valid[i] == it->sidx;
+            }
+        }
+        if (g) {
+            /* Found a match, so consume it */
+
+            /* Delete 'it' from the queue */
+            if (lit) {
+                lit->next = it->next;
+            } else {
+                /* It was the first element */
+                self->queue_first = it->next;
+            }
+            if (it == self->queue_last) self->queue_last = lit;
+
+            /* Set the information and decode it */
+            *sidx = it->packet->stream_index;
+            kso res = ksav_decode(self, *sidx, it->packet);
+
+            /* Free queue item */
+            av_packet_free(&it->packet);
+            ks_free(it);
+
+            return res;
+        }
+
+        /* Advance iterator */
+        lit = it;
+        it = it->next;
+    }
+
+    /* Not found, so now consume encoded frames until we find one that matches */
+
+    while (true) {
+        /* Read a frame (still encoded) into packet */
+        if ((avst = av_read_frame(self->fmtctx, self->packet)) < 0) {
+            if (avst == AVERROR_EOF) {
+                KS_OUTOFITER();
+                return NULL;
+            }
+            KS_THROW(kst_Error, "Failed to read frame from file %R: %s [%i]", self->src, av_err2str(avst), avst);
+            return NULL;
+        }
+
+        /* Check if this stream should be consumed */
+        bool g = nvalid < 0;
+        if (!g) {
+            for (i = 0; !g && i < nvalid; ++i) {
+                g = valid[i] == self->packet->stream_index;
+            }
+        }
+        if (g) {
+            /* Found a match, so consume it */
+            *sidx = self->packet->stream_index;
+            kso res = ksav_decode(self, *sidx, self->packet);
+
+            /* Done with packet, but don't free it since we are using it as a quick buffer */
+            av_packet_unref(self->packet);
+            return res;
+        }
+
+        /* Append to the end of the queue */
+        it = ks_malloc(sizeof(*self->queue_last));
+        it->next = NULL;
+        it->sidx = self->packet->stream_index;
+        it->packet = self->packet;
+
+        if (!self->queue_first) self->queue_first = it;
+        if (self->queue_last) self->queue_last->next = it;
+        self->queue_last = it;
+
+        if (!(self->packet = av_packet_alloc())) {
+            /* Failed to allocate */
+            KS_THROW(kst_Error, "Failed to allocate packet via 'av_packet_alloc()");
+            return NULL;
+        }
+    }
+
+    assert(false);
 #else
     KS_THROW(kst_Error, "Failed to get next from %R: was not compiled with 'libav'", self->src);
     return NULL;
@@ -402,29 +451,36 @@ static KS_TFUNC(T, free) {
 
     KS_NDECREF(self->src);
     KS_NDECREF(self->mode);
-
+    KS_NDECREF(self->mut);
 
 #ifdef KS_HAVE_libav
-    if (self->fmtctx) {
-        avformat_close_input(&self->fmtctx);
+    
+    avformat_close_input(&self->fmtctx);
+
+    if (self->frame) {
+        av_frame_free(&self->frame);
+    }
+    if (self->packet) {
+        av_packet_free(&self->packet);
     }
 
-    if (self->qf) {
-        av_frame_free(&self->qf);
+    struct ksav_IO_queue_item* it = self->queue_first;
+    while (it) {
+        struct ksav_IO_queue_item* t = it;
+        it = t->next;
+        
+        av_packet_free(&t->packet);
+        ks_free(t);
     }
-    if (self->qp) {
-        av_packet_free(&self->qp);
 
-    }
+
 #endif
 
     int i;
     for (i = 0; i < self->nstreams; ++i) {
         struct ksav_IO_stream* s = &self->streams[i];
 #ifdef KS_HAVE_libav
-        if (s->codctx) {
-            avcodec_free_context(&s->codctx);
-        }
+        avcodec_free_context(&s->codctx);
 #endif
     }
 
@@ -446,7 +502,7 @@ static KS_TFUNC(T, next) {
     KS_ARGS("self:*", &self, ksavt_IO);
 
     int stream;
-    kso res = ksav_next(self, &stream);
+    kso res = ksav_next(self, &stream, -1, NULL);
     if (!res) return NULL;
 
     return (kso)ks_tuple_newn(2, (kso[]){
@@ -455,6 +511,13 @@ static KS_TFUNC(T, next) {
     });
 }
 
+static KS_TFUNC(T, stream) {
+    ksav_IO self;
+    ks_cint idx = 0;
+    KS_ARGS("self:* ?idx:cint", &self, ksavt_IO, &idx);
+
+    return (kso)ksav_getstream(self, idx);
+}
 
 static KS_TFUNC(T, isaudio) {
     ksav_IO self;
@@ -489,7 +552,6 @@ static KS_TFUNC(T, isvideo) {
 }
 
 
-
 static KS_TFUNC(T, bestaudio) {
     ksav_IO self;
     KS_ARGS("self:*", &self, ksavt_IO);
@@ -497,7 +559,7 @@ static KS_TFUNC(T, bestaudio) {
     int res = ksav_bestaudio(self);
     if (res < 0) return NULL;
 
-    return (kso)ks_int_new(res);
+    return (kso)ksav_getstream(self, res);
 }
 
 static KS_TFUNC(T, bestvideo) {
@@ -506,8 +568,8 @@ static KS_TFUNC(T, bestvideo) {
 
     int res = ksav_bestvideo(self);
     if (res < 0) return NULL;
-
-    return (kso)ks_int_new(res);
+    
+    return (kso)ksav_getstream(self, res);
 }
 
 
@@ -523,12 +585,13 @@ void _ksi_av_IO() {
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__next",                 ksf_wrap(T_next_, T_NAME ".__next(self)", "")},
 
+        {"stream",                 ksf_wrap(T_stream_, T_NAME ".stream(self, idx=0)", "Gets the 'idx'th stream")},
 
         {"isaudio",                ksf_wrap(T_isaudio_, T_NAME ".isaudio(self, idx=0)", "Tells whether stream 'idx' is an audio stream")},
         {"isvideo",                ksf_wrap(T_isvideo_, T_NAME ".isvideo(self, idx=0)", "Tells whether stream 'idx' is a video stream")},
 
-        {"best_audio",             ksf_wrap(T_bestaudio_, T_NAME ".best_audio(self)", "Returns the index of the best audio stream\n\n    Throws an error if there were no audio streams")},
-        {"best_video",             ksf_wrap(T_bestvideo_, T_NAME ".best_video(self)", "Tells whether stream 'idx' is a video stream\n\n    Throws an error if there were no video streams")},
+        {"best_audio",             ksf_wrap(T_bestaudio_, T_NAME ".best_audio(self)", "Returns the best audio stream in the media container")},
+        {"best_video",             ksf_wrap(T_bestvideo_, T_NAME ".best_video(self)", "Returns the best video stream in the media container")},
 
     ));
 }

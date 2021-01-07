@@ -981,6 +981,9 @@ typedef struct ks_module_s {
 
     ks_dict attr;
 
+    /* Handle to close with 'dlclose()' */
+    void* dlhandle;
+
 }* ks_module;
 
 

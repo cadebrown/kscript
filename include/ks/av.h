@@ -59,9 +59,31 @@ typedef struct ksav_IO_s {
     /* Internal IO-like object to read/write bytes to */
     kso iio;
 
+    /* Mutex, so the IO object is only accessed in a single thread at a time */
+    ksos_mutex mut;
 
     /* Number of streams */
     int nstreams;
+
+    /* Queue item, of unconsumed packets */
+    struct ksav_IO_queue_item {
+        /* Pointer to the next item in the queue */
+        struct ksav_IO_queue_item* next;
+
+        /* Stream index the item came from */
+        int sidx;
+
+#ifdef KS_HAVE_libav
+
+        /* Packet which represents a still-encoded frame from
+         *   'av_read_frame()'
+         */
+        AVPacket* packet;
+#endif
+
+
+    } *queue_first, *queue_last;
+
 
     /* Array of stream data */
     struct ksav_IO_stream {
@@ -83,19 +105,31 @@ typedef struct ksav_IO_s {
     /* libav container */
     AVFormatContext* fmtctx;
 
-    /* Quick buffers (not threadsafe, so they are set to NULL when being used) */
-    AVFrame* qf;
-    AVPacket* qp;
+    /* Quick buffers (not threadsafe, so only access when the mutex is held) */
+    AVFrame* frame;
+    AVPacket* packet;
 
 #endif
 
 }* ksav_IO;
 
+/* av.Stream - Stream wrapper
+ *
+ */
+typedef struct ksav_Stream_s {
+    KSO_BASE
+
+    /* What the stream is a part of */
+    ksav_IO of;
+
+    /* Stream index */
+    int sidx;
+
+}* ksav_Stream;
 
 
 
 /* Functions */
-
 
 #ifdef KS_HAVE_libav
 
@@ -116,8 +150,11 @@ KS_API ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode);
 
 
 /* Get the next data item from an 'av.IO', setting '*sidx' to the index of the stream it came from
+ * 
+ * If 'nvalid >= 0', then 'valid' should point to an array of valid indexes, and all packets from other
+ *   streams will be ignored temporarily and pushed onto the queue for next time
  */
-KS_API kso ksav_next(ksav_IO self, int* sidx);
+KS_API kso ksav_next(ksav_IO self, int* sidx, int nvalid, int* valid);
 
 
 /* Tests whether stream 'sidx' is an audio stream
@@ -137,10 +174,16 @@ KS_API int ksav_bestvideo(ksav_IO self);
 KS_API int ksav_bestaudio(ksav_IO self);
 
 
+/* Get a stream wrapper for a specific index
+ */
+KS_API ksav_Stream ksav_getstream(ksav_IO self, int sidx);
+
+
 /* Export */
 
 KS_API extern ks_type
-    ksavt_IO
+    ksavt_IO,
+    ksavt_Stream
 ;
 
 

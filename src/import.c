@@ -29,7 +29,9 @@ static ks_module import_path_dll(ks_str p, ks_str name, kso dir) {
 
         struct ks_cextinit* sym = dlsym(handle, _KS_CEXTINIT_SYMBOL_STR);
         if (sym) {
-            return sym->loadfunc();
+            ks_module res = sym->loadfunc();
+            res->dlhandle = handle;
+            return res;
         } else {
             KS_THROW(kst_ImportError, "Failed to import %R, %R had not symbol '%s'", name, p, _KS_CEXTINIT_SYMBOL_STR);
             dlclose(handle);

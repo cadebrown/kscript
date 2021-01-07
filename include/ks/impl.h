@@ -109,6 +109,7 @@ ks_module _ksi_ucd();
 
 ks_module _ksi_av();
 void _ksi_av_IO();
+void _ksi_av_Stream();
 
 void _ksi_parser();
 void _ksi_funcs();

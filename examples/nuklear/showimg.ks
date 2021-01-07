@@ -19,9 +19,9 @@ import av
 ctx = nuklear.Context("Basic Application Window", 900, 720)
 
 
-#imgs = av.open("./assets/vid/rabbitman.mp4")
-imgs = av.open("../../Downloads/ex0.webp")
-svid = imgs.best_video()
+imgs = av.open("./assets/vid/rabbitman.mp4").best_video()
+#imgs = av.open("../../Downloads/ex0.webp").best_video()
+
 #imgs = mm.open("./assets/img/monarch.png")[0]
 #imgs = mm.open("../../Downloads/ex0.webp")[0]
 
@@ -29,13 +29,7 @@ svid = imgs.best_video()
 curimg = none
 
 func nextimg() {
-    for (s, img) in imgs {
-        if s == svid {
-            ret nuklear.Image(img)
-        }
-    }
-
-    ret none
+    ret nuklear.Image(next(imgs)) ?? none
 }
 
 
