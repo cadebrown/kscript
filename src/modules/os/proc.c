@@ -167,6 +167,9 @@ static KS_TFUNC(T, init) {
     ks_str v_out_src = ks_fmt("%i:stdout", self->pid);
     ks_str v_err_src = ks_fmt("%i:stderr", self->pid);
 
+    /* Set the PID */
+    self->pid = pid;
+
     self->v_in = ksio_FileIO_fdopen(pin[1], v_in_src, _ksv_w);
     self->v_out = ksio_FileIO_fdopen(pout[0], v_out_src, _ksv_r);
     self->v_err = ksio_FileIO_fdopen(perr[0], v_err_src, _ksv_r);

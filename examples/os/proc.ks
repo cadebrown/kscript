@@ -9,9 +9,10 @@ import os
 
 p = os.proc("yes")
 
-# print(p.stdout.read())
-
 p.kill()
+
+print ("after")
+
 
 """p = os.proc("yes")
 
