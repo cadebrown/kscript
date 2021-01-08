@@ -119,6 +119,7 @@ ks_type kst_bytes = &tp;
 void _ksi_bytes() {
     _ksinit(kst_bytes, kst_object, T_NAME, sizeof(struct ks_bytes_s), -1, "Sequence of bytes ('int' in range(256)), which is immutable. Similar to a 'str' but has no notion of 'codepoints' or 'characters'", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj)", "")},
         {"__bool",               ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"decode",               ksf_wrap(T_decode_, T_NAME ".decode(self)", "Decode into a string")},

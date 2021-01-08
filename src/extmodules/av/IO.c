@@ -12,10 +12,64 @@
 
 /* Internals */
 
+#ifdef KS_HAVE_libav
+
+/* libav IO 'read' callback */
+static int my_av_read(void* opaque, uint8_t* buf, int nbuf) {
+    ksav_IO self = (ksav_IO)opaque;
+
+    ks_ssize_t rsz = ksio_readb(self->iio, nbuf, buf);
+    if (rsz < 0) {
+        self->cbexc = true;
+        return -1;
+    }
+
+    return rsz;
+}
+
+/* libav IO 'write' callback */
+static int my_av_write(void* opaque, uint8_t* buf, int nbuf) {
+    ksav_IO self = (ksav_IO)opaque;
+
+    ks_ssize_t rsz = ksio_writeb(self->iio, nbuf, buf);
+    if (rsz < 0) {
+        self->cbexc = true;
+        return -1;
+    }
+
+    return rsz;
+}
+
+/* libav IO 'seek' callback */
+static int64_t my_av_seek(void* opaque, int64_t pos, int whence) {
+    ksav_IO self = (ksav_IO)opaque;
+
+    int ww;
+    if (whence == SEEK_SET) {
+        ww = KSIO_SEEK_SET;
+    } else if (whence == SEEK_CUR) {
+        ww = KSIO_SEEK_CUR;
+    } else if (whence == SEEK_END) {
+        ww = KSIO_SEEK_END;
+    } else {
+        return -1;
+    }
+
+    if (!ksio_seek(self->iio, pos, ww)) {
+        self->cbexc = true;
+        return -1;
+    }
+
+    return ksio_tell(self->iio);
+}
+
+#endif
+
+
 /* C-API */
 
 
-ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
+ksav_IO ksav_open(ks_type tp, kso iio, ks_str src, ks_str mode) {
 #ifdef KS_HAVE_libav
     ksav_IO self = KSO_NEW(ksav_IO, tp);
 
@@ -24,6 +78,8 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
     self->src = src;
     KS_INCREF(mode);
     self->mode = mode;
+
+    self->cbexc = false;
 
     /* Create a mutex */
     self->mut = ksos_mutex_new(ksost_mutex);
@@ -38,7 +94,17 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
     }
 
     /* TODO: custom IO objects? */
-    self->iio = KSO_NONE;
+    if (iio == KSO_NONE) {
+        self->iio = (kso)kso_call((kso)ksiot_FileIO, 2, (kso[]){ (kso)src, (kso)mode });
+        if (!self->iio) {
+            KS_DECREF(self);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(iio);
+        self->iio = iio;
+    }
+
 
     /* Lock the mutex to create anything */
     ksos_mutex_lock(self->mut);
@@ -46,8 +112,29 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
     /* libav status */
     int avst;
 
+    /* Create an IO context for our custom functions */
+    if (!(self->avioctx = avio_alloc_context(NULL, 0, 0, (kso)self, my_av_read, my_av_write, my_av_seek))) {
+        KS_THROW(kst_Error, "Failed to allocate AVIO context");
+        KS_DECREF(self);
+        return false;
+    }
+
+    if (!(self->fmtctx = avformat_alloc_context())) {
+        KS_THROW(kst_Error, "Failed to allocate AV format context");
+        KS_DECREF(self);
+        return false;
+    }
+
+    /* Set our custom IO objects */
+    self->fmtctx->pb = self->avioctx;
+
     /* Open the file as a media container */
     if ((avst = avformat_open_input(&self->fmtctx, src->data, NULL, NULL)) != 0) {
+        self->fmtctx = NULL;
+        if (self->cbexc) {
+            KS_DECREF(self);
+            return NULL;
+        }
         KS_THROW(kst_Error, "Failed to open %R: %s [%i]", src, av_err2str(avst), avst);
         KS_DECREF(self);
         return false;
@@ -55,6 +142,10 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
 
     /* Find all the streams in the media container (so the data is valid) */
     if ((avst = avformat_find_stream_info(self->fmtctx, NULL)) != 0) {
+        if (self->cbexc) {
+            KS_DECREF(self);
+            return NULL;
+        }
         KS_THROW(kst_Error, "Failed to open %R: %s [%i]", src, av_err2str(avst), avst);
         KS_DECREF(self);
         return false;
@@ -103,6 +194,10 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
 
         /* Get parameters */
         if ((avst = avcodec_parameters_to_context(s->codctx, codpar)) < 0) {
+            if (self->cbexc) {
+                KS_DECREF(self);
+                return NULL;
+            }
             KS_THROW(kst_Error, "Failed 'avcodec_parameters_to_context()': %s [%i]", av_err2str(avst), avst);
             KS_DECREF(self);
             return NULL;
@@ -110,6 +205,10 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
 
         /* Open the stream */
         if ((avst = avcodec_open2(s->codctx, cod, NULL)) < 0) {
+            if (self->cbexc) {
+                KS_DECREF(self);
+                return NULL;
+            }
             KS_THROW(kst_IOError, "Failed to open decoder for stream #%i in %R: %s %i", i, src, av_err2str(avst), avst);
             KS_DECREF(self);
             return NULL;
@@ -126,7 +225,9 @@ ksav_IO ksav_open(ks_type tp, ks_str src, ks_str mode) {
 }
 
 
+#ifdef KS_HAVE_libav
 
+/* Internally return the object that should be returned from a packet */
 static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
     struct ksav_IO_stream* s = &self->streams[sidx];
     AVStream* stream = self->fmtctx->streams[s->fcidx];
@@ -234,10 +335,8 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
                 assert(false);
             }
 
-            static struct SwsContext *sws_context = NULL;
-
             /* Get the conversion context */
-            sws_context = sws_getCachedContext(sws_context,
+            self->swsctx = sws_getCachedContext(self->swsctx,
                 w, h, pix_fmt,
                 w, h, new_fmt,
                 0, NULL, NULL, NULL
@@ -250,7 +349,7 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
             char* tmp_data = ks_malloc(linesize * h);
 
             /* Convert data into 'tmp_data' */
-            sws_scale(sws_context, (const uint8_t* const*)self->frame->data, self->frame->linesize, 0, h, (uint8_t* const[]){ tmp_data, NULL, NULL, NULL }, (int[]){ linesize, 0, 0, 0 });
+            sws_scale(self->swsctx, (const uint8_t* const*)self->frame->data, self->frame->linesize, 0, h, (uint8_t* const[]){ tmp_data, NULL, NULL, NULL }, (int[]){ linesize, 0, 0, 0 });
 
             /* Construct result */
             nx_array res = nx_array_newc(nxt_array, odt, 3, (ks_size_t[]){ h, w, d }, NULL, NULL);
@@ -276,13 +375,56 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
     } else if (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO) {
         /* Return audio data */
 
-        return KSO_NONE;
+        /* Number of channels in the audio */
+        int channels = s->codctx->channels;
+
+        /* Sample rate */
+        int hz = s->codctx->sample_rate;
+
+        /* Number of datapoints */
+        int nsamp = self->frame->nb_samples;
+
+        /* Format of each sample */
+        enum AVSampleFormat smpfmt = self->frame->format;
+
+        /* Create data to hold the result */
+        nxc_float* tmp_data = ks_zmalloc(sizeof(*tmp_data), channels * nsamp);
+
+        /* The samples to use (depends on the sample format) */
+        void** samples = (void**)self->frame->data; 
+
+        int i, j;
+
+        switch (smpfmt)
+        {
+        case AV_SAMPLE_FMT_FLTP:
+            for (j = 0; j < channels; ++j) {
+                for (i = 0; i < nsamp; ++i) {
+                    tmp_data[i * channels + j] = ((float**)samples)[j][i];
+                }
+            }
+            break;
+        
+        default:
+            ks_free(tmp_data);
+            KS_THROW(kst_Error, "Unknown sample format from libav: %s", av_get_sample_fmt_name(smpfmt));
+            break;
+        }
+
+
+        /* Construct result */
+        nx_array res = nx_array_newc(nxt_array, nxd_float, 2, (ks_size_t[]){ nsamp, channels }, (ks_ssize_t[]){ channels * sizeof(*tmp_data), sizeof(*tmp_data) }, tmp_data);
+        ks_free(tmp_data);
+
+        return (kso)res;
     } else {
         /* Restore quick data buffers */
         KS_THROW(kst_Error, "Don't know what to return for stream #%i in %R (unknown type, not video or audio)", sidx, self->src);
         return NULL;
     }
 }
+
+#endif
 
 
 kso ksav_next(ksav_IO self, int* sidx, int nvalid, int* valid) {
@@ -456,6 +598,7 @@ static KS_TFUNC(T, free) {
 #ifdef KS_HAVE_libav
     
     avformat_close_input(&self->fmtctx);
+    avio_context_free(&self->avioctx);
 
     if (self->frame) {
         av_frame_free(&self->frame);
@@ -473,6 +616,7 @@ static KS_TFUNC(T, free) {
         ks_free(t);
     }
 
+    sws_freeContext(self->swsctx);
 
 #endif
 

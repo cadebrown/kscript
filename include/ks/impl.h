@@ -141,7 +141,10 @@ _KS_DO_SPEC(_KSACT)
     _ksva__doc,
 
 
-    _ksv_r
+    _ksv_r,
+    _ksv_rb,
+    _ksv_w,
+    _ksv_wb
 ;
 
 

@@ -100,12 +100,13 @@ ksnet_SocketIO ksnet_SocketIO_wrap(int fd, ksnet_fk fk, ksnet_sk sk, ksnet_pk pk
     self->sk = sk;
     self->pk = pk;
 
-    self->fname = ks_fmt("[socket:%i]", fd);
-
-    self->is_r = self->is_w = true;
+    self->src = ks_fmt("[socket:%i]", fd);
+    self->mode = ks_str_new(-1, "rb+");
+    self->mr = true;
+    self->mw = true;
+    self->mb = true;
 
     /* Copy settings */
-    self->is_open = true;
     self->is_bound = is_bound;
     self->is_listening = is_listening;
 
@@ -275,7 +276,6 @@ bool ksnet_SocketIO_connect(ksnet_SocketIO self, kso addr) {
             return false;
         } 
 
-        self->is_open = true;
         break;
     
     default:
@@ -391,6 +391,7 @@ static KS_TFUNC(T, new) {
 
     return (kso)ksnet_SocketIO_new(tp, fk, sk, pk);
 }
+
 static KS_TFUNC(T, init) {
     int nargs;
     kso* args;
@@ -398,6 +399,7 @@ static KS_TFUNC(T, init) {
 
     return KSO_NONE;
 }
+
 static KS_TFUNC(T, free) {
     ksnet_SocketIO self;
     KS_ARGS("self:*", &self, ksnett_SocketIO);
@@ -407,7 +409,8 @@ static KS_TFUNC(T, free) {
         shutdown(self->fd, SHUT_RD);
         close(self->fd);
     }
-    KS_NDECREF(self->fname);
+    KS_NDECREF(self->src);
+    KS_NDECREF(self->mode);
 
     KSO_DEL(self);
 
@@ -447,7 +450,6 @@ static KS_TFUNC(T, close) {
     return KSO_NONE;
 }
 
-
 static KS_TFUNC(T, bind) {
     ksnet_SocketIO self;
     kso addr;
@@ -457,6 +459,7 @@ static KS_TFUNC(T, bind) {
 
     return KSO_NONE;
 }
+
 static KS_TFUNC(T, connect) {
     ksnet_SocketIO self;
     kso addr;
@@ -489,7 +492,6 @@ static KS_TFUNC(T, accept) {
         (kso)name
     });
 }
-
 
 /* Export */
 

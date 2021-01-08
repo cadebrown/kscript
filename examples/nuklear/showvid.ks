@@ -19,9 +19,7 @@ import av
 ctx = nuklear.Context("Basic Application Window", 900, 720)
 
 
-img = nuklear.Image(av.imread("./assets/image/monarch.png"))
-
-#imgs = av.open("./assets/vid/rabbitman.mp4").best_video()
+imgs = av.open("./assets/video/rabbitman.mp4").best_video()
 #imgs = av.open("../../Downloads/ex0.webp").best_video()
 
 #imgs = mm.open("./assets/img/monarch.png")[0]
@@ -53,8 +51,8 @@ for frame in ctx {
 
         ctx.layout_row_dynamic(360, 1)
         # Output a random image
-        #curimg = nextimg() || curimg
-        ctx.image(img)
+        curimg = nextimg() || curimg
+        ctx.image(curimg)
     }
     ctx.end()
 }

@@ -10,64 +10,34 @@
 
 
 /* C-API */
-
-ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, bool is_w, bool is_bin, ks_str src_name) {
+ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, ks_str src, ks_str mode) {
     ksio_FileIO self = KSO_NEW(ksio_FileIO, tp);
 
-    self->do_close = do_close;
-    self->is_r = is_r;
-    self->is_w = is_w;
-    self->is_bin = is_bin;
-    KS_INCREF(src_name);
-    self->fname = src_name;
     self->fp = fp;
-    self->sz_r = self->sz_w = 0;
-    self->is_open = true;
+    self->do_close = do_close;
+
+    KS_INCREF(src);
+    self->src = src;
+    KS_INCREF(mode);
+    self->mode = mode;
+
+    if (!ksio_modeinfo(self->mode, &self->mr, &self->mw, &self->mb)) {
+        KS_DECREF(self);
+        return NULL;
+    }
 
     return self;
 }
-
-ksio_FileIO ksio_FileIO_fdopen(int fd, bool is_r, bool is_w, bool is_bin, ks_str src_name) {
-    const char* mode = NULL;
-    
-    if (is_r && is_w) {
-        if (is_bin) {
-            mode = "rb+";
-        }
-        else {
-            mode = "r+";
-        }
-    }
-    else if (is_r) {
-        if (is_bin) {
-            mode = "rb";
-        }
-        else {
-            mode = "r";
-        }
-    }
-    else if (is_w) {
-        if (is_bin) {
-            mode = "wb";
-        }
-        else {
-            mode = "w";
-        }
-    }
-    else {
-        assert(false);
-    }
-
+ksio_FileIO ksio_FileIO_fdopen(int fd, ks_str src, ks_str mode) {
 #ifdef KS_HAVE_fdopen
-    FILE* res = fdopen(fd, mode);
+    FILE* res = fdopen(fd, mode->data);
 
     if (!res) {
         KS_THROW(kst_OSError, "Failed to fdopen %i: %s", fd, strerror(errno));
         return NULL;
     }
 
-    return ksio_FileIO_wrap(ksiot_FileIO, res, true, is_r, is_w, is_bin, src_name);
-
+    return ksio_FileIO_wrap(ksiot_FileIO, res, true, src, mode);
 #else
     KS_THROW(kst_OSError, "Failed to fdopen: platform did not provide a 'fdopen()' function");
     return -1;
@@ -96,56 +66,25 @@ static KS_TFUNC(T, init) {
         return NULL;
     }
 
-    bool is_r = false, is_w = false, is_bin = false;
-
-    if (ks_str_eq_c(mode, "r", 1)) {
-        is_r = true;
-    } else if (ks_str_eq_c(mode, "w", 1)) {
-        is_w = true;
-    } else if (ks_str_eq_c(mode, "a", 1)) {
-        is_w = true;
-    } else if (ks_str_eq_c(mode, "r+", 2) || ks_str_eq_c(mode, "w+", 2) || ks_str_eq_c(mode, "a+", 2)) {
-        is_r = true;
-        is_w = true;
-    } else if (ks_str_eq_c(mode, "rb", 2)) {
-        is_r = true;
-        is_bin = true;
-    } else if (ks_str_eq_c(mode, "r+b", 3) || ks_str_eq_c(mode, "rb+", 3)) {
-        is_r = true;
-        is_w = true;
-        is_bin = true;
-    } else if (ks_str_eq_c(mode, "wb", 2)) {
-        is_w = true;
-        is_bin = true;
-    } else if (ks_str_eq_c(mode, "w+b", 3) || ks_str_eq_c(mode, "wb+", 3)) {
-        is_r = true;
-        is_w = true;
-        is_bin = true;
-    } else if (ks_str_eq_c(mode, "ab", 2) || ks_str_eq_c(mode, "a+b", 3) || ks_str_eq_c(mode, "ab+", 3)) {
-        is_w = true;
-        is_bin = true;
-    } else {
-        KS_THROW(kst_Error, "Invalid mode: %R", mode);
-        return NULL;
-    }
-
     /* Attempt to open via the C library 
      * TODO: check filesystem encoding
      */
-    FILE* fp = fopen(src->data, mode->data);
-    if (!fp) {
+    self->fp = fopen(src->data, mode->data);
+    if (!self->fp) {
         KS_THROW(kst_IOError, "Failed to open %R: %s", src, strerror(errno));
+        KS_DECREF(src);
         return NULL;
     }
 
-    self->fname = src;
-    self->is_r = is_r;
-    self->is_w = is_w;
-    self->is_bin = is_bin;
     self->do_close = true;
-    self->sz_r = self->sz_w;
-    self->fp = fp;
-    self->is_open = true;
+
+    self->src = src;
+    KS_INCREF(mode);
+    self->mode = mode;
+
+    if (!ksio_modeinfo(self->mode, &self->mr, &self->mw, &self->mb)) {
+        return NULL;
+    }
 
     return KSO_NONE;
 }
@@ -154,10 +93,11 @@ static KS_TFUNC(T, free) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
 
-    if (self->fname) KS_DECREF(self->fname);
+    KS_NDECREF(self->src);
+    KS_NDECREF(self->mode);
     
-    if (self->do_close && self->is_open && self->fp) {
-        fclose(self->fp);
+    if (!ksio_close((ksio_BaseIO)self)) {
+        return NULL;
     }
 
     KSO_DEL(self);
@@ -169,23 +109,7 @@ static KS_TFUNC(T, str) {
     ksio_FileIO self;
     KS_ARGS("self:*", &self, ksiot_FileIO);
 
-    bool both = self->is_r && self->is_w;
-    return (kso)ks_fmt("<%T (src=%R, mode='%s%s')>", self, self->fname, both ? "r+" : self->is_r ? "r" : "w", self->is_bin ? "b" : "");
-}
-
-static KS_TFUNC(T, close) {
-    ksio_FileIO self;
-    KS_ARGS("self:*", &self, ksiot_FileIO);
-
-    if (self->do_close && self->is_open && self->fp) {
-        self->is_open = false;
-        if (fclose(self->fp) != 0) {
-            KS_THROW(kst_IOError, "Failed to close %R: %s", self, strerror(errno));
-            return NULL;
-        }
-    }
-
-    return KSO_NONE;
+    return (kso)ks_fmt("<%T (src=%R, mode=%R)>", self, self->src, self->mode);
 }
 
 static KS_TFUNC(T, read) {
@@ -193,7 +117,7 @@ static KS_TFUNC(T, read) {
     ks_cint sz = KS_CINT_MAX;
     KS_ARGS("self:* ?sz:cint", &self, ksiot_FileIO, &sz);
     
-    if (self->is_bin) {
+    if (self->mb) {
         /* Read bytes */
         ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0;
         void* dest = NULL;
@@ -236,7 +160,7 @@ static KS_TFUNC(T, write) {
     ksio_FileIO self;
     kso msg;
     KS_ARGS("self:* msg", &self, ksiot_FileIO, &msg);
-    if (self->is_bin) {
+    if (self->mb) {
         /* Write bytes */
         ks_bytes vm = kso_bytes(msg);
         if (!vm) return NULL;

@@ -662,13 +662,99 @@ bool ksio_fmt(ksio_BaseIO self, const char* fmt, ...) {
     return res;
 }
 
-ks_str ksio_readall(ks_str fname) {
-    FILE* fp = fopen(fname->data, "r");
-    if (!fp) {
-        KS_THROW(kst_IOError, "Failed to open %R: %s", fname, strerror(errno));
-        return NULL;
+bool ksio_info(ksio_BaseIO self, bool* is_r, bool* is_w, bool* is_b) {
+    if (kso_issub(self->type, ksiot_FileIO)) {
+        return ksio_modeinfo(((ksio_FileIO)self)->mode, is_r, is_w, is_b);
+    } else if (kso_issub(self->type, ksiot_RawIO)) {
+        return ksio_modeinfo(((ksio_FileIO)self)->mode, is_r, is_w, is_b);
+    } else if (kso_issub(self->type, ksiot_StringIO)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = false;
+        return true;
+    } else if (kso_issub(self->type, ksiot_BytesIO)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = true;
+        return true;
+    } else {
+        KS_THROW(kst_IOError, "Failed to determine stream info for '%T' object", self);
+        return false;
     }
-    ksio_FileIO fio = ksio_FileIO_wrap(ksiot_FileIO, fp, true, true, false, false, fname);
+
+}
+
+
+bool ksio_modeinfo(ks_str mode, bool* is_r, bool* is_w, bool* is_b) {
+    if (ks_str_eq_c(mode, "r", 1)) {
+        *is_r = true;
+        *is_w = false;
+        *is_b = false;
+        return true;
+    } else if (ks_str_eq_c(mode, "rb", 2)) {
+        *is_r = true;
+        *is_w = false;
+        *is_b = true;
+        return true;
+    } else if (ks_str_eq_c(mode, "w", 1)) {
+        *is_r = false;
+        *is_w = true;
+        *is_b = false;
+        return true;
+    } else if (ks_str_eq_c(mode, "wb", 2)) {
+        *is_r = false;
+        *is_w = true;
+        *is_b = true;
+        return true;
+    } else if (ks_str_eq_c(mode, "a", 1)) {
+        *is_r = false;
+        *is_w = true;
+        *is_b = false;
+        return true;
+    } else if (ks_str_eq_c(mode, "ab", 2)) {
+        *is_r = false;
+        *is_w = true;
+        *is_b = true;
+        return true;
+    } else if (ks_str_eq_c(mode, "r+", 2)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = false;
+        return true;
+    } else if (ks_str_eq_c(mode, "r+b", 3) || ks_str_eq_c(mode, "rb+", 3)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = true;
+        return true;
+    } else if (ks_str_eq_c(mode, "w+", 2)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = false;
+        return true;
+    } else if (ks_str_eq_c(mode, "w+b", 3) || ks_str_eq_c(mode, "wb+", 3)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = true;
+        return true;
+    } else if (ks_str_eq_c(mode, "a+", 2)) {
+        *is_r = true;
+        *is_w = true;
+        return true;
+    } else if (ks_str_eq_c(mode, "a+b", 3) || ks_str_eq_c(mode, "ab+", 3)) {
+        *is_r = true;
+        *is_w = true;
+        *is_b = true;
+        return true;
+    } else {
+        KS_THROW(kst_Error, "Invalid mode: %R", mode);
+        return false;
+    }
+}
+
+
+ks_str ksio_readall(ks_str fname) {
+    ksio_FileIO fio = (ksio_FileIO)kso_call((kso)ksiot_FileIO, 1, (kso[]){ (kso)fname });
+    if (!fio) return NULL;
 
     /* Buffered read, and append */
     ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0, num_c;
@@ -690,6 +776,53 @@ ks_str ksio_readall(ks_str fname) {
     ks_free(dest);
     KS_DECREF(fio);
     return res;
+}
+ks_bytes ksio_readallo(kso obj) {
+    if (kso_issub(obj->type, kst_str)) {
+        ksio_FileIO fio = (ksio_FileIO)kso_call((kso)ksiot_FileIO, 2, (kso[]){ (kso)obj, (kso)_ksv_rb });
+        if (!fio) return NULL;
+
+        /* Buffered read, and append */
+        ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0, num_c;
+        void* dest = NULL;
+        while (true) {
+            dest = ks_realloc(dest, rsz + bsz * 4);
+            ks_ssize_t csz = ksio_reads((ksio_BaseIO)fio, bsz, ((char*)dest) + rsz, &num_c);
+            if (csz < 0) {
+                ks_free(dest);
+                KS_DECREF(fio);
+                return NULL;
+            }
+            rsz += csz;
+            if (csz == 0) break;
+        }
+
+        /* Construct string and return it */
+        ks_bytes res = ks_bytes_new(rsz, dest);
+        ks_free(dest);
+        KS_DECREF(fio);
+        return res;
+    } else {
+
+        /* Buffered read, and append */
+        ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0, num_c;
+        void* dest = NULL;
+        while (true) {
+            dest = ks_realloc(dest, rsz + bsz * 4);
+            ks_ssize_t csz = ksio_readb((ksio_BaseIO)obj, bsz, ((char*)dest) + rsz);
+            if (csz < 0) {
+                ks_free(dest);
+                return NULL;
+            }
+            rsz += csz;
+            if (csz == 0) break;
+        }
+
+        /* Construct string and return it */
+        ks_bytes res = ks_bytes_new(rsz, dest);
+        ks_free(dest);
+        return res;
+    }
 }
 
 /* Adapted from: https://gist.github.com/jstaursky/84cf1ddf91716d31558d6f0b5afc3feb */

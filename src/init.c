@@ -22,7 +22,10 @@ ks_str
 _KS_DO_SPEC(_KSACT)
 #undef _KSACT
 
-    _ksv_r
+    _ksv_r,
+    _ksv_rb,
+    _ksv_w,
+    _ksv_wb
 ;
 
 
@@ -71,6 +74,9 @@ _KS_DO_SPEC(_KSACT)
     _CONST(_ksv_os, "os");
     _CONST(_ksv_getarg, "getarg");
     _CONST(_ksv_r, "r");
+    _CONST(_ksv_rb, "rb");
+    _CONST(_ksv_w, "w");
+    _CONST(_ksv_wb, "wb");
     _CONST(_ksv_stdin, "<stdin>");
     _CONST(_ksv_stdout, "<stdout>");
     _CONST(_ksv_stderr, "<stderr>");

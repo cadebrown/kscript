@@ -10,15 +10,21 @@
 
 /* C-API */
 
-ksio_RawIO ksio_RawIO_wrap(ks_type tp, int fd, bool do_close, bool is_r, bool is_w, ks_str fname) {
+ksio_RawIO ksio_RawIO_wrap(ks_type tp, int fd, bool do_close, ks_str src, ks_str mode) {
     ksio_RawIO self = KSO_NEW(ksio_RawIO, tp);
 
     self->fd = fd;
     self->do_close = do_close;
-    self->is_r = is_r;
-    self->is_w = is_w;
-    KS_INCREF(fname);
-    self->fname = fname;
+
+    KS_INCREF(src);
+    self->src = src;
+    KS_INCREF(mode);
+    self->mode = mode;
+
+    if (!ksio_modeinfo(self->mode, &self->mr, &self->mw, &self->mb)) {
+        KS_DECREF(self);
+        return NULL;
+    }
 
     return self;
 }
@@ -43,32 +49,59 @@ static KS_TFUNC(T, init) {
         return NULL;
     }
 
-    bool is_r = false, is_w = false;
+    bool is_r = false, is_w = false, is_b = false;
     int flags = 0;
-    if (ks_str_eq_c(mode, "r", 1) || ks_str_eq_c(mode, "rb", 2)) {
+    if (ks_str_eq_c(mode, "r", 1)) {
         is_r = true;
         flags = O_RDONLY;
-    } else if (ks_str_eq_c(mode, "w", 1) || ks_str_eq_c(mode, "wb", 2)) {
+    } else if (ks_str_eq_c(mode, "rb", 2)) {
+        is_r = true;
+        is_b = true;
+        flags = O_RDONLY;
+    } else if (ks_str_eq_c(mode, "w", 1)) {
         is_w = true;
         flags = O_WRONLY | O_CREAT | O_TRUNC;
-    } else if (ks_str_eq_c(mode, "a", 1) || ks_str_eq_c(mode, "ab", 2)) {
+    } else if (ks_str_eq_c(mode, "wb", 2)) {
+        is_w = true;
+        is_b = true;
+        flags = O_WRONLY | O_CREAT | O_TRUNC;
+    } else if (ks_str_eq_c(mode, "a", 1)) {
         is_w = true;
         flags = O_WRONLY | O_CREAT | O_APPEND;
-    } else if (ks_str_eq_c(mode, "r+", 1) || ks_str_eq_c(mode, "r+b", 2) || ks_str_eq_c(mode, "rb+", 2)) {
+    } else if (ks_str_eq_c(mode, "ab", 2)) {
+        is_w = true;
+        is_b = true;
+        flags = O_WRONLY | O_CREAT | O_APPEND;
+    } else if (ks_str_eq_c(mode, "r+", 2)) {
         is_r = true;
         is_w = true;
         flags = O_RDWR;
-    } else if (ks_str_eq_c(mode, "w+", 1) || ks_str_eq_c(mode, "w+b", 2) || ks_str_eq_c(mode, "wb+", 2)) {
+    } else if (ks_str_eq_c(mode, "r+b", 3) || ks_str_eq_c(mode, "rb+", 3)) {
+        is_r = true;
+        is_w = true;
+        is_b = true;
+        flags = O_RDWR;
+    } else if (ks_str_eq_c(mode, "w+", 2)) {
         is_r = true;
         is_w = true;
         flags = O_RDWR | O_CREAT | O_TRUNC;
-    } else if (ks_str_eq_c(mode, "a+", 1) || ks_str_eq_c(mode, "a+b", 2) || ks_str_eq_c(mode, "ab+", 2)) {
+    } else if (ks_str_eq_c(mode, "w+b", 3) || ks_str_eq_c(mode, "wb+", 3)) {
+        is_r = true;
+        is_w = true;
+        is_b = true;
+        flags = O_RDWR | O_CREAT | O_TRUNC;
+    } else if (ks_str_eq_c(mode, "a+", 2)) {
         is_r = true;
         is_w = true;
         flags = O_RDWR | O_CREAT | O_APPEND;
+    } else if (ks_str_eq_c(mode, "a+b", 3) || ks_str_eq_c(mode, "ab+", 3)) {
+        is_r = true;
+        is_w = true;
+        is_b = true;
+        flags = O_RDWR | O_CREAT | O_APPEND;
     } else {
         KS_THROW(kst_Error, "Invalid mode: %R", mode);
-        return NULL;
+        return false;
     }
 
     /* Attempt to open via the C library 
@@ -81,12 +114,14 @@ static KS_TFUNC(T, init) {
         return NULL;
     }
 
-    self->fname = src;
-    self->is_r = is_r;
-    self->is_w = is_w;
+    self->src = src;
+    self->mode = mode;
     self->do_close = true;
-    self->sz_r = self->sz_w;
-    self->is_open = true;
+    self->sz_r = self->sz_w = 0;
+
+    if (!ksio_modeinfo(self->mode, &self->mr, &self->mw, &self->mb)) {
+        return NULL;
+    }
 
     return KSO_NONE;
 }
@@ -95,10 +130,11 @@ static KS_TFUNC(T, free) {
     ksio_RawIO self;
     KS_ARGS("self:*", &self, ksiot_RawIO);
 
-    if (self->fname) KS_DECREF(self->fname);
-    
-    if (self->do_close && self->is_open && self->fd >= 0) {
-        close(self->fd);
+    KS_NDECREF(self->src);
+    KS_NDECREF(self->mode);
+
+    if (!ksio_close((ksio_BaseIO)self)) {
+        return NULL;
     }
 
     KSO_DEL(self);
@@ -110,23 +146,7 @@ static KS_TFUNC(T, str) {
     ksio_RawIO self;
     KS_ARGS("self:*", &self, ksiot_RawIO);
 
-    bool both = self->is_r && self->is_w;
-    return (kso)ks_fmt("<%T (src=%R, mode='%sb')>", self, self->fname, both ? "r+" : self->is_r ? "r" : "w");
-}
-
-static KS_TFUNC(T, close) {
-    ksio_RawIO self;
-    KS_ARGS("self:*", &self, ksiot_RawIO);
-
-    if (self->do_close && self->is_open && self->fd >= 0) {
-        self->is_open = false;
-        if (close(self->fd) != 0) {
-            KS_THROW(kst_IOError, "Failed to close %R: %s", self, strerror(errno));
-            return NULL;
-        }
-    }
-
-    return KSO_NONE;
+    return (kso)ks_fmt("<%T (src=%R, mode=%R)>", self, self->src, self->mode);
 }
 
 static KS_TFUNC(T, read) {

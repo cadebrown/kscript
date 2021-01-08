@@ -61,7 +61,7 @@ static KS_TFUNC(T, free) {
 #if defined(KSNK_XLIB_GL3)
 
     /* Free Xlib stuffs */
-    XFree(self->x.vis);
+   // XFree(self->x.vis);
 
 #elif defined(KSNK_GLFW_GL3)
 

@@ -193,9 +193,9 @@ ks_module _ksi_os() {
     ks_list_push(ksos_argv, (kso)tmp);
     KS_DECREF(tmp);
 
-    ksos_stdin = ksio_FileIO_wrap(ksiot_FileIO, stdin, false, true, false, false, _ksv_stdin);
-    ksos_stdout = ksio_FileIO_wrap(ksiot_FileIO, stdout, false, false, true, false, _ksv_stdout);
-    ksos_stderr = ksio_FileIO_wrap(ksiot_FileIO, stderr, false, false, true, false, _ksv_stderr);
+    ksos_stdin = ksio_FileIO_wrap(ksiot_FileIO, stdin, false, _ksv_stdin, _ksv_r);
+    ksos_stdout = ksio_FileIO_wrap(ksiot_FileIO, stdout, false, _ksv_stdout, _ksv_w);
+    ksos_stderr = ksio_FileIO_wrap(ksiot_FileIO, stderr, false, _ksv_stderr, _ksv_w);
 
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "Operating system interface", KS_IKV(
 

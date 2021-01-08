@@ -29,6 +29,21 @@
 #define KSIO_BUFSIZ 1024
 #endif
 
+
+/* Enum for 'ksio_seek()' function */
+enum {
+
+    /* Relative to the start of the stream */
+    KSIO_SEEK_SET = 0,
+
+    /* Relative to the current position */
+    KSIO_SEEK_CUR = 1,
+
+    /* Relative to the end of the stream */
+    KSIO_SEEK_END = 2,
+
+};
+
 /** Types **/
 
 /* Any Input/Output stream */
@@ -41,14 +56,12 @@ typedef kso ksio_BaseIO;
     int fd; \
     /* If true, 'close(fd)' after the IO is done */ \
     bool do_close; \
-    /* Whether the IO is open */ \
-    bool is_open; \
-    /* Whether the RawIO is readable/writeable */ \
-    bool is_r, is_w; \
     /* Number of bytes read and written (not rigorous, don't rely on these) */ \
     ks_ssize_t sz_r, sz_w; \
-    /* The name of the source */ \
-    ks_str fname; \
+    /* The name of the source, and mode it was opened in */ \
+    ks_str src, mode; \
+    /* Mode information */ \
+    bool mr, mw, mb;
 
 
 /* 'io.RawIO' - represents an open file descriptor
@@ -64,27 +77,20 @@ typedef struct ksio_RawIO_s {
 typedef struct ksio_FileIO_s {
     KSO_BASE
 
-    /* Whether the IO is open */
-    bool is_open;
-
-    /* Whether the file is text or binary */
-    bool is_bin;
-
-    /* Whether the FileIO is readable/writeable */
-    bool is_r, is_w;
-
-    /* Number of bytes read and written (not rigorous, don't rely on these) */
-    ks_ssize_t sz_r, sz_w;
-
+    /* File pointer (from 'fopen()' or similar) */
+    FILE* fp;
 
     /* If true, actually close 'fp' once the object has been closed */
     bool do_close;
 
-    /* The name of the source */
-    ks_str fname;
+    /* Number of bytes read and written (not rigorous, don't rely on these) */
+    ks_ssize_t sz_r, sz_w;
 
-    /* File descriptor from 'fopen()' */
-    FILE* fp;
+    /* The name of the source, and mode it was opened in */
+    ks_str src, mode;
+
+    /* Mode information */
+    bool mr, mw, mb;
 
 }* ksio_FileIO;
 
@@ -94,25 +100,21 @@ typedef struct ksio_FileIO_s {
 typedef struct ksio_StringIO_s {
     KSO_BASE
 
-    /* Whether the IO is readable/writeable */
-    bool is_r, is_w;
+    /* Array of data, allocated with 'ks_malloc()' */
+    unsigned char* data;
+
+    /* Current position in 'data' */
+    ks_ssize_t pos_b, pos_c;
+
+    /* Current size of 'data' */
+    ks_ssize_t len_b, len_c;
+
+    /* Maximum length 'data' is allocated for */
+    ks_ssize_t max_len_b;
 
     /* Number of bytes read and written (not rigorous, don't rely on these) */
     ks_ssize_t sz_r, sz_w;
 
-    /* Length of the data (in bytes and characters) 
-     * For byte-oriented IO, len_c==len_b, but should not be used
-     */
-    int len_b, len_c;
-
-    /* Allocated array of data */
-    unsigned char* data;
-
-    /* Internal maximum length it is allocated to hold */
-    ks_ssize_t max_len_b;
-
-    /* Current position in the buffer */
-    int pos_b, pos_c;
 
 }* ksio_StringIO;
 
@@ -193,23 +195,25 @@ typedef ksio_StringIO ksio_BytesIO;
 
 /** Functions **/
 
-
-/* Calculate whether the IO is open
+/* Close the IO object
  */
-KS_API bool ksio_is_open(ksio_BaseIO self, bool* out);
+KS_API bool ksio_close(ksio_BaseIO self);
 
-/* Calculate whether the IO is readable/writeable
+/* Seek the IO object to 'pos' from 'whence' (which is one of 'KSIO_SEEK_*')
  */
-KS_API bool ksio_is_r(ksio_BaseIO self, bool* out);
-KS_API bool ksio_is_w(ksio_BaseIO self, bool* out);
+KS_API bool ksio_seek(ksio_BaseIO self, ks_cint pos, int whence);
 
-/* Get the datatype of the IO stream. The other methods
- *   test for bytes- and str- based streams
+/* Tell where the current position is, from the start of the stream, or negative if an error was thrown
  */
-KS_API ks_type ksio_rtype(ksio_BaseIO self);
-KS_API bool ksio_is_bytes(ksio_BaseIO self, bool* out);
-KS_API bool ksio_is_str(ksio_BaseIO self, bool* out);
+KS_API ks_cint ksio_tell(ksio_BaseIO self);
 
+/* Tell whether we've hit the EOF
+ */
+KS_API bool ksio_eof(ksio_BaseIO self, bool* out);
+
+/* Truncate the IO object to 'sz'
+ */
+KS_API bool ksio_trunc(ksio_BaseIO self, ks_cint sz);
 
 /* Read up to 'sz_b' bytes, and store in 'data'
  *
@@ -232,6 +236,7 @@ KS_API bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data);
  */
 KS_API bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data);
 
+
 /* Adds a C-style printf-like formatting to the output stream
  */
 KS_API bool ksio_fmt(ksio_BaseIO self, const char* fmt, ...);
@@ -246,15 +251,15 @@ KS_API bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap);
 
 /* Return a wrapper around an opened C-style file descriptor
  */
-KS_API ksio_RawIO ksio_RawIO_wrap(ks_type tp, int fd, bool do_close, bool is_r, bool is_w, ks_str fname);
+KS_API ksio_RawIO ksio_RawIO_wrap(ks_type tp, int fd, bool do_close, ks_str src, ks_str mode);
 
 /* Return a wrapper around an opened C-style FILE*
  */
-KS_API ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, bool is_r, bool is_w, bool is_bin, ks_str src_name);
+KS_API ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, ks_str src, ks_str mode);
 
-/* Return a wrapper around a file descriptor
+/* Open a file descriptor
 */
-KS_API ksio_FileIO ksio_FileIO_fdopen(int fd, bool is_r, bool is_w, bool is_bin, ks_str src_name);
+KS_API ksio_FileIO ksio_FileIO_fdopen(int fd, ks_str src, ks_str mode);
 
 /* Create a new StringIO
  */
@@ -279,9 +284,19 @@ KS_API ks_bytes ksio_BytesIO_getf(ksio_BytesIO self);
 
 /** Misc. Utils **/
 
+/* Get mode information about a given stream or mode
+ */
+KS_API bool ksio_info(ksio_BaseIO self, bool* is_r, bool* is_w, bool* is_b);
+KS_API bool ksio_modeinfo(ks_str mode, bool* is_r, bool* is_w, bool* is_b);
+
+
 /* Read entire file and return as a string. Returns NULL and throws an error if there was a problem
  */
 KS_API ks_str ksio_readall(ks_str fname);
+
+/* Read entire object (may be 'str' for source, or IO object)
+ */
+KS_API ks_bytes ksio_readallo(kso obj);
 
 /* Portable implementation of the 'getline()' function, which reads an entire line from a FILE* pointer
  *
@@ -301,6 +316,11 @@ KS_API extern ks_type
     ksiot_FileIO,
     ksiot_StringIO,
     ksiot_BytesIO
+;
+
+/* Enums */
+KS_API extern ks_type
+    ksioe_Seek
 ;
 
 #endif /* KSIO_H__ */

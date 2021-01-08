@@ -17,7 +17,6 @@ ksio_StringIO ksio_StringIO_new() {
     self->pos_b = self->pos_c = 0;
     self->max_len_b = 0;
 
-    self->is_r = self->is_w = true;
     self->sz_r = self->sz_w = false;
 
     self->data = NULL;
