@@ -14,6 +14,12 @@
 #include <ks/ks.h>
 #endif
 
+/* For now, in Windows, do ASCII only because the compiler maxes out at 16k string literals... */
+#ifdef WIN32
+  #define KSUCD_ASCII_ONLY
+#endif
+
+
 /** Types **/
 
 /* Category of a Unicode character */

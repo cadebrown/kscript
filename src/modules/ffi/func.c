@@ -9,9 +9,8 @@
 #define T_NAME "ffi.func"
 
 
-
 #ifndef KS_HAVE_ffi
-#warning Building kscript without ffi support, so calling C-style functions from kscript may throw errors or cause problems
+//#warning Building kscript without ffi support, so calling C-style functions from kscript may throw errors or cause problems
 #endif
 
 /* C-API */

@@ -20,16 +20,42 @@ static ks_module import_path_dll(ks_str p, ks_str name, kso dir) {
     ks_trace("ks", "Attempting %R for %R", p, name);
     if (ksos_path_isfile((kso)p, &g) && g) {
         
-        /* Now, check if we can open it */
+        /* Now, check if we can open it, and get the symbol that holds the initializer */
+		struct ks_cextinit* sym = NULL;
+#ifdef WIN32
+		HMODULE handle = LoadLibrary(p->data);
+		if (!handle) {
+			KS_THROW(kst_Error, "Failed to LoadLibrary %R: [%i]", name, GetLastError());
+			return NULL;
+		}
+
+		sym = GetProcAddress(handle, _KS_CEXTINIT_SYMBOL_STR);
+		if (sym) {
+			ks_module res = sym->loadfunc();
+			if (!res) {
+				FreeLibrary(handle);
+				return NULL;
+			}
+			res->dlhandle = handle;
+			return res;
+		} else {
+			FreeLibrary(handle);
+			return NULL;
+		}
+#else
         void* handle = dlopen(p->data, RTLD_LAZY);
         if (!handle) {
             KS_THROW(kst_Error, "Failed to dlopen %R: %s", p, dlerror());
             return NULL;
         }
 
-        struct ks_cextinit* sym = dlsym(handle, _KS_CEXTINIT_SYMBOL_STR);
+        sym = dlsym(handle, _KS_CEXTINIT_SYMBOL_STR);
         if (sym) {
             ks_module res = sym->loadfunc();
+			if (!res) {
+				dlclose(handle);
+				return NULL;
+			}
             res->dlhandle = handle;
             return res;
         } else {
@@ -37,6 +63,8 @@ static ks_module import_path_dll(ks_str p, ks_str name, kso dir) {
             dlclose(handle);
             return NULL; 
         }
+#endif
+
     } else {
         kso_catch_ignore();
     }

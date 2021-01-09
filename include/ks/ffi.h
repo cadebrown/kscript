@@ -182,7 +182,7 @@ KS_API ksffi_func ksffi_func_new(ks_type tp, void (*val)());
 
 
 /* Types */
-KS_API extern ks_type
+KS_API_DATA ks_type
 #define _KSFFI_INTDECL(_name, _ctp) ksffit_##_name,
 KSFFI_DO_INTS(_KSFFI_INTDECL)
 

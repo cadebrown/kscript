@@ -749,7 +749,7 @@ static KS_TFUNC(T, edit_string) {
     return (kso)res;
 }
 
-#endif /* KSNK_DO */
+#endif
 
 
 /* Export */
@@ -758,6 +758,9 @@ static struct ks_type_s tp;
 ks_type ksnkt_Context = &tp;
 
 void _ksi_nk_Context() {
+
+#ifdef KSNK_DO
+
     _ksinit(ksnkt_Context, kst_object, T_NAME, sizeof(struct ksnk_Context_s), -1, "", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, name, w, h)", "")},
@@ -765,7 +768,6 @@ void _ksi_nk_Context() {
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
         {"__setattr",              ksf_wrap(T_setattr_, T_NAME ".__setattr(self, attr, val)", "")},
 
-#ifdef KSNK_DO
 
         {"__next",                 ksf_wrap(T_next_, T_NAME ".__next(self)", "")},
 
@@ -801,8 +803,8 @@ void _ksi_nk_Context() {
         {"image",                  ksf_wrap(T_image_, T_NAME ".image(self, image)", "Draws an image")},
         
         {"edit_text",              ksf_wrap(T_edit_string_, T_NAME ".edit_text(self, cur, max_len, flags=nuklear.Edit.NONE)", "Draws a string/text editor, and returns the new text created")},
-#endif
     ));
+#endif
 }
 
 

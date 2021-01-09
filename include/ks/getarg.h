@@ -132,7 +132,7 @@ KS_API ks_str ksga_help(ksga_Parser self);
 
 /* Exported */
 
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksgat_Parser
 ;
 

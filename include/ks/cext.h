@@ -27,15 +27,9 @@
  * ```
  *
  */
-#ifdef __cplusplus
 #define KS_CEXT_DECL(_loadfunc) struct ks_cextinit _KS_CEXTINIT_SYMBOL = { \
     _loadfunc \
 }
-#else
-#define KS_CEXT_DECL(_loadfunc) struct ks_cextinit _KS_CEXTINIT_SYMBOL = (struct ks_cextinit) { \
-    .loadfunc = _loadfunc \
-}
-#endif
 
 /* Declare with 'extern' linkage so it can be read from 'dlopen()' or similar */
 KS_API

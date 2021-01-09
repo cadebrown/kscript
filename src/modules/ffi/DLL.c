@@ -20,7 +20,11 @@ static KS_TFUNC(T, free) {
 
     KS_DECREF(self->name);
 
-    if (self->handle) dlclose(self->handle);
+#ifdef WIN32
+	if (self->handle) FreeLibrary(self->handle);
+#else
+	if (self->handle) dlclose(self->handle);
+#endif
 
     KSO_DEL(self);
 
@@ -40,13 +44,23 @@ static KS_TFUNC(T, getattr) {
     ks_str attr;
     KS_ARGS("self:* attr:*", &self, ksffit_dll, &attr, kst_str);
 
+#ifdef WIN32
+	void* sym = GetProcAddress(self->handle, attr->data);
+	if (!sym) {
+		KS_THROW(kst_IOError, "Failed to load name %R: [%i]", attr, GetLastError());
+		return NULL;
+	}
+	
+	return (kso)ksffi_ptr_make(NULL, sym);
+#else
     void* sym = dlsym(self->handle, attr->data);
     if (!sym) {
         KS_THROW(kst_IOError, "Failed to load name %R: %s", attr, dlerror());
         return NULL;
     }
+	return (kso)ksffi_ptr_make(NULL, sym);
+#endif
 
-    return (kso)ksffi_ptr_make(NULL, sym);
     //return (kso)ks_int_newu((ks_uint)sym);
 }
 

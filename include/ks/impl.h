@@ -47,7 +47,6 @@ void _ksi_graph();
 void _ksi_module();
 void _ksi_type();
 void _ksi_func();
-void _ksi_partial();
 void _ksi_logger();
 
 void _ksi_ast();
@@ -123,7 +122,7 @@ void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, con
 
 
 /* String constants */
-KS_API extern ks_str
+KS_API_DATA ks_str
     _ksv_io,
     _ksv_os,
     _ksv_getarg,
@@ -148,12 +147,12 @@ _KS_DO_SPEC(_KSACT)
 ;
 
 
-KS_API extern ks_tuple
+KS_API_DATA ks_tuple
     _ksv_emptytuple
 ;
 
 /* Integer constants */
-KS_API extern ks_int
+KS_API_DATA ks_int
     _ksint_0,
     _ksint_1,
     _ksint_HASH_P /* KS_HASH_P */

@@ -1,5 +1,7 @@
 /* os/proc.c - 'os.proc' type
  *
+ *
+ * SEE: https://docs.microsoft.com/en-us/windows/win32/procthread/creating-a-child-process-with-redirected-input-and-output
  * 
  * @author:    Gregory Croisdale <greg@kscript.org>
  */
@@ -9,7 +11,7 @@
 
 /* C-API */
 
-bool ksos_waitpid(pid_t pid, int* status) {
+bool ksos_waitpid(int pid, int* status) {
 #ifdef KS_HAVE_waitpid
     if (waitpid(pid, status, 0) < 0) {
         KS_THROW(kst_OSError, "Failed to waitpid: error using waitpid(%i)", pid);
@@ -23,7 +25,7 @@ bool ksos_waitpid(pid_t pid, int* status) {
 #endif
 }
 
-bool ksos_kill(pid_t pid, int sig) {
+bool ksos_kill(int pid, int sig) {
 #ifdef KS_HAVE_kill
     int res = kill(pid, sig);
     if (res < 0) {
@@ -38,7 +40,7 @@ bool ksos_kill(pid_t pid, int sig) {
 #endif
 }
 
-bool ksos_isalive(pid_t pid, bool* out) {
+bool ksos_isalive(int pid, bool* out) {
 #ifdef KS_HAVE_kill
     // attempt send empty signal
     int res = kill(pid, 0);
@@ -114,6 +116,11 @@ static KS_TFUNC(T, init) {
         cargv[i] = s->data;
     }
 
+#ifdef WIN32
+	KS_THROW(kst_OSError, "Process spawning not supported on Windows yet...");
+	ks_free(cargv);
+	return NULL;
+#else
     /* Create pipes */
     int pin[2];
     int pout[2];
@@ -129,7 +136,7 @@ static KS_TFUNC(T, init) {
         return NULL;
     }
 
-    pid_t pid;
+    int pid;
     if ((pid = ksos_fork()) < 0) {
         if (pin[0] >= 0) close(pin[0]);
         if (pin[1] >= 0) close(pin[1]);
@@ -180,6 +187,7 @@ static KS_TFUNC(T, init) {
     free(cargv);
 
     return KSO_NONE;
+#endif
 }
 
 static KS_TFUNC(T, getattr) {
@@ -251,7 +259,11 @@ static KS_TFUNC(T, kill) {
     ksos_proc self;
     KS_ARGS("self:*", &self, ksost_proc);
 
-    if (!ksos_kill(self->pid, SIGKILL)) return NULL;
+#ifdef SIGKILL
+	if (!ksos_kill(self->pid, SIGKILL)) return NULL;
+#else
+	if (!ksos_kill(self->pid, 9)) return NULL;
+#endif
 
     return KSO_NONE;
 }

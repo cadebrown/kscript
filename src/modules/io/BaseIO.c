@@ -260,21 +260,32 @@ bool ksio_trunc(ksio_BaseIO self, ks_cint sz) {
     if (kso_issub(self->type, ksiot_FileIO)) {
         ksio_FileIO fio = (ksio_FileIO)self;
 
+#ifdef WIN32
+		LONG up = sz >> 32;
+		SetFilePointer(fileno(fio->fp), (UINT32)sz, &up, FILE_BEGIN);
+		SetEndOfFile(fileno(fio->fp));
+#else
         int rc = ftruncate(fileno(fio->fp), sz);
         if (rc < 0) {
             KS_THROW(kst_IOError, "Failed to trunc %R: %s", self, strerror(errno));
             return false;
         }
-
-        return true;
-
+#endif
+		return true;
     } else if (kso_issub(self->type, ksiot_RawIO)) {
         ksio_RawIO rio = (ksio_RawIO)self;
-        int rc = ftruncate(rio->fd, sz);
-        if (rc < 0) {
-            KS_THROW(kst_IOError, "Failed to trunc %R: %s", self, strerror(errno));
-            return false;
-        }
+
+#ifdef WIN32
+		LONG up = sz >> 32;
+		SetFilePointer(rio->fd, (UINT32)sz, &up, FILE_BEGIN);
+		SetEndOfFile(rio->fd);
+#else
+		int rc = ftruncate(rio->fd, sz);
+		if (rc < 0) {
+			KS_THROW(kst_IOError, "Failed to trunc %R: %s", self, strerror(errno));
+			return false;
+		}
+#endif
 
         return true;
     } else if (kso_issub(self->type, ksiot_BytesIO)) {

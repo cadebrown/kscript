@@ -27,11 +27,10 @@
 #include <ks/ks.h>
 #endif /* KS_H__ */
 
-#ifdef KS_HAVE_TIME_H
- #include <time.h>
-#endif
+#include <time.h>
+
 #ifdef KS_HAVE_SYS_TIME_H
- #include <sys/time.h>
+  #include <sys/time.h>
 #endif
 
 
@@ -56,9 +55,9 @@
 
 #define KSTIME_SEC_PER_MIN         (60)
 
-#define KSTIME_MILLI_PER_SEC      (1000)
-#define KSTIME_MICRO_PER_SEC      (1000000)
-#define KSTIME_NANO_PER_SEC       (1000000000)
+#define KSTIME_MILLI_PER_SEC       (1000)
+#define KSTIME_MICRO_PER_SEC       (1000000)
+#define KSTIME_NANO_PER_SEC        (1000000000)
 
 #define KSTIME_SEC_PER_DAY (KSTIME_SEC_PER_MIN * KSTIME_MIN_PER_HOUR * KSTIME_HOUR_PER_DAY)
 
@@ -205,7 +204,7 @@ KS_API kstime_struct kstime_parse(const char* fmt, const char* str);
 
 /* Exported */
 
-KS_API extern ks_type
+KS_API_DATA ks_type
 
     kstimet_struct
 

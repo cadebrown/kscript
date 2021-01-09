@@ -38,11 +38,6 @@ static bool k2u_fk(ksnet_fk x, int* y) {
 #else
     E_(KSNET_FK_BT, AF_BLUETOOTH)
 #endif
-#ifdef KS_HAVE_AF_PACKET
-    C_(KSNET_FK_PACKET, AF_PACKET)
-#else
-    E_(KSNET_FK_PACKET, AF_PACKET)
-#endif
     }
 
     KS_THROW(kst_Error, "Unknown family kind: %i", (int)x);
@@ -400,15 +395,34 @@ static KS_TFUNC(T, init) {
     return KSO_NONE;
 }
 
+
+static KS_TFUNC(T, close) {
+	ksnet_SocketIO self;
+	KS_ARGS("self:*", &self, ksnett_SocketIO);
+
+	if (self->fd >= 0) {
+#ifdef WIN32
+		shutdown(self->fd, SD_BOTH);
+#else
+		shutdown(self->fd, SHUT_WR);
+		shutdown(self->fd, SHUT_RD);
+#endif
+		close(self->fd);
+	}
+	self->fd = -1;
+
+	return KSO_NONE;
+}
+
+
 static KS_TFUNC(T, free) {
     ksnet_SocketIO self;
     KS_ARGS("self:*", &self, ksnett_SocketIO);
 
-    if (self->fd >= 0) {
-        shutdown(self->fd, SHUT_WR);
-        shutdown(self->fd, SHUT_RD);
-        close(self->fd);
-    }
+	if (!T_close_(_nargs, _args)) {
+		return NULL;
+	}
+
     KS_NDECREF(self->src);
     KS_NDECREF(self->mode);
 
@@ -436,19 +450,6 @@ static KS_TFUNC(T, getattr) {
     return NULL;
 }
 
-static KS_TFUNC(T, close) {
-    ksnet_SocketIO self;
-    KS_ARGS("self:*", &self, ksnett_SocketIO);
-
-    if (self->fd >= 0) {
-        shutdown(self->fd, SHUT_WR);
-        shutdown(self->fd, SHUT_RD);
-        close(self->fd);
-    }
-    self->fd = -1;
-
-    return KSO_NONE;
-}
 
 static KS_TFUNC(T, bind) {
     ksnet_SocketIO self;

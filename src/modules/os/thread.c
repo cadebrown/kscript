@@ -8,7 +8,7 @@
 #define T_NAME "os.thread"
 
 #ifndef KS_HAVE_pthreads
-#warning Building kscript without pthread support, so threading is disabled
+//#warning Building kscript without pthread support, so threading is disabled
 #endif
 
 
@@ -40,11 +40,12 @@ static void join_active_threads() {
 }
 
 
+#ifdef KS_HAVE_pthreads
+
+
 /* Thread-local key which we store the thread instance on */
 static pthread_key_t this_thread_key;
 
-
-#ifdef KS_HAVE_pthreads
 
 /* Initialize and begin pthreads-specific */
 static void* init_thread_pthreads(void* _self) {

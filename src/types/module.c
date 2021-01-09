@@ -32,10 +32,17 @@ static KS_TFUNC(T, free) {
     ks_module self;
     KS_ARGS("self:*", &self, kst_module);
 
+#ifdef WIN32
+	if (self->dlhandle) {
+		FreeLibrary(self->dlhandle);
+	}
+#else
+
     if (self->dlhandle) {
         int rc = dlclose(self->dlhandle);
     }
-    
+#endif
+
     KSO_DEL(self);
 
     return KSO_NONE;

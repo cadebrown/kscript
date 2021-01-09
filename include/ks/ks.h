@@ -38,77 +38,111 @@
 #ifndef KS_H__
 #define KS_H__
 
+
+
+/** Platform detection **/
+
+
+/* On Emscripten, allow 'dead' code to remain (because it may be called dynamically) */
+#if defined(__EMSCRIPTEN__)
+  #define KS_EMSCRIPTEN_API EMSCRIPTEN_KEEPALIVE
+#else
+  #define KS_EMSCRIPTEN_API
+#endif
+
+#if defined(_WIN32) && !defined(WIN32)
+  #define WIN32
+#endif
+
+/* On Windows, import/export must be defined explicitly */
+#if defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)
+  #define KS_API_IMPORT __declspec(dllimport)
+  #define KS_API_EXPORT __declspec(dllexport)
+#else
+  #define KS_API_IMPORT 
+  #define KS_API_EXPORT 
+#endif
+
+/* Select whether we are importing or exporting */
+#ifdef KS_BUILD
+  #define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API
+#else
+  #define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API
+#endif
+
+
+/* KS_API_DATA is for data symbols, not functions */
+#ifdef KS_BUILD
+  #define KS_API_DATA KS_API_EXPORT extern 
+#else
+  #define KS_API_DATA KS_API_IMPORT extern
+#endif
+
+
+/* Use GNU and specific POSIX source, whenever possible */
+#define _GNU_SOURCE
+#define _POSIX_C_SOURCE 200112L
+
+
 #ifndef KS_NO_CONFIG
  #include <ks/config.h>
 #endif
 
-/** Other Includes **/
 
-#ifdef KS_HAVE_STDLIB_H
- #include <stdlib.h>
-#endif
-#ifdef KS_HAVE_STDIO_H
- #include <stdio.h>
-#endif
-#ifdef KS_HAVE_STDARG_H
- #include <stdarg.h>
-#endif
-#ifdef KS_HAVE_STDDEF_H
- #include <stddef.h>
-#endif
-#ifdef KS_HAVE_UNISTD_H
- #include <unistd.h>
-#endif
-#ifdef KS_HAVE_ERRNO_H
- #include <errno.h>
+
+/** Headers **/
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdarg.h>
+#include <stddef.h>
+
+#include <stdint.h>
+#include <stdbool.h>
+
+#include <limits.h>
+#include <float.h>
+#include <math.h>
+
+#include <errno.h>
+#include <string.h>
+
+#include <assert.h>
+
+#ifdef WIN32
+  #define WIN32_LEAN_AND_MEAN
+  #include <Windows.h>
 #endif
 
-#ifdef KS_HAVE_STRING_H
- #include <string.h>
+
+/*
+#include <unistd.h>
+#include <dlfcn.h>
+*/
+
+
+#if 0
+
+#define bool int
+#ifdef true
+#undef true
+#endif
+#ifdef false
+#undef false
+#endif
+#define true 1
+#define false 0
+
 #endif
 
-#ifdef KS_HAVE_ASSERT_H
- #include <assert.h>
-#else
+#if 0
  #define assert(_x) do { if (!(_x)) { \
     fprintf(stderr, "assertion failed: '%s' (%s:%i)", #_x, __FILE__, __LINE__); \
     exit(1); \
  } } while (0)
 #endif
 
-#ifdef KS_HAVE_STDBOOL_H
- #include <stdbool.h>
-#else
- #define bool int
- #ifdef true
-  #undef true
- #endif
- #ifdef false
-  #undef false
- #endif
- #define true 1
- #define false 0
-#endif
 
-#ifdef KS_HAVE_STDINT_H
- #include <stdint.h>
-#else
- /* TODO: add defaults? */
-#endif
-
-#ifdef KS_HAVE_LIMITS_H
- #include <limits.h>
-#endif
-#ifdef KS_HAVE_FLOAT_H
- #include <float.h>
-#endif
-#ifdef KS_HAVE_MATH_H
- #include <math.h>
-#endif
-
-#ifdef KS_HAVE_DLFCN_H
- #include <dlfcn.h>
-#endif
 
 /* WebAssembly/Emscription ()
  *
@@ -154,7 +188,8 @@
 
 #include <ks/types.h>
 
-/** Always-Included Modules **/
+
+/** Always Included Modules **/
 
 #include <ks/io.h>
 #include <ks/os.h>
@@ -174,41 +209,41 @@
 
 #define KSO_BOOL(_cond) ((_cond) ? KSO_TRUE : KSO_FALSE)
 
-KS_API extern kso
+KS_API_DATA kso
     ksg_none,
     ksg_undefined,
     ksg_dotdotdot
 ;
-KS_API extern ks_bool
+KS_API_DATA ks_bool
     ksg_true,
     ksg_false
 ;
 
-KS_API extern ks_float
+KS_API_DATA ks_float
     ksg_inf,
     ksg_neginf,
     ksg_nan
 ;
 
-KS_API extern ksos_mutex
+KS_API_DATA ksos_mutex
     ksg_GIL
 ;
 
-KS_API extern ksos_thread
+KS_API_DATA ksos_thread
     ksg_main_thread
 ;
 
-KS_API extern ks_dict
+KS_API_DATA ks_dict
     ksg_globals,
     ksg_config,
     ksg_inter_vars
 ;
 
-KS_API extern ks_list
+KS_API_DATA ks_list
     ksg_path
 ;
 
-KS_API extern ks_type
+KS_API_DATA ks_type
 
     kst_object,
     kst_none,
@@ -283,7 +318,7 @@ KS_API extern ks_type
 
 ;
 
-KS_API extern ks_func 
+KS_API_DATA ks_func
     ksf_any,
     ksf_all,
     ksf_min,

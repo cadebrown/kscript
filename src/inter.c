@@ -22,7 +22,7 @@
 #else
 
 /* Fallback (TODO: make even better) */
-#warning Building kscript without 'readline', so limited interactivity and line editing features
+//#warning Building kscript without 'readline', so limited interactivity and line editing features
 
 #endif
 

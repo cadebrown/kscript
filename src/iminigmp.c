@@ -7,7 +7,7 @@
 #include <ks/ks.h>
 
 #ifdef KS_INT_MINIGMP
-#warning Building kscript without GMP, int math may be slower
+//#warning Building kscript without GMP, int math may be slower
 
 
 /* mini-gmp, a minimalistic implementation of a GNU GMP subset.

@@ -42,7 +42,7 @@ ksos_path ksos_path_newt(ks_type tp, ks_ssize_t len_b, const char* data, kso roo
             return NULL;
         }
 
-        self->root = (kso)ks_fmt("%.*s%s", 2, data, KS_PLATFORM_PATHSEP);
+        self->root = (kso)ks_fmt("%.*s%s", 2, data, "/");
         data += 3;
         len_b -= 3;
     } else if (len_b > 0 && (data[0] == '/')) {
@@ -199,10 +199,24 @@ ksos_path ksos_path_real(kso path) {
 }
 
 bool ksos_stat(kso path, struct ksos_cstat* out) {
-    ks_str sp = get_spath(path);
-    if (!sp) return NULL;
 
-#ifdef KS_HAVE_stat
+#ifdef WIN32
+	ks_str sp = get_spath(path);
+	if (!sp) return NULL;
+
+	int rs = _stat(sp->data, &out->v_stat);
+	if (rs != 0) {
+		KS_THROW(kst_OSError, "Failed to stat %R: %s", sp, strerror(errno));
+		KS_DECREF(sp);
+		return NULL;
+	}
+
+	KS_DECREF(sp);
+	return true;
+#elif defined(KS_HAVE_stat)
+	ks_str sp = get_spath(path);
+	if (!sp) return NULL;
+
     int rs = stat(sp->data, &out->v_stat);
     if (rs != 0) {
         KS_THROW(kst_OSError, "Failed to stat %R: %s", sp, strerror(errno));
@@ -214,13 +228,19 @@ bool ksos_stat(kso path, struct ksos_cstat* out) {
     return true;
 #else
     KS_THROW(kst_PlatformWarning, "Failed to stat %R: The platform had no 'stat()' function", sp);
-    KS_DECREF(sp);
     return NULL;
 #endif
 }
 
 bool ksos_fstat(int fd, struct ksos_cstat* out) {
-#ifdef KS_HAVE_fstat
+#ifdef WIN32
+	int rs = _fstat(fd, &out->v_stat);
+	if (rs != 0) {
+		KS_THROW(kst_OSError, "Failed to fstat %i: %s", fd, strerror(errno));
+		return NULL;
+	}
+	return true;
+#elif defined(KS_HAVE_fstat)
     int rs = fstat(fd, &out->v_stat);
     if (rs != 0) {
         KS_THROW(kst_OSError, "Failed to fstat %i: %s", fd, strerror(errno));
@@ -229,16 +249,19 @@ bool ksos_fstat(int fd, struct ksos_cstat* out) {
     return true;
 #else
     KS_THROW(kst_PlatformWarning, "Failed to fstat %i: The platform had no 'fstat()' function", fd);
-    KS_DECREF(s);
     return NULL;
 #endif
 
 }
 bool ksos_lstat(kso path, struct ksos_cstat* out) {
-    ks_str sp = get_spath(path);
-    if (!sp) return NULL;
 
-#ifdef KS_HAVE_lstat
+#ifdef WIN32
+	/* On Windows, treat 'lstat' like 'stat' */
+	return ksos_stat(path, out);
+#elif defined(KS_HAVE_lstat)
+	ks_str sp = get_spath(path);
+	if (!sp) return NULL;
+
     int rs = lstat(sp->data, &out->v_stat);
     if (rs != 0) {
         KS_THROW(kst_OSError, "Failed to lstat %R: %s", sp, strerror(errno));
@@ -247,10 +270,8 @@ bool ksos_lstat(kso path, struct ksos_cstat* out) {
     }
     KS_DECREF(sp);
     return true;
-
 #else
     KS_THROW(kst_PlatformWarning, "Failed to lstat %R: The platform had no 'lstat()' function", sp);
-    KS_DECREF(sp);
     return NULL;
 #endif
 
@@ -299,10 +320,56 @@ bool ksos_path_islink(kso path, bool* res) {
 }
 
 bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
-    ks_str sp = get_spath(path);
-    if (!sp) return false;
+#ifdef WIN32
 
-    /* TODO: Windows version */
+	/* Convert to string */
+	ks_str sp = get_spath(path);
+	if (!sp) return false;
+
+	/* Collect Entries */
+	if (*dirs) {
+		ks_list_clear(*dirs);
+	} else {
+		*dirs = ks_list_new(0, NULL);
+	}
+	if (*files) {
+		ks_list_clear(*files);
+	} else {
+		*files = ks_list_new(0, NULL);
+	}
+
+	/* Iterate over directory */
+	HANDLE hit;
+	WIN32_FIND_DATA hitdata;
+
+	if ((hit = FindFirstFile(sp->data, &hitdata)) != INVALID_HANDLE_VALUE) {
+		do {
+			/* Have valid file */
+			int sl = strlen(hitdata.cFileName);
+			if ((hitdata.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)) {
+				if (!((sl == 1 && hitdata.cFileName[0] == '.') || (sl == 2 && hitdata.cFileName[0] == hitdata.cFileName[1] == '.'))) {
+					/* Valid directory */
+					ks_str sv = ks_str_new(sl, hitdata.cFileName);
+					ks_list_pushu(*dirs, (kso)sv);
+
+				}
+			} else {
+				/* Valid file */
+				ks_str sv = ks_str_new(sl, hitdata.cFileName);
+				ks_list_pushu(*files, (kso)sv);
+			}
+			
+		} while (FindNextFile(hit, &hitdata));
+		FindClose(hit);
+	} else {
+		KS_THROW(kst_Error, "Failed to open %R", sp);
+		KS_DECREF(sp);
+		return NULL;
+	}
+	return true;
+#elif defined(HAVE_opendir)
+	ks_str sp = get_spath(path);
+    if (!sp) return false;
 
     /* TODO: check OS encoding */
     DIR* dp = opendir(sp->data);
@@ -310,7 +377,8 @@ bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
 
     if (!dp) {
         KS_THROW(kst_OSError, "Failed to open %R: %s", sp, strerror(errno));
-        return false;
+		KS_DECREF(sp);
+		return false;
     }
 
     /* Collect Entries */
@@ -359,6 +427,10 @@ bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
 
     closedir(dp);
     return true;
+#else
+	KS_THROW(kst_Error, "Failed to listdir: platform had no 'opendir()' function");
+	return false;
+#endif
 }
 
 bool ksos_path_mkdir(kso path, int mode, bool parents) {
@@ -456,7 +528,6 @@ bool ksos_path_mkdir(kso path, int mode, bool parents) {
     }
 #else
     KS_THROW(kst_OSError, "Failed to mkdir %R: platform did not provide a 'mkdir()' function", path);
-    KS_DECREF(s);
     return NULL;
 #endif
 

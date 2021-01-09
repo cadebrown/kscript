@@ -139,8 +139,6 @@ kso ksffi_wrapo(kso obj, ks_type tp) {
 }
 
 
-
-
 int ksffi_sizeof(ks_type tp) {
     /* sizeof(void) == 1 */
     if (tp == kst_none || (kso)tp == KSO_NONE) return 1;
@@ -172,6 +170,22 @@ int ksffi_sizeofp(ks_type tp) {
 
 
 ksffi_dll ksffi_open(ks_type tp, ks_str name) {
+#ifdef WIN32
+	HMODULE handle = LoadLibrary(name->data);
+	if (!handle) {
+		KS_THROW(kst_IOError, "Failed to LoadLibrary %R: [%i]", name, (int)GetLastError());
+		return NULL;
+	}
+
+	ksffi_dll self = KSO_NEW(ksffi_dll, tp);
+
+	KS_INCREF(name);
+	self->name = name;
+	self->handle = handle;
+
+	return self;
+
+#else
     void* handle = dlopen(name->data, RTLD_LAZY);
     if (!handle) {
         KS_THROW(kst_IOError, "Failed to dlopen %R: %s", name, dlerror());
@@ -185,6 +199,7 @@ ksffi_dll ksffi_open(ks_type tp, ks_str name) {
     self->handle = handle;
 
     return self;
+#endif
 }
 
 /* Module functions */
@@ -252,13 +267,14 @@ ks_module _ksi_ffi() {
     _ksi_ffi_func();
     _ksi_ffi_dll();
 
+#define _KSCASE(_name, _ctp) {#_name,  KS_NEWREF(ksffit_##_name)},
+
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "Foreign Function Interface (FFI) library", KS_IKV(
         
         /* Types */
         
         {"DLL",                    KS_NEWREF(ksffit_dll)},
 
-        #define _KSCASE(_name, _ctp) {#_name,  KS_NEWREF(ksffit_##_name)},
         KSFFI_DO_INTS(_KSCASE)
         KSFFI_DO_FLOATS(_KSCASE)
 

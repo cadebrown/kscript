@@ -31,7 +31,6 @@ ks_module _ksi_net() {
         {"INET4",                  KSNET_FK_INET4},
         {"INET6",                  KSNET_FK_INET6},
         {"BT",                     KSNET_FK_BT},
-        {"PACKET",                 KSNET_FK_PACKET},
     ));
 
     ksnete_sk = ks_enum_make(M_NAME ".SK", KS_EIKV(

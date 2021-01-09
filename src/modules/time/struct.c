@@ -82,17 +82,22 @@ struct tm kstime_unwrap(kstime_struct ts) {
 /* C-API */
 
 kstime_struct kstime_struct_new_utc(ks_cfloat tse) {
-    #ifdef KS_HAVE_gmtime
+
+#if defined(WIN32)
+
+	time_t _c = (time_t)tse;
+	return kstime_wrap(*gmtime(&_c));
+#elif defined(KS_HAVE_gmtime)
 
     time_t _c = (time_t)tse;
     return kstime_wrap(*gmtime(&_c));
     
-    #else
+#else
     
     KS_THROW(kst_PlatformWarning, "Failed to create 'time.struct' in UTC, because the platform did not have 'gmtime()' function");
     return NULL;
     
-    #endif
+#endif
 }
 
 kstime_struct kstime_struct_new_local(ks_cfloat tse) {

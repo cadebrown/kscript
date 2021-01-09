@@ -613,7 +613,7 @@ KS_API bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o);
 /*  */
 
 /* Types */
-KS_API extern ks_type
+KS_API_DATA ks_type
     nxt_dtype,
     nxt_array,
     nxt_view,
@@ -622,7 +622,7 @@ KS_API extern ks_type
 
 ;
 
-KS_API extern nx_dtype
+KS_API_DATA nx_dtype
     nx_uint8,
     nx_sint8,
     nx_uint16,
@@ -645,7 +645,7 @@ KS_API extern nx_dtype
 
 
 /* C types */
-KS_API extern nx_dtype
+KS_API_DATA nx_dtype
     nxd_schar,
     nxd_uchar,
     nxd_sshort,

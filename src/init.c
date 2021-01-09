@@ -53,7 +53,7 @@ static ks_module
 ;
 
 
-bool ks_init() {
+KS_API bool ks_init() {
     if (has_init) return true;
 
     kst_func->ob_sz = sizeof(struct ks_func_s);

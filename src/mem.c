@@ -12,7 +12,7 @@
  */
 #define _NEXTSIZE(_sz) (2 * (_sz) / 1)
 
-void* ks_malloc(ks_size_t sz) {
+KS_API void* ks_malloc(ks_size_t sz) {
     void* res = malloc(sz);
 
     if (!res && sz > 0) {
@@ -22,7 +22,7 @@ void* ks_malloc(ks_size_t sz) {
     return res;
 }
 
-void* ks_zmalloc(ks_size_t sz, ks_size_t num) {
+KS_API void* ks_zmalloc(ks_size_t sz, ks_size_t num) {
     return ks_malloc(sz * num);
 }
 

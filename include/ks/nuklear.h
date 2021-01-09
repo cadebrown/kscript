@@ -182,13 +182,13 @@ KS_API ksnk_Image ksnk_Image_new(ks_type tp, nxar_t img);
 
 
 /* Types */
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksnkt_Context,
     ksnkt_Image
 ;
 
 /* Enums */
-KS_API extern ks_type 
+KS_API_DATA ks_type 
     ksnke_Heading, 
     ksnke_Symbol, 
     ksnke_Window,

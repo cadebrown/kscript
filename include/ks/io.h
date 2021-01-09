@@ -18,15 +18,18 @@
 #include <ks/ks.h>
 #endif
 
-#include <fcntl.h>
-
 
 
 /** Constants **/
 
+
 /* Buffer size */
 #ifndef KSIO_BUFSIZ
-#define KSIO_BUFSIZ 1024
+  #ifdef BUFSIZ
+    #define KSIO_BUFSIZ BUFSIZ
+  #elif
+    #define KSIO_BUFSIZ 1024
+  #endif
 #endif
 
 
@@ -310,7 +313,7 @@ KS_API ks_bytes ksio_readallo(kso obj);
 KS_API ks_ssize_t ksu_getline(char** lineptr, ks_ssize_t* n, FILE* fp);
 
 /* Types */
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksiot_BaseIO,
     ksiot_RawIO,
     ksiot_FileIO,
@@ -319,7 +322,7 @@ KS_API extern ks_type
 ;
 
 /* Enums */
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksioe_Seek
 ;
 

@@ -13,34 +13,32 @@
 #include <ks/ks.h>
 #endif
 
-#ifdef KS_HAVE_SIGNAL_H
- #include <signal.h>
-#endif
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/stat.h>
 
-#ifdef KS_HAVE_SYS_TYPES_H
- #include <sys/types.h>
-#endif
+#include <fcntl.h>
+
 
 #ifdef KS_HAVE_SYS_WAIT_H
- #include <sys/wait.h>
+  #include <sys/wait.h>
 #endif
 
-#ifdef KS_HAVE_SYS_STAT_H
- #include <sys/stat.h>
+#ifdef KS_HAVE_DIRENT_H
+  #include <dirent.h>
 #endif
-
-#include <dirent.h>
 
 
 /** Constants **/
-#ifndef PATH_MAX
-#define KSOS_PATH_MAX 4096
+
+#ifdef PATH_MAX
+  #define KSOS_PATH_MAX PATH_MAX
 #else
-#define KSOS_PATH_MAX PATH_MAX
+  #define KSOS_PATH_MAX 4096
 #endif
 
-/** Types **/
 
+/** Types **/
 
 /* Internal stat type, meant for the C-API only (this should be wrapped by another type, or just used internally) 
  * Use KSOS_CSTAT_* macros
@@ -52,6 +50,14 @@ struct ksos_cstat {
 
 };
 
+#ifdef WIN32
+
+#define KSOS_CSTAT_ISFILE(_stat) (((_stat).v_stat.st_mode & S_IFMT) == S_IFREG)
+#define KSOS_CSTAT_ISDIR(_stat)  (((_stat).v_stat.st_mode & S_IFMT) == S_IFDIR)
+#define KSOS_CSTAT_ISLINK(_stat) (!KSOS_CSTAT_ISFILE(_stat) && !KSOS_CSTAT_ISDIR(_stat))
+
+#else
+
 /* Yield whether a cstat is a regular file */
 #define KSOS_CSTAT_ISFILE(_stat) (S_ISREG((_stat).v_stat.st_mode))
 
@@ -60,6 +66,9 @@ struct ksos_cstat {
 
 /* Yield whether a cstat is a symlink */
 #define KSOS_CSTAT_ISLINK(_stat) (S_ISLNK((_stat).v_stat.st_mode))
+
+
+#endif
 
 /* 'os.path' - Resource locator for a file/directory/symlink on disk
  *
@@ -253,8 +262,8 @@ typedef struct ksos_proc_s {
     /* Program being executed */
     ks_tuple argv;
 
-    /* Process ID */
-    pid_t pid;
+	/* Process ID */
+    int pid;
 
     /* stdin, stdout, stderr */
     ksio_FileIO v_in, v_out, v_err;
@@ -287,15 +296,15 @@ KS_API int ksos_dup2(int oldfd, int newfd);
 
 /* Wait for a pid, and calculate the status
  */
-KS_API bool ksos_waitpid(pid_t pid, int* status);
+KS_API bool ksos_waitpid(int pid, int* status);
 
 /* Tell whether 'pid' refers to an alive process
  */
-KS_API bool ksos_isalive(pid_t pid, bool* out);
+KS_API bool ksos_isalive(int pid, bool* out);
 
 /* Attempt to send a signal to a pid
  */
-KS_API bool ksos_kill(pid_t pid, int sig);
+KS_API bool ksos_kill(int pid, int sig);
 
 
 
@@ -432,11 +441,8 @@ KS_API void ksos_mutex_unlock(ksos_mutex self);
 KS_API bool ksos_mutex_trylock(ksos_mutex self);
 
 
-
-
-
 /* Types */
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksost_path,
     ksost_path_walk,
     ksost_thread,
@@ -446,13 +452,15 @@ KS_API extern ks_type
 ;
 
 /* Globals */
-KS_API extern ksio_FileIO
+KS_API_DATA ksio_FileIO
     ksos_stdin,
     ksos_stdout,
     ksos_stderr
 ;
-KS_API extern ks_list
+
+KS_API_DATA ks_list
     ksos_argv
 ;
+
 
 #endif /* KSOS_H__ */

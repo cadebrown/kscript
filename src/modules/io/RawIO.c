@@ -104,11 +104,18 @@ static KS_TFUNC(T, init) {
         return false;
     }
 
-    /* Attempt to open via the C library 
-     * TODO: check filesystem encoding
-     */
-    mode_t m = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
-    self->fd = (flags & O_CREAT) ? open(src->data, flags, m) : open(src->data, flags);
+
+#if defined(WIN32)
+	/* Open on windows, via the '_' library call */
+	self->fd = _open();
+
+#else
+	/* Attempt to open via the C library
+	 * TODO: check filesystem encoding
+	 */
+	int m = S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH;
+	self->fd = (flags & O_CREAT) ? open(src->data, flags, m) : open(src->data, flags);
+#endif
     if (self->fd < 0) {
         KS_THROW(kst_IOError, "Failed to open %R: %s", src, strerror(errno));
         return NULL;

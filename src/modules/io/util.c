@@ -312,7 +312,7 @@ static bool add_O_path(ksio_BaseIO self, ksos_path val) {
 
         ks_size_t i;
         for (i = 0; i < val->parts->len; ++i) {
-            if (i > 0) ksio_add((ksio_BaseIO)sio, "%s", KS_PLATFORM_PATHSEP);
+            if (i > 0) ksio_add((ksio_BaseIO)sio, "%s", "/");
             if (!ksio_add((ksio_BaseIO)sio, "%S", val->parts->elems[i])) {
                 KS_DECREF(sio);
                 return false;

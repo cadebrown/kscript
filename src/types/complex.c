@@ -8,7 +8,7 @@
 #define T_NAME "complex"
 
 /* Precision (in digits) for regular and scientific output */
-#define F_PREC_REG (KS_CFLOAT_DIG/2-2)
+#define F_PREC_REG (KS_CFLOAT_DIG/2+2)
 #define F_PREC_SCI (KS_CFLOAT_DIG-2)
 
 /* Absolute value at which numbers are printed in scientific format as opposed to regular */

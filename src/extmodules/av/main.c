@@ -10,7 +10,7 @@
 #define M_NAME "mm"
 
 #ifndef KS_HAVE_libav
-#warning Building kscript without libav support, so most media formats are not supported
+//#warning Building kscript without libav support, so most media formats are not supported
 #endif
 
 #ifndef KS_HAVE_libav

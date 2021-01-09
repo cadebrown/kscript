@@ -21,31 +21,21 @@
 #endif
 
 
-#ifdef _WIN32
+#if defined(WIN32)
 
-/* Windows Headers */
-#ifdef KS_HAVE_WINSOCK2_H
- #include <winsock2.h>
-#endif
-#ifdef KS_HAVE_WS2TCPIP_H
- #include <Ws2tcpip.h>
-#endif
+  /* Windows socket API */
+  #include <winsock2.h>
+  #include <Ws2tcpip.h>
 
 #else
 
-/* Unix (assume they're all unix-like) */
-#ifdef KS_HAVE_SYS_SOCKET_H
- #include <sys/socket.h>
-#endif
-#ifdef KS_HAVE_ARPA_INET_H
- #include <arpa/inet.h>
-#endif
-#ifdef KS_HAVE_NETDB_H
- #include <netdb.h>
-#endif
-#ifdef KS_HAVE_NETINET_IN_H
- #include <netinet/in.h>
-#endif
+  /* Linux/Unix socket API 
+   * TODO: detect different configurations?
+   */
+  #include <sys/socket.h>
+  #include <arpa/inet.h>
+  #include <netdb.h>
+  #include <netinet/in.h>
 
 #endif
 
@@ -81,13 +71,6 @@ typedef enum {
      * AKA: AF_BLUETOOTH
      */
     KSNET_FK_BT                    = 3,
-
-
-    /*
-     *
-     * AKA: AF_PACKET
-     */
-    KSNET_FK_PACKET                = 4,
 
 
 } ksnet_fk;
@@ -208,7 +191,7 @@ KS_API bool ksnet_Socket_port(ksnet_SocketIO self, int* out);
 /** Functions **/
 
 /* Types */
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksnett_SocketIO
 ;
 

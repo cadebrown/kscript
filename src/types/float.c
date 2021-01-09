@@ -8,7 +8,7 @@
 #define T_NAME "float"
 
 /* Precision (in digits) for regular and scientific output */
-#define F_PREC_REG (KS_CFLOAT_DIG/2-2)
+#define F_PREC_REG (KS_CFLOAT_DIG/2+2)
 #define F_PREC_SCI (KS_CFLOAT_DIG-2)
 
 /* Absolute value at which numbers are printed in scientific format as opposed to regular */
@@ -259,17 +259,17 @@ int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int b
     /* Handle actual digits, break into integer and floating point type */
     static const char digc[] = "0123456789ABCDEF";
 
-    #if (defined(KS_FLOAT_float128) && defined(KS_HAVE_strfromf128)) \
-     || (defined(KS_FLOAT_long_double) && defined(KS_HAVE_strfromld)) \
-     || (defined(KS_FLOAT_double) && defined(KS_HAVE_strfromd))
     if (base == 10) {
-    #else
-    if (false) {
-    #endif
         char fmt[64];
-        int sz_fmt = snprintf(fmt, sizeof(fmt) - 1, "%%.%if", prec);
-        assert(sz_fmt <= sizeof(fmt) - 1);
-        i += strfromd(str+i, sz-i, fmt, val);
+        int sz_fmt = snprintf(fmt, sizeof(fmt) - 1, "%%.%ilf", prec);
+		assert(sz_fmt <= sizeof(fmt) - 1);
+		char vs[256];
+		int sz_vs = snprintf(vs, sizeof(vs) - 1, fmt, (double)val);
+		assert(sz_vs <= sizeof(vs) - 1);
+		ADDS(vs);
+
+		//i += strfromd(str+i, sz-i, fmt, val);
+
     } else {
         int i_num = i;
         ks_cfloat vi;

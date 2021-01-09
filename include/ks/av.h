@@ -97,6 +97,8 @@ typedef struct ksav_IO_s {
         /* Encoder/decoder context */
         AVCodecContext* codctx;
 
+#else
+		int dummy;
 #endif
 
     }* streams;
@@ -214,7 +216,7 @@ KS_API bool ksav_imwrite(kso src, nxar_t data, kso fmt);
 
 /* Export */
 
-KS_API extern ks_type
+KS_API_DATA ks_type
     ksavt_IO,
     ksavt_Stream
 ;

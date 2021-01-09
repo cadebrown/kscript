@@ -189,7 +189,8 @@ ks_module _ksi_os() {
     _ksi_os_proc();
 
     ksos_argv = ks_list_new(0, NULL);
-    ks_str tmp = ks_str_new(1, "-");
+
+	ks_str tmp = ks_str_new(1, "-");
     ks_list_push(ksos_argv, (kso)tmp);
     KS_DECREF(tmp);
 
@@ -222,7 +223,6 @@ ks_module _ksi_os() {
         {"exec",                   ksf_wrap(M_exec_, M_NAME ".exec(cmd)", "Attempts to execute a command as if typed in console - returns exit code")},
         {"fork",                   ksf_wrap(M_fork_, M_NAME ".fork()", "Creates a new process by duplicating the calling process - returns 0 in the child, PID > 0 in the parent, and -1 if there was an error")},
     ));
-
 
     return res;
 }

@@ -2,9 +2,11 @@
  *
  * @author: Cade Brown <cade@kscript.org>
  */
+
 #include <ks/impl.h>
 #include <ks/compiler.h>
 #include <ks/getarg.h>
+
 
 /* Variables currently being used */
 static ks_dict vars = NULL;
@@ -134,10 +136,11 @@ static KS_FUNC(verbose) {
 
 
 int main(int argc, char** argv) {
+
     if (!ks_init()) return 1;
     int i;
 
-    /* Initialize 'os.argv' */
+	/* Initialize 'os.argv' */
     ks_list_clear(ksos_argv);
     for (i = 0; i < argc; ++i) {
         ks_list_pushu(ksos_argv, (kso)ks_str_new(-1, argv[i]));
