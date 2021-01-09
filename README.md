@@ -1,10 +1,9 @@
 # kscript (ks)
 
-kscript ([https://kscript.org](https://kscript.org)) is an easy to use, general purpose, multi-paradigm programming language meant to provide cross-platform APIs. The standard library of kscript includes most features required for development tasks, including maths (`m`, `nx`), networking (`net`, `net.http`), GUI programming, and more.
+kscript ([https://kscript.org](https://kscript.org)) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. It's primary aim is to allow developers to write platform agnostic programs that can run anywhere, and require little or no platform- or os- specific code.
 
-Documentation is available in a few different forms:
-  * [kscript.org](https://kscript.org): Examples, tutorials, and extensive coverage of the standard library
-  * This repository contains technical references (`make docs`), and the files `docs/kscript.pdf` and `docs/kscript.html` will be generated.
+Documentation is available at [kscript.org](https://kscript.org), which provides examples, tutorials, and coverage of the standard library. Formal specifications are available at the GitHub repository ([https://github.com/ChemicalDevelopment/kscript](https://github.com/ChemicaldDvelopment/kscript)), within the `docs` folder.
+
 
 
 ## Current Status

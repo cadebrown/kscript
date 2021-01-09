@@ -138,8 +138,6 @@ fi
 
 if [ "x$PATHSEP" = 'xauto' ]; then
     case "${Vuname}" in
-        Linux*)     PATHSEP="/";;
-        Darwin*)    PATHSEP="/";;
         CYGWIN*)    PATHSEP="/";;
         MINGW*)     PATHSEP="\\";;
         *)          PATHSEP="/"
@@ -148,7 +146,6 @@ fi
 
 if [ "x$EXTSHARED" = 'xauto' ]; then
     case "${Vuname}" in
-        Linux*)     EXTSHARED=".so";;
         Darwin*)    EXTSHARED=".dylib";;
         CYGWIN*)    EXTSHARED=".dll";;
         MINGW*)     EXTSHARED=".dll";;
@@ -158,8 +155,6 @@ fi
 
 if [ "x$EXTSTATIC" = 'xauto' ]; then
     case "${Vuname}" in
-        Linux*)     EXTSTATIC=".a";;
-        Darwin*)    EXTSTATIC=".a";;
         CYGWIN*)    EXTSTATIC=".lib";;
         MINGW*)     EXTSTATIC=".lib";;
         *)          EXTSTATIC=".a"
@@ -168,8 +163,6 @@ fi
 
 if [ "x$EXTBINARY" = 'xauto' ]; then
     case "${Vuname}" in
-        Linux*)     EXTBINARY="";;
-        Darwin*)    EXTBINARY="";;
         CYGWIN*)    EXTBINARY=".exe";;
         MINGW*)     EXTBINARY=".exe";;
         *)          EXTBINARY=""
@@ -208,11 +201,7 @@ int main(int argc, char** argv) {
 }
 " > $_check_c
 
-    if [ "x$CHECKTO" = 'x' ]; then
-        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
-    else
-        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO && $_check_o
-    fi
+    $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO && $_check_o
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -223,40 +212,47 @@ int main(int argc, char** argv) {
     fi
 }
 
-check_header STDIO_H "stdio.h" ""
-check_header STDLIB_H "stdlib.h" ""
-check_header STDARG_H "stdarg.h" ""
-check_header STDDEF_H "stddef.h" ""
-check_header STDBOOL_H "stdbool.h" ""
-check_header STDINT_H "stdint.h" ""
+# Assume these...
+#check_header STDIO_H "stdio.h" ""
+#check_header STDLIB_H "stdlib.h" ""
+#check_header STDARG_H "stdarg.h" ""
+#check_header STDDEF_H "stddef.h" ""
+#check_header STDINT_H "stdint.h" ""
+#check_header STDBOOL_H "stdbool.h" ""
+
+#check_header ERRNO_H "errno.h" ""
+#check_header ASSERT_H "assert.h" ""
+
+#check_header STRING_H "string.h" ""
+#check_header FLOAT_H "float.h" ""
+
+#check_header LIMITS_H "limits.h" ""
+#check_header MATH_H "math.h" ""
+
+check_header DIRENT_H "dirent.h" ""
 check_header UNISTD_H "unistd.h" ""
-check_header ERRNO_H "errno.h" ""
-check_header STRING_H "string.h" ""
-check_header ASSERT_H "assert.h" ""
-check_header MATH_H "math.h" ""
+check_header DLFCN_H "dlfcn.h" ""
+
 check_header TIME_H "time.h" ""
-check_header LIMITS_H "limits.h" ""
-check_header FLOAT_H "float.h" ""
+
+#check_header WINDOWS_H "windows.h" ""
 
 check_header SYS_TIME_H "sys/time.h" ""
 check_header SYS_TYPES_H "sys/types.h" ""
 check_header SYS_STAT_H "sys/stat.h" ""
-check_header SYS_SOCKET_H "sys/socket.h" ""
 check_header SYS_WAIT_H "sys/wait.h" ""
 
 check_header SIGNAL_H "signal.h" ""
-check_header DLFCN_H "dlfcn.h" ""
 
+
+# Networking headers
 check_header ARPA_INET_H "arpa/inet.h" ""
 check_header NETDB_H "netdb.h" ""
 check_header NETINET_IN_H "netinet/in.h" ""
 
-check_header WINDOWS_H "windows.h" ""
+#check_header SYS_SOCKET_H "sys/socket.h" ""
 
-check_header WINSOCK2_H "winsock2.h" ""
-check_header WS2TCPIP_H "Ws2tcpip.h" ""
-
-check_header GL_GL_H "gl/GL.h" ""
+#check_header GL_GL_H "gl/GL.h" ""
 
 
 echo ""
@@ -279,11 +275,7 @@ check_clib() {
 
         # compile and run it
         echo "$5" > $_check_c
-        if [ "x$CHECKTO" = 'x' ]; then
-            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o
-        else
-            $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 2>> $CHECKTO -o $_check_o
-        fi
+        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 2>> $CHECKTO -o $_check_o
         if [ $? -eq 0 ]; then
             echo "  :: Succeeded"
 
@@ -322,6 +314,7 @@ check_clib dl "on" "" "-ldl" "
 #include <dlfcn.h>
 
 int main(int argc, char** argv) {
+    dlopen(0, 0);
     return 0;
 }
 "
@@ -367,6 +360,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 "
+
 check_clib readline "$WITH_readline" "" "-lreadline" "
 #ifdef KS_HAVE_STDIO_H
  #include <stdio.h>
@@ -375,6 +369,19 @@ check_clib readline "$WITH_readline" "" "-lreadline" "
 
 int main(int argc, char** argv) {
     rl_bind_key('\\t', rl_insert);
+    return 0;
+}
+"
+
+check_clib x "$WITH_x" "" "-lX11" "
+#ifdef KS_HAVE_WINDOWS_H
+ #include <windows.h>
+#endif
+
+#include <X11/Xlib.h>
+
+int main(int argc, char** argv) {
+    XOpenDisplay(NULL);
     return 0;
 }
 "
@@ -389,19 +396,6 @@ int main(int argc, char** argv) {
     return 0;
 }
 "
-check_clib x "$WITH_x" "" "-lX11" "
-#ifdef KS_HAVE_WINDOWS_H
- #include <windows.h>
-#endif
-
-#include <X11/Xlib.h>
-
-int main(int argc, char** argv) {
-    XOpenDisplay(NULL);
-    return 0;
-}
-"
-
 
 
 echo ""
@@ -412,27 +406,18 @@ echo ""
 check_struct() {
     printf "Searching for '%-24s' ... " "$2"
     echo "
-#ifdef KS_HAVE_STDIO_H
- #include <stdio.h>
-#endif
-#ifdef KS_HAVE_STDLIB_H
- #include <stdlib.h>
-#endif
 
-#ifdef KS_HAVE_MATH_H
- #include <math.h>
-#endif
-#ifdef KS_HAVE_TIME_H
- #include <time.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <math.h>
+#include <time.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
-#endif
-#ifdef KS_HAVE_SYS_TYPES_H
- #include <sys/types.h>
-#endif
-#ifdef KS_HAVE_SYS_STAT_H
- #include <sys/stat.h>
 #endif
 
 int main(int argc, char** argv) {
@@ -440,11 +425,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-    if [ "x$CHECKTO" = 'x' ]; then
-       $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o
-    else
-       $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
-    fi
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -454,14 +435,15 @@ int main(int argc, char** argv) {
     fi
 }
 
-check_struct "long_double" "long double"
-check_struct "float128" "_Float128"
+check_struct "_Float128" "_Float128"
+if test "${HAVES#*loat128}" != "$HAVES"; then
+    : not checking
+else
+    check_struct "__float128" "__float128"
+fi
 check_struct "struct_tm" "struct tm"
-check_struct "time_t" "time_t"
 check_struct "clock_t" "clock_t"
 check_struct "struct_timespec" "struct timespec"
-check_struct "struct_stat" "struct stat"
-check_struct "FILE" "FILE*"
 
 echo ""
 echo " -- Members -- "
@@ -471,24 +453,15 @@ echo ""
 check_member() {
     printf "Searching for '%-24s' ... " "($2).$3"
     echo "
-#ifdef KS_HAVE_STDIO_H
- #include <stdio.h>
-#endif
-#ifdef KS_HAVE_STDLIB_H
- #include <stdlib.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 
-#ifdef KS_HAVE_MATH_H
- #include <math.h>
-#endif
-#ifdef KS_HAVE_TIME_H
- #include <time.h>
-#endif
+#include <math.h>
+#include <time.h>
+
+#include <sys/types.h>
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
-#endif
-#ifdef KS_HAVE_SYS_TYPES_H
- #include <sys/types.h>
 #endif
 
 int main(int argc, char** argv) {
@@ -498,11 +471,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-    if [ "x$CHECKTO" = 'x' ]; then
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o
-    else
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
-    fi
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -530,27 +499,17 @@ check_func() {
         *) ;; # ignore
     esac
     echo "
-#ifdef KS_HAVE_STDIO_H
- #include <stdio.h>
-#endif
-#ifdef KS_HAVE_STDLIB_H
- #include <stdlib.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 
-#ifdef KS_HAVE_MATH_H
- #include <math.h>
-#endif
-#ifdef KS_HAVE_TIME_H
- #include <time.h>
-#endif
+#include <math.h>
+#include <time.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
-#endif
-#ifdef KS_HAVE_SYS_TYPES_H
- #include <sys/types.h>
-#endif
-#ifdef KS_HAVE_SYS_STAT_H
- #include <sys/stat.h>
 #endif
 #ifdef SYS_WAIT_H
  #include <sys/wait.h>
@@ -558,49 +517,37 @@ check_func() {
 
 int main(int argc, char** argv) {
     int i = 0;
-    #ifdef KS_HAVE_time_t
     time_t t;
-    #endif
-    #ifdef KS_HAVE_clock_t
     clock_t c;
-    #endif
     float f = 0.0f;
     double d = 0.0;
-    char* s = \".\", *fmt = \"%.4f\";
+    char* s = \".\";
     
-    #ifdef KS_HAVE_long_double
-     long double ld;
-    #endif
-    #ifdef KS_HAVE_float128
-     __float128 f128;
-    #endif
-    #ifdef KS_HAVE_struct_tm
-     struct tm tm;
-     struct tm* tm_p = &tm;
-    #endif
-    #ifdef KS_HAVE_struct_timespec
-     struct timespec ts;
-     struct timespec* ts_p = &ts;
-    #endif
+    long double ld;
 
-    #ifdef KS_HAVE_struct_stat
-     struct stat st;
-     struct stat* st_p = &st;
-    #endif
+#ifdef KS_HAVE__Float128
+    _Float128 f128;
+#elif defined(KS_HAVE___float128)
+    __float128 f128;
+#endif
 
-    #ifdef KS_HAVE_FILE
-     FILE* F;
-    #endif
+#ifdef KS_HAVE_struct_tm
+    struct tm tm;
+    struct tm* tm_p = &tm;
+#endif
+#ifdef KS_HAVE_struct_timespec
+    struct timespec ts;
+    struct timespec* ts_p = &ts;
+#endif
+
+    struct stat st;
+    FILE* F;
 
     $assignto $1($3);
     return 0;
 }
 " > $_check_c
-    if [ "x$CHECKTO" = 'x' ]; then
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o
-    else
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
-    fi
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -614,54 +561,87 @@ int main(int argc, char** argv) {
 # checks for different precisions
 check_func_math1() {
     _name="$1"
+    # Assume we have 'd'
     check_func "${_name}f" "f" "f"
     check_func "${_name}" "d" "d"
     check_func "${_name}l" "ld" "ld"
-    check_func "${_name}f128" "f128" "f128"
+    # Have [fF]loat128, so check
+    if test "${HAVES#*loat128}" != "$HAVES"; then
+        check_func "${_name}f128" "f128" "f128"
+    fi
 }
 
 # check_func_math2 <name>
 # checks for different precisions
 check_func_math2() {
     _name="$1"
+    # Assume we have 'd'
     check_func "${_name}f" "f" "f,f"
-    check_func "${_name}" "d" "d,d"
+    #check_func "${_name}" "d" "d,d"
     check_func "${_name}l" "ld" "ld,ld"
-    check_func "${_name}f128" "f128" "f128,f128"
+    
+    # Have [fF]loat128, so check
+    if test "${HAVES#*loat128}" != "$HAVES"; then
+        check_func "${_name}f128" "f128" "f128,f128"
+    fi
 }
 
 check_func_math1 fabs
+check_func_math2 fmod
+check_func modff "f" "f,&f"
+check_func modf "d" "d,&d"
+check_func modfl "ld" "ld,&ld"
+if test "${HAVES#*loat128}" != "$HAVES"; then
+  check_func modff128 "f128" "f128,&f128"
+fi
+
 check_func_math1 ceil
 check_func_math1 floor
 check_func_math1 trunc
+
+check_func_math1 exp
+check_func_math1 exp2
+check_func_math1 expm1
+check_func_math1 log
+check_func_math1 log2
+check_func_math1 log10
+check_func_math1 log1p
+
 check_func_math1 sqrt
 check_func_math1 cbrt
-check_func_math1 exp
-check_func_math1 log
-#check_func_math1 log1p
-check_func_math1 erf
-check_func_math1 erfc
-#check_func_math1 tgamma
+check_func_math2 hypot
+check_func_math2 pow
+
 check_func_math1 sin
 check_func_math1 cos
 check_func_math1 tan
 check_func_math1 asin
 check_func_math1 acos
 check_func_math1 atan
+check_func_math2 atan2
 check_func_math1 sinh
 check_func_math1 cosh
 check_func_math1 tanh
 check_func_math1 asinh
 check_func_math1 acosh
 check_func_math1 atanh
+
+check_func_math1 log1p
+check_func_math1 erf
+check_func_math1 erfc
+check_func_math1 tgamma
+
+check_func sincosf "v" "f,&f,&f"
+check_func sincos "v" "d,&d,&d"
+check_func sincosl "v" "ld,&ld,&ld"
+if test "${HAVES#*loat128}" != "$HAVES"; then
+  check_func sincosf128 "v" "f128,&f128,&f128"
+fi
+
 #check_func_math2 copysign
 #check_func_math2 fmin
 #check_func_math2 fmax
-check_func_math2 fmod
 #check_func_math2 nextafter
-check_func_math2 hypot
-#check_func_math2 atan2
-check_func_math2 pow
 #check_func strfromf "i" "s,i,fmt,f"
 #check_func strfromd "i" "s,i,fmt,d"
 #check_func strfroml "i" "s,i,fmt,ld"
@@ -670,40 +650,34 @@ check_func_math2 pow
 #check_func strtod "d" "s,&s"
 #check_func strtold "ld" "s,&s"
 #check_func strtof128 "f128" "s,&s"
-#check_func modff "f" "f,&f"
-#check_func modf "d" "d,&d"
-#check_func modfl "ld" "ld,&ld"
-#check_func modff128 "f128" "f128,&f128"
-#check_func sincosf "v" "f,&f,&f"
-check_func sincos "v" "d,&d,&d"
-#check_func sincosl "v" "ld,&ld,&ld"
-#check_func sincosf128 "v" "f128,&f128,&f128"
+
+
+
+check_func "stat" "i" "s,&st"
+check_func "lstat" "i" "s,&st"
+check_func "fstat" "i" "s,&st"
+
+check_func "realpath" "s" "s,NULL"
+
+check_func "fdopen" "F" "i,s"
+check_func "mkdir" "i" "s,i"
+check_func "remove" "i" "s"
+check_func "chdir" "i" "s"
 
 check_func "opendir" "i" "s,&st"
 
 check_func "getcwd" "s" "s"
 
-check_func "system" "i" "s"
-
 check_func "getenv" "s" "s"
 check_func "putenv" "i" "s"
 
-check_func "stat" "i" "s,&st"
-check_func "lstat" "i" "s,&st"
-check_func "fstat" "i" "s,&st"
-check_func "realpath" "s" "s,NULL"
+check_func "system" "i" "s"
 
 check_func "waitpid" "i" "i,&i,i"
 check_func "fork" "i" ""
 check_func "pipe" "i" "&i"
 check_func "dup2" "i" "i,i"
 check_func "kill" "i" "i,i"
-
-check_func "fdopen" "F" "i,s"
-check_func "mkdir" "i" "s,i"
-check_func "_mkdir" "i" "s,i"
-check_func "remove" "i" "s"
-check_func "chdir" "i" "s"
 
 check_func "clock" "c" ""
 check_func "time" "t" "&t"
@@ -715,7 +689,6 @@ check_func "clock_gettime" "i" "i,&ts"
 check_func "clock_settime" "i" "i,&ts"
 check_func "clock_nanosleep" "i" "i,i,&ts,&ts"
 
-
 echo ""
 echo " -- Names -- "
 echo ""
@@ -726,32 +699,19 @@ check_name() {
 
     printf "Searching for '%-24s' ... " "$2"
     echo "
-#ifdef KS_HAVE_STDIO_H
- #include <stdio.h>
-#endif
-#ifdef KS_HAVE_STDLIB_H
- #include <stdlib.h>
-#endif
+#include <stdio.h>
+#include <stdlib.h>
 
-#ifdef KS_HAVE_MATH_H
- #include <math.h>
-#endif
-#ifdef KS_HAVE_TIME_H
- #include <time.h>
-#endif
-#ifdef KS_HAVE_SYS_TIME_H
- #include <sys/time.h>
-#endif
+#include <math.h>
+#include <time.h>
 
-#ifdef _WIN32
+#include <sys/time.h>
+
+#if defined(_WIN32) || defined(WIN32)
 
 /* Windows Headers */
-#ifdef KS_HAVE_WINSOCK2_H
- #include <winsock2.h>
-#endif
-#ifdef KS_HAVE_WS2TCPIP_H
- #include <Ws2tcpip.h>
-#endif
+#include <winsock2.h>
+#include <Ws2tcpip.h>
 
 #else
 
@@ -776,11 +736,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-    if [ "x$CHECKTO" = 'x' ]; then
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o && $_check_o
-    else
-        $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
-    fi
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -801,7 +757,6 @@ check_name SOCK_STREAM "SOCK_STREAM"
 check_name SOCK_DGRAM "SOCK_DGRAM"
 check_name SOCK_PACKET "SOCK_PACKET"
 check_name SOCK_SEQPACKET "SOCK_SEQPACKET"
-
 
 check_name CLOCK_REALTIME "CLOCK_REALTIME"
 check_name CLOCK_REALTIME_COARSE "CLOCK_REALTIME_COARSE"
@@ -891,44 +846,10 @@ echo "#define KS_PLATFORM_EXTSTATIC \"$EXTSTATIC\"" >> $T
 echo "#define KS_PLATFORM_EXTBINARY \"$EXTBINARY\"" >> $T
 echo "" >> $T
 echo "" >> $T
-echo "/* Compile-Time Environment Detection */" >> $T
-echo "" >> $T
-echo "#if defined(__EMSCRIPTEN__) || defined(EMSCRIPTEN)" >> $T
-echo "#define KS_IN_EMSCRIPTEN" >> $T
-echo "#define KS_EMSCRIPTEN_API EMSCRIPTEN_KEEPALIVE" >> $T
-echo "#else" >> $T
-echo "#define KS_EMSCRIPTEN_API" >> $T
-echo "#endif" >> $T
-echo "" >> $T
-echo "/* This is needed for declaring symbols to be exported (only required for windows) */" >> $T
-echo "#if defined(_WIN32) || defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)" >> $T
-echo "#define KS_API_IMPORT __declspec(dllimport)" >> $T
-echo "#define KS_API_EXPORT __declspec(dllexport)" >> $T
-echo "#else" >> $T
-echo "#define KS_API_IMPORT " >> $T
-echo "#define KS_API_EXPORT " >> $T
-echo "#endif" >> $T
-echo "" >> $T
-echo "#ifdef KS_BUILD" >> $T
-echo "#define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API" >> $T
-echo "#else" >> $T
-echo "#define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API" >> $T
-echo "#endif" >> $T
 echo "" >> $T
 if [ "x$COLORS" = 'xon' ]; then
     echo "#define KS_USE_COLORS" >> $T
-else
-    echo "//#define KS_USE_COLORS" >> $T
 fi
-echo "" >> $T
-echo "/* Optional Dependencies */" >> $T
-echo "" >> $T
-
-
-echo "" >> $T
-echo "" >> $T
-echo "/* API Import/Export Symbols (mainly for Windows builds) */" >> $T
-echo "" >> $T
 echo "" >> $T
 echo "" >> $T
 echo "/* Features & Defines */" >> $T
@@ -959,12 +880,17 @@ echo "  Done!"
 T=makefile
 echo "Generating '$T' ..."
 
-
 echo "# Makefile (GENERATED) - auto-generated build script" > $T
+echo "" >> $T
+echo "# -*- Values -*-" >> $T
+echo "" >> $T
+echo "VERS             := 0.0.1" >> $T
 echo "" >> $T
 echo "# -*- Paths -*-" >> $T
 echo "CFLAGS           := $CFLAGS" >> $T
 echo "LDFLAGS          := $LDFLAGS" >> $T
+echo "" >> $T
+echo "BUNDLE           ?= .tmp/bundle" >> $T
 echo "" >> $T
 echo "# -*- Functions -*-" >> $T
 echo "rwildcard = \$(foreach d,\$(wildcard \$(1:=/*)),\$(call rwildcard,\$d,\$2) \$(filter \$(subst *,%,\$2),\$d))" >> $T
@@ -995,16 +921,14 @@ for dir in src/extmodules/*; do
 done
 echo "" >> $T
 
-
 echo "" >> $T
 echo "# -*- Rules -*-" >> $T
 echo "" >> $T
-echo ".PHONY: default lib bin check install uninstall clean docs FORCE" >> $T
+echo ".PHONY: default lib bin check install uninstall bundle clean docs FORCE" >> $T
 echo "" >> $T
 echo "# meta-rules that just are shorthands for other ones" >> $T
 echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN) \$(libksmext)" >> $T
 echo "lib: \$(libks_SHARED) \$(libks_STATIC) \$(libksmext)" >> $T
-
 echo "bin: \$(ks_BIN)" >> $T
 echo "clean: FORCE" >> $T
 echo "	rm -rf \$(wildcard .tmp debian/usr build lib bin *.deb)" >> $T
@@ -1022,6 +946,20 @@ echo "uninstall: FORCE" >> $T
 echo "	rm -f \$(TODIR)/bin/\$(notdir \$(ks_BIN))" >> $T
 echo "	rm -f \$(TODIR)/lib/\$(notdir \$(libks_SHARED))" >> $T
 echo "	rm -f \$(patsubst %,\$(TODIR)/include/ks/%,\$(notdir \$(all_H)))" >> $T
+echo "" >> $T
+echo "bundle: default FORCE" >> $T
+echo "	mkdir -p \$(BUNDLE)/lib/ks-\$(VERS)" >> $T
+echo "	mkdir -p \$(BUNDLE)/lib/ks-\$(VERS)/include" >> $T
+echo "	mkdir -p \$(BUNDLE)/lib/ks-\$(VERS)/lib" >> $T
+echo "	mkdir -p \$(BUNDLE)/lib/ks-\$(VERS)/bin" >> $T
+echo "	mkdir -p \$(BUNDLE)/bin" >> $T
+echo "	mkdir -p \$(BUNDLE)/include" >> $T
+echo "	cp -rf include/ks \$(BUNDLE)/lib/ks-\$(VERS)/include" >> $T
+echo "	cp -rf \$(ks_BIN) \$(BUNDLE)/lib/ks-\$(VERS)/bin" >> $T
+echo "	cp -rf \$(libks_SHARED) \$(BUNDLE)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
+echo "	ln -sf ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED)) \$(BUNDLE)/lib/\$(notdir \$(libks_SHARED))" >> $T
+echo "	ln -sf ../lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN)) \$(BUNDLE)/bin/\$(notdir \$(ks_BIN))" >> $T
+echo "	ln -sf ../lib/ks-\$(VERS)/include/ks \$(BUNDLE)/include/ks" >> $T
 echo "" >> $T
 echo "check: \$(tests_KS) FORCE" >> $T
 echo "	@echo Success" >> $T
@@ -1078,9 +1016,6 @@ for dir in src/extmodules/*; do
 done
 echo "" >> $T
 echo "" >> $T
-echo "" >> $T
-
-
 
 
 echo "  Done!"

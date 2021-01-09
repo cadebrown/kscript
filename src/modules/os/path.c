@@ -367,7 +367,7 @@ bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files) {
 		return NULL;
 	}
 	return true;
-#elif defined(HAVE_opendir)
+#elif defined(KS_HAVE_opendir)
 	ks_str sp = get_spath(path);
     if (!sp) return false;
 

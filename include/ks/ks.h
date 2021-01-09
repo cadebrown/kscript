@@ -92,6 +92,15 @@
 
 /** Headers **/
 
+
+/* Windows headers */
+#ifdef WIN32
+  #define WIN32_LEAN_AND_MEAN
+  #include <Windows.h>
+#endif
+
+
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -100,21 +109,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-#include <limits.h>
-#include <float.h>
-#include <math.h>
-
 #include <errno.h>
-#include <string.h>
-
 #include <assert.h>
 
-#ifdef WIN32
-  #define WIN32_LEAN_AND_MEAN
-  #include <Windows.h>
-#endif
+#include <string.h>
+#include <float.h>
+
+#include <limits.h>
+#include <math.h>
 
 
+
+/* Platform-specific headers (detected) */
 #ifdef KS_HAVE_UNISTD_H
   #include <unistd.h>
 #endif
@@ -122,6 +128,9 @@
 #ifdef KS_HAVE_DLFCN_H
   #include <dlfcn.h>
 #endif
+
+
+
 
 #if 0
 
@@ -143,7 +152,6 @@
     exit(1); \
  } } while (0)
 #endif
-
 
 
 /* WebAssembly/Emscription ()
@@ -246,7 +254,6 @@ KS_API_DATA ks_list
 ;
 
 KS_API_DATA ks_type
-
     kst_object,
     kst_none,
     kst_undefined,
@@ -317,7 +324,6 @@ KS_API_DATA ks_type
       kst_Warning,
         kst_PlatformWarning,
         kst_SyntaxWarning
-
 ;
 
 KS_API_DATA ks_func
@@ -1002,7 +1008,6 @@ KS_API void ks_func_setdefa(ks_func self, int n_defa, kso* defa);
 /* Create a new partial function with index '0' filled in
  */
 KS_API ks_partial ks_partial_new(kso of, kso arg0);
-
 
 
 /* Construct a new 'set' object from a list of elements

@@ -32,6 +32,14 @@ jobs:
       # Runs a set of commands using the runners shell
       - name: Build
         run: make
-        
+      
+      # Ensure we passed our checks
       - name: Check
         run: make check
+
+      # Upload a compiled version of this
+      - name: Upload Bundle
+        uses: actions/upload-artifact@v2
+        with:
+          name: kscript-bundle
+          path: .tmp/bundle

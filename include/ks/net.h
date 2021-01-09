@@ -32,10 +32,18 @@
   /* Linux/Unix socket API 
    * TODO: detect different configurations?
    */
-  #include <sys/socket.h>
-  #include <arpa/inet.h>
-  #include <netdb.h>
-  #include <netinet/in.h>
+  #ifdef KS_HAVE_SYS_SOCKET_H
+   #include <sys/socket.h>
+  #endif
+  #ifdef KS_HAVE_ARPA_INET_H
+   #include <arpa/inet.h>
+  #endif
+  #ifdef KS_HAVE_NETDB_H
+   #include <netdb.h>
+  #endif
+  #ifdef KS_HAVE_NETINET_IN_H
+   #include <netinet/in.h>
+  #endif
 
 #endif
 
