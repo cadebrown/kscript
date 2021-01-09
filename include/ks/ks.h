@@ -115,11 +115,13 @@
 #endif
 
 
-/*
-#include <unistd.h>
-#include <dlfcn.h>
-*/
+#ifdef KS_HAVE_UNISTD_H
+  #include <unistd.h>
+#endif
 
+#ifdef KS_HAVE_DLFCN_H
+  #include <dlfcn.h>
+#endif
 
 #if 0
 
