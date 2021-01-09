@@ -36,6 +36,10 @@ jobs:
       # Ensure we passed our checks
       - name: Check
         run: make check
+        
+      # Bundle and build into '.tmp/bundle'
+      - name: Bundle
+        run: make bundle
 
       # Upload a compiled version of this
       - name: Upload Bundle
