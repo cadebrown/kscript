@@ -36,14 +36,16 @@ jobs:
       # Ensure we passed our checks
       - name: Check
         run: make check
-        
+
       # Bundle and build into '.tmp/bundle'
       - name: Bundle
-        run: make bundle
+        run: |
+          make bundle
+          tar -C .tmp/bundle -czvf ks.tar.gz include bin lib
 
       # Upload a compiled version of this
       - name: Upload Bundle
         uses: actions/upload-artifact@v2
         with:
           name: kscript-bundle
-          path: .tmp/bundle
+          path: ks.tar.gz
