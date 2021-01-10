@@ -781,7 +781,7 @@ echo ""
 echo "DEFS               = $DEFS"
 echo "CFLAGS             = $CFLAGS"
 echo "LDFLAGS            = $LDFLAGS"
-echo "PLATFORM_NAME      = $PLATFORM_NAME"
+echo "PLATFORM           = $PLATFORM"
 echo "PATHSEP            = $PATHSEP"
 echo "EXTSHARED          = $EXTSHARED"
 echo "EXTSTATIC          = $EXTSTATIC"
@@ -839,7 +839,7 @@ echo "" >> $T
 echo "" >> $T
 echo "/* Platform Defines */" >> $T
 echo "" >> $T
-echo "#define KS_PLATFORM_NAME \"$PLATFORM_NAME\"" >> $T
+echo "#define KS_PLATFORM \"$PLATFORM\"" >> $T
 echo "#define KS_PLATFORM_PATHSEP \"$PATHSEP\"" >> $T
 echo "#define KS_PLATFORM_EXTSHARED \"$EXTSHARED\"" >> $T
 echo "#define KS_PLATFORM_EXTSTATIC \"$EXTSTATIC\"" >> $T
@@ -884,11 +884,15 @@ echo "# Makefile (GENERATED) - auto-generated build script" > $T
 echo "" >> $T
 echo "# -*- Values -*-" >> $T
 echo "" >> $T
-echo "VERS             := 0.0.1" >> $T
+echo "VERS             := 0.2.2" >> $T
 echo "" >> $T
 echo "# -*- Paths -*-" >> $T
 echo "CFLAGS           := $CFLAGS" >> $T
 echo "LDFLAGS          := $LDFLAGS" >> $T
+echo "" >> $T
+echo "PREFIX           := $PREFIX" >> $T
+echo "DESTDIR          ?= $DESTDIR" >> $T
+echo "TODIR            := \$(DESTDIR)\$(PREFIX)" >> $T
 echo "" >> $T
 echo "BUNDLE           ?= .tmp/bundle" >> $T
 echo "" >> $T
@@ -917,7 +921,7 @@ echo "docs_HTML_DIR    := docs/kscript" >> $T
 echo "" >> $T
 printf "libksmext        :=" >> $T
 for dir in src/extmodules/*; do
-    printf " lib/libksm_%s%s" "${dir##*/}" "$EXTSHARED" >> $T
+    printf " ksm_%s%s" "${dir##*/}" "$EXTSHARED" >> $T
 done
 echo "" >> $T
 
@@ -936,16 +940,31 @@ echo "	rm -rf \$(wildcard *.aux *.cp *.cps *.index *.log *.toc *.info)" >> $T
 echo "	rm -rf \$(wildcard \$(docs_PDF) \$(docs_HTML_MONO) \$(docs_HTML_DIR))" >> $T
 echo "" >> $T
 echo "install: \$(ks_BIN) \$(libks_SHARED) \$(all_H) FORCE" >> $T
+echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/include/ks" >> $T
+echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/bin" >> $T
+echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/lib" >> $T
+echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/pkgs" >> $T
+echo "	install -m 755 \$(ks_BIN) \$(TODIR)/lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN))" >> $T
+echo "	install -m 644 \$(libks_SHARED) \$(TODIR)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
+echo "	install -m 644 \$(all_H) \$(TODIR)/lib/ks-\$(VERS)/include/ks" >> $T
+
+echo "	strip \$(TODIR)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
+echo "	strip \$(TODIR)/lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN))" >> $T
+
 echo "	install -d \$(TODIR)/bin" >> $T
-echo "	install -d \$(TODIR)/include/ks" >> $T
-echo "	install -m 755 \$(ks_BIN) \$(TODIR)/bin" >> $T
-echo "	install -m 644 \$(libks_SHARED) \$(TODIR)/lib" >> $T
-echo "	install -m 644 \$(all_H) \$(TODIR)/include/ks" >> $T
+echo "	install -d \$(TODIR)/include" >> $T
+
+echo "	ln -sf ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED)) \$(TODIR)/lib/\$(notdir \$(libks_SHARED))" >> $T
+echo "	ln -sf ../lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN)) \$(TODIR)/bin/\$(notdir \$(ks_BIN))" >> $T
+echo "	ln -sf ../lib/ks-\$(VERS)/include/ks \$(TODIR)/include/ks" >> $T
+echo "	ln -sf ../lib/ks-\$(VERS) \$(TODIR)/lib/ks" >> $T
+
 echo "" >> $T
 echo "uninstall: FORCE" >> $T
 echo "	rm -f \$(TODIR)/bin/\$(notdir \$(ks_BIN))" >> $T
 echo "	rm -f \$(TODIR)/lib/\$(notdir \$(libks_SHARED))" >> $T
-echo "	rm -f \$(patsubst %,\$(TODIR)/include/ks/%,\$(notdir \$(all_H)))" >> $T
+echo "	rm -rf \$(TODIR)/lib/ks-\$(VERS)" >> $T
+echo "	rm -rf \$(TODIR)/include/ks" >> $T
 echo "" >> $T
 echo "bundle: default FORCE" >> $T
 echo "	mkdir -p \$(BUNDLE)/lib/ks-\$(VERS)" >> $T
@@ -960,6 +979,7 @@ echo "	cp -rf \$(libks_SHARED) \$(BUNDLE)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks
 echo "	ln -sf ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED)) \$(BUNDLE)/lib/\$(notdir \$(libks_SHARED))" >> $T
 echo "	ln -sf ../lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN)) \$(BUNDLE)/bin/\$(notdir \$(ks_BIN))" >> $T
 echo "	ln -sf ../lib/ks-\$(VERS)/include/ks \$(BUNDLE)/include/ks" >> $T
+echo "	ln -sf ../lib/ks-\$(VERS) \$(BUNDLE)/lib/ks" >> $T
 echo "" >> $T
 echo "check: \$(tests_KS) FORCE" >> $T
 echo "	@echo Success" >> $T
@@ -1006,7 +1026,7 @@ for dir in src/extmodules/*; do
     printf "libksm_%s_C := \$(wildcard %s/*.c)\n" "$mn" "$dir" >> $T
     printf "libksm_%s_O := \$(patsubst %%.c,.tmp/%%.o,\$(libksm_%s_C))" "$mn" "$mn" >> $T
     echo "" >> $T
-    printf "lib/libksm_%s%s: \$(libksm_%s_O) \$(all_H)" "$mn" "$EXTSHARED" "$mn" >> $T
+    printf "ksm_%s%s: \$(libksm_%s_O) \$(all_H)" "$mn" "$EXTSHARED" "$mn" >> $T
     echo "" >> $T
     echo "	@mkdir -p \$(dir \$@)" >> $T
     echo "	\$(CC) -L./lib \\" >> $T

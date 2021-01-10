@@ -39,9 +39,20 @@
 #define KS_H__
 
 
+/* Version Information  
+ * 
+ * This is the header API version. The actual distributed version of kscript may be different (although,
+ *   if you get a warning about this, its a good sign your package manager has messed up).
+ * 
+ * Developers: If you change this, change it in './configure' also
+ * 
+ */
+#define KS_VERSION_MAJOR 0
+#define KS_VERSION_MINOR 2
+#define KS_VERSION_PATCH 2
+
 
 /** Platform detection **/
-
 
 /* On Emscripten, allow 'dead' code to remain (because it may be called dynamically) */
 #if defined(__EMSCRIPTEN__)
@@ -65,9 +76,17 @@
 
 /* Select whether we are importing or exporting */
 #ifdef KS_BUILD
-  #define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API
+  #ifdef __cplusplus
+    #define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API extern "C"
+  #else
+    #define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API
+  #endif
 #else
-  #define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API
+  #ifdef __cplusplus
+    #define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API extern "C"
+  #else
+    #define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API
+  #endif
 #endif
 
 
@@ -86,12 +105,25 @@
 
 #ifndef KS_NO_CONFIG
  #include <ks/config.h>
+#else
+ #ifdef WIN32
+  #define KS_PLATFORM "windows"
+  #define KS_PLATFORM_PATHSEP "\\"
+  #define KS_PLATFORM_EXTSHARED ".dll"
+  #define KS_PLATFORM_EXTSTATIC ".lib"
+  #define KS_PLATFORM_EXTBINARY ".exe"
+ #else
+  #define KS_PLATFORM "unix"
+  #define KS_PLATFORM_PATHSEP "/"
+  #define KS_PLATFORM_EXTSHARED ".so"
+  #define KS_PLATFORM_EXTSTATIC ".a"
+  #define KS_PLATFORM_EXTBINARY ""
+ #endif
 #endif
 
 
 
 /** Headers **/
-
 
 /* Windows headers */
 #ifdef WIN32

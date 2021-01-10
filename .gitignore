@@ -32,6 +32,8 @@
 # other directories
 /build
 
+/pkgs
+
 # build output
 /*.tar.*
 /*.tar

@@ -143,7 +143,6 @@ _KS_DO_SPEC(_KSACT)
     G_getarg = ks_import(_ksv_getarg);
     assert(G_getarg != NULL);
 
-
     ksg_config = ks_dict_new(KS_IKV(
         {"prompt0",                (kso)ks_str_new(-1, ">>> ")},
         {"prompt1",                (kso)ks_str_new(-1, "... ")},
@@ -154,7 +153,6 @@ _KS_DO_SPEC(_KSACT)
     ksg_inter_vars = ks_dict_new(KS_IKV(
         {"_",                      KSO_NONE},
     ));
-
 
     ksg_globals = ks_dict_new(KS_IKV(
         {"__config", KS_NEWREF(ksg_config)},
@@ -250,6 +248,12 @@ _KS_DO_SPEC(_KSACT)
 
     /* Current position */
     ks_list_pushu(ksg_path, (kso)ks_str_new(-1, "."));
+
+    /* Add the prefix configured */
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks/pkgs", KS_BUILD_PREFIX));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i.%i.%i/pkgs", KS_BUILD_PREFIX, KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i.%i/pkgs", KS_BUILD_PREFIX, KS_VERSION_MAJOR, KS_VERSION_MINOR));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i/pkgs", KS_BUILD_PREFIX, KS_VERSION_MAJOR));
 
     /*  */
     ks_str key = ks_str_new(-1, "KSPATH");

@@ -37,7 +37,9 @@ jobs:
       - name: Check
         run: make check
 
-      # Bundle and build into '.tmp/bundle'
+      # Bundle and build into 'ks.tar.gz'
+      # NOTE: We must turn it into a tar, since zipping it will not
+      #   preseve symlinks
       - name: Bundle
         run: |
           make bundle

@@ -13,20 +13,6 @@
 #endif
 
 
-/* Version Information  
- * 
- * This is the header API version. The actual distributed version of kscript may be different (although,
- *   if you get a warning about this, its a good sign your package manager has messed up).
- * 
- * You should check the global variable 'ks_version' after the library is initialized to see the actual
- *   version of the interpreter present.
- * 
- */
-#define KS_VERSION_MAJOR 0
-#define KS_VERSION_MINOR 2
-#define KS_VERSION_PATCH 2
-
-
 /** Hashing Constants (TODO: detect 32 v 64 bit version) **/
 
 /* Special values */

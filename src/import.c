@@ -37,6 +37,9 @@ static ks_module import_path_dll(ks_str p, ks_str name, kso dir) {
 				return NULL;
 			}
 			res->dlhandle = handle;
+            ks_dict_merge_ikv(res->attr, KS_IKV(
+                {"__src", KS_NEWREF(p)},
+            ));
 			return res;
 		} else {
 			FreeLibrary(handle);
@@ -57,6 +60,9 @@ static ks_module import_path_dll(ks_str p, ks_str name, kso dir) {
 				return NULL;
 			}
             res->dlhandle = handle;
+            ks_dict_merge_ikv(res->attr, KS_IKV(
+                {"__src", KS_NEWREF(p)},
+            ));
             return res;
         } else {
             KS_THROW(kst_ImportError, "Failed to import %R, %R had not symbol '%s'", name, p, _KS_CEXTINIT_SYMBOL_STR);
@@ -74,34 +80,7 @@ static ks_module import_path_dll(ks_str p, ks_str name, kso dir) {
 
 /* Internal utility to try importing a module from a path */
 static ks_module import_path(ks_str p, ks_str name, kso dir) {
-
     bool g;
-    if (ksos_path_isdir((kso)p, &g) && g) {
-        ks_trace("ks", "Attempting %R for %R", p, name);
-        /* Is a valid directory, so get the real path */
-        ksos_path rp = ksos_path_real((kso)p);
-        ks_str rps = NULL;
-        if (!rp) {
-            kso_catch_ignore();
-            KS_INCREF(p);
-            rps = p;
-        } else {
-            rps = ks_fmt("%S", rp);
-            KS_DECREF(rp);
-        }
-
-        ks_module mod = ks_module_new(name->data, rps->data, "", KS_IKV(
-            {"__dir",              KS_NEWREF(dir)},
-            {"__file",             KS_NEWREF(p)},
-        ));
-
-        KS_DECREF(rps);
-        return mod;
-
-    } else {
-        kso_catch_ignore();
-    }
-
     if (ksos_path_isfile((kso)p, &g) && g) {
         ks_trace("ks", "Attempting %R for %R", p, name);
         /* Is a valid file, so read it all */
@@ -144,6 +123,7 @@ static ks_module import_path(ks_str p, ks_str name, kso dir) {
         ks_module mod = ks_module_new(name->data, rps->data, "", KS_IKV(
             {"__dir",              KS_NEWREF(dir)},
             {"__file",             KS_NEWREF(p)},
+            {"__src",              KS_NEWREF(p)},
         ));
         KS_DECREF(rps);
 
@@ -189,65 +169,74 @@ ks_module ks_import(ks_str name) {
     BIMOD(net)
     BIMOD(nx)
 
-
     /* Capture thread for exception */
     ksos_thread th = ksos_thread_get();
 
     /* Search through the paths while it has not been found */
     int i;
     for (i = 0; !res && i < ksg_path->len; ++i) {
-        /* Attempt specific paths within each path */
-        ks_str p = NULL, d = NULL;
+
+        /* Directory in which it was located */
+        ks_str dir = NULL;
+
+        /* File being searched */
+        ks_str fl = NULL;
         
-        d = ks_fmt("%S", ksg_path->elems[i]);
-        p = ks_fmt("%S/%S.ks", ksg_path->elems[i], name);
-        res = import_path(p, name, (kso)d);
-        KS_DECREF(d);
-        KS_DECREF(p);
-        if (res) break;
-        else if (th->exc) return NULL;
+        /** kscript files **/
 
-        d = ks_fmt("%S/%S", ksg_path->elems[i], name);
-        p = ks_fmt("%S/%S/__main.ks", ksg_path->elems[i], name);
-        res = import_path(p, name, (kso)d);
-        KS_DECREF(d);
-        KS_DECREF(p);
-        if (res) break;
-        else if (th->exc) return NULL;
-    
-        d = ks_fmt("%S", ksg_path->elems[i]);
-        p = ks_fmt("%S/libksm_%S.so", ksg_path->elems[i], name);
-        res = import_path_dll(p, name, (kso)d);
-        KS_DECREF(d);
-        KS_DECREF(p);
-        if (res) break;
-        else if (th->exc) return NULL;
-    
-        d = ks_fmt("%S", ksg_path->elems[i]);
-        p = ks_fmt("%S/lib/libksm_%S.so", ksg_path->elems[i], name);
-        res = import_path_dll(p, name, (kso)d);
-        KS_DECREF(d);
-        KS_DECREF(p);
-        if (res) break;
-        else if (th->exc) return NULL;
+        /* Search 'path[i]/' */
+        dir = ks_fmt("%S", ksg_path->elems[i]);
 
-        d = ks_fmt("%S", ksg_path->elems[i]);
-        p = ks_fmt("%S/ksm_%S.dll", ksg_path->elems[i], name);
-        res = import_path_dll(p, name, (kso)d);
-        KS_DECREF(d);
-        KS_DECREF(p);
-        if (res) break;
-        else if (th->exc) return NULL;
+        /* path[i]/NAME.ks */
+        fl = ks_fmt("%S/%S.ks", dir, name);
+        res = import_path(fl, name, (kso)dir);
+        KS_DECREF(fl);
+        if (res) {
+            break;
+        } else if (th->exc) {
+            KS_DECREF(dir);
+            return NULL;
+        }
+
+        /* path[i]/ksm_NAME.so  (or different extension for other platforms) */
+        fl = ks_fmt("%S/ksm_%S%s", dir, name, KS_PLATFORM_EXTSHARED);
+        res = import_path_dll(fl, name, (kso)dir);
+        KS_DECREF(fl);
+        if (res) {
+            break;
+        } else if (th->exc) {
+            KS_DECREF(dir);
+            return NULL;
+        }
 
 
-        d = ks_fmt("%S", ksg_path->elems[i]);
-        p = ks_fmt("%S/lib/ksm_%S.dll", ksg_path->elems[i], name);
-        res = import_path_dll(p, name, (kso)d);
-        KS_DECREF(d);
-        KS_DECREF(p);
-        if (res) break;
-        else if (th->exc) return NULL;
+        KS_DECREF(dir);
+        /* Search 'path[i]/NAME' */
+        dir = ks_fmt("%S/%S", ksg_path->elems[i], name);
 
+        /* path[i]/NAME/__main.ks */
+        fl = ks_fmt("%S/__main.ks", dir, name);
+        res = import_path(fl, name, (kso)dir);
+        KS_DECREF(fl);
+        if (res) {
+            break;
+        } else if (th->exc) {
+            KS_DECREF(dir);
+            return NULL;
+        }
+
+        /* path[i]/NAME/ksm_NAME.so  (or different extension for other platforms) */
+        fl = ks_fmt("%S/ksm_%S%s", dir, name, KS_PLATFORM_EXTSHARED);
+        res = import_path_dll(fl, name, (kso)dir);
+        KS_DECREF(fl);
+        if (res) {
+            break;
+        } else if (th->exc) {
+            KS_DECREF(dir);
+            return NULL;
+        }
+
+        KS_DECREF(dir);
     }
 
     if (!res) {
