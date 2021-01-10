@@ -85,7 +85,7 @@ Optional Dependencies:
 
 For example, you can install these on various platforms:
 
-Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libreadline-dev libfftw3-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev`
+Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libffi-dev libreadline-dev libfftw3-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev`
 
 Now, once you have installed the dependencies you want, you can build the library via:
 
