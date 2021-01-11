@@ -289,6 +289,9 @@ bool ks_inter() {
 
     /* Number of inputs so far */
     int ct = 0;
+    
+    /* Ensure prompts are updated */
+    update_prompts();
 
     /* Keep taking prompts */
     bool done = false;
@@ -325,8 +328,8 @@ bool ks_inter() {
                 /* If non-empty, add to history */
                 if (*rl_res) add_history(rl_res);
 
+                /* Append to the code result */
                 ksio_add((ksio_BaseIO)code, "%s", rl_res);
-
                 free(rl_res);
                 #else
 
@@ -351,6 +354,7 @@ bool ks_inter() {
                 ks_ssize_t len = ksu_getline(&gl_res, &max_len, stdin);
                 if (len < 0) {
                     kso_catch_ignore();
+                    ks_free(gl_res);
                     done = true;
                     break;
                 }
@@ -408,10 +412,10 @@ bool ks_inter() {
             } else {
                 break;
             }
-
         }
 
         /* Now, actually compile and run the input */
+        KS_NDECREF(src);
         src = ksio_StringIO_get(code);
 
         /* Turn the input code into a list of tokens */
@@ -420,6 +424,8 @@ bool ks_inter() {
         if (n_toks < 0) {
             kso_catch_ignore_print();
             ks_free(toks);
+            KS_DECREF(fname);
+            KS_DECREF(src);
             continue;
         }
 
@@ -428,6 +434,8 @@ bool ks_inter() {
         ks_free(toks);
         if (!prog) {
             kso_catch_ignore_print();
+            KS_DECREF(fname);
+            KS_DECREF(src);
             continue;
         }
 
@@ -450,6 +458,8 @@ bool ks_inter() {
         ks_code code = ks_compile(fname, src, prog, NULL);
         KS_DECREF(prog);
         if (!code) {
+            KS_DECREF(fname);
+            KS_DECREF(src);
             kso_catch_ignore_print();
             continue;
         }
@@ -461,6 +471,8 @@ bool ks_inter() {
         kso res = kso_call_ext((kso)code, 0, NULL, ksg_inter_vars, NULL);
         KS_DECREF(code);
         if (!res) {
+            KS_DECREF(fname);
+            KS_DECREF(src);
             kso_catch_ignore_print();
             continue;
         }
@@ -471,6 +483,9 @@ bool ks_inter() {
         }
         ks_dict_set(ksg_inter_vars, (kso)prompt2, res);
         KS_DECREF(res);
+
+        KS_DECREF(fname);
+        KS_DECREF(src);
     }
 
     return true;

@@ -267,6 +267,37 @@ static KS_TFUNC(T, len) {
     return (kso)ks_int_newu(self->len);
 }
 
+
+static KS_TFUNC(T, eq) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    if (kso_issub(L->type, kst_list) && kso_issub(R->type, kst_list)) {
+        ks_list lL = (ks_list)L, lR = (ks_list)R;
+
+        if (lL->len != lR->len) return KSO_FALSE;
+
+        ks_cint i;
+        for (i = 0; i < lL->len; ++i) {
+            kso a = lL->elems[i], b = lR->elems[i];
+            if (a == b) continue;
+
+            bool g;
+            if (!kso_eq(a, b, &g)) {
+                return NULL;
+            }
+
+            if (!g) return KSO_FALSE;
+        }
+
+        return KSO_TRUE;
+    }
+
+
+    return KSO_UNDEFINED;
+}
+
+
 static KS_TFUNC(T, add) {
     kso L, R;
     KS_ARGS("L R", &L, &R);
@@ -332,7 +363,7 @@ static KS_TFUNC(T, index) {
 
         bool eq;
         if (!kso_eq(elem, ob, &eq)) {
-            kso_catch_ignore();
+            return NULL;
         } else if (eq) {
             return (kso)ks_int_new(i);
         }
@@ -394,6 +425,7 @@ void _ksi_list() {
         {"__bool",               ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"__iter",               KS_NEWREF(kst_list_iter)},
+        {"__eq",                 ksf_wrap(T_eq_, T_NAME ".__eq(L, R)", "")},
         {"__add",                ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
 
         {"push",                 ksf_wrap(T_push_, T_NAME ".push(self, *args)", "Pushes any number of arguments on to the end of the list")},

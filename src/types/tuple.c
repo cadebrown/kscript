@@ -156,7 +156,7 @@ static KS_TFUNC(T, contains) {
    
         bool eq;
         if (!kso_eq(elem, ob, &eq)) {
-            kso_catch_ignore();
+            return NULL;
         } else if (eq) {
             return KSO_TRUE;
         }

@@ -240,7 +240,6 @@ void _ksi_io_FileIO() {
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
         {"__setattr",              ksf_wrap(T_setattr_, T_NAME ".__setattr(self, attr)", "")},
 
-        {"__int",                  ksf_wrap(T_int_, T_NAME ".__int(self)", "Acts as 'self.fileno'")},
         {"__integral",             ksf_wrap(T_int_, T_NAME ".__integral(self)", "Acts as 'self.fileno'")},
 
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},

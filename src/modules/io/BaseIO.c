@@ -702,6 +702,17 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
 
 /* Type Functions */
 
+static KS_TFUNC(T, bool) {
+    ksio_BaseIO self;
+    KS_ARGS("self:*", &self, ksiot_BaseIO);
+    bool g;
+    if (!ksio_eof(self, &g)) {
+        return NULL;
+    }
+
+    return KSO_BOOL(!g);
+}
+
 static KS_TFUNC(T, close) {
     ksio_BaseIO self;
     KS_ARGS("self:*", &self, ksiot_BaseIO);
@@ -894,7 +905,7 @@ void _ksi_io_BaseIO() {
     ));
 
     _ksinit(ksiot_BaseIO, kst_object, T_NAME, sizeof(struct kso_s), -1, "Abstract base type of other IO objects", KS_IKV(
-       //{"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
+        {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__iter",                 KS_NEWREF(ksiot_BaseIO_iter)},
 
         {"close",                  ksf_wrap(T_close_, T_NAME ".close(self)", "Closes the stream")},
