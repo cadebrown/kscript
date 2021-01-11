@@ -109,7 +109,7 @@ static ks_module import_path(ks_str p, ks_str name, kso dir) {
         if (!code) {
             return NULL;
         }
-        ksos_path rp = ksos_path_real((kso)p);
+        kso rp = ksos_path_real((kso)p);
         ks_str rps = NULL;
         if (!rp) {
             kso_catch_ignore();

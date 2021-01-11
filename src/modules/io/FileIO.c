@@ -112,6 +112,15 @@ static KS_TFUNC(T, str) {
     return (kso)ks_fmt("<%T (src=%R, mode=%R)>", self, self->src, self->mode);
 }
 
+
+static KS_TFUNC(T, int) {
+    ksio_FileIO self;
+    KS_ARGS("self:*", &self, ksiot_FileIO);
+
+    return (kso)ks_int_new(fileno(self->fp));
+}
+
+
 static KS_TFUNC(T, read) {
     ksio_FileIO self;
     ks_cint sz = KS_CINT_MAX;
@@ -185,6 +194,36 @@ static KS_TFUNC(T, write) {
 }
 
 
+static KS_TFUNC(T, getattr) {
+    ksio_FileIO self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, ksiot_FileIO, &attr, kst_str);
+
+    if (ks_str_eq_c(attr, "fileno", 6)) {
+        return (kso)ks_int_new(fileno(self->fp));
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
+
+
+static KS_TFUNC(T, setattr) {
+    ksio_FileIO self;
+    ks_str attr;
+    kso val;
+    KS_ARGS("self:* attr:* val", &self, ksiot_FileIO, &attr, kst_str, &val);
+
+    if (ks_str_eq_c(attr, "fileno", 6)) {
+        KS_THROW(kst_AttrError, "Cannot set '.fileno', is read only");
+        return NULL;
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -198,6 +237,11 @@ void _ksi_io_FileIO() {
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, src, mode='r')", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+        {"__setattr",              ksf_wrap(T_setattr_, T_NAME ".__setattr(self, attr)", "")},
+
+        {"__int",                  ksf_wrap(T_int_, T_NAME ".__int(self)", "Acts as 'self.fileno'")},
+        {"__integral",             ksf_wrap(T_int_, T_NAME ".__integral(self)", "Acts as 'self.fileno'")},
 
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},

@@ -11,6 +11,13 @@ Color = enum.make('Color', [
     ('BLACK', 1),
 ])
 
+"""
+enum Color {
+    WHITE,
+    BLACK,
+}
+"""
+
 # Determine the other color
 Color.other = x -> 1 - x
 
@@ -193,12 +200,13 @@ type Tile {
     }
 
     func __repr(self) {
-        ret "%T(%R, %R)" % (self, self.rank, self.file,)
+        ret "%T((%R, %R))" % (self, self.rank, self.file,)
     }
 
     func __eq(L, R) {
         L = L as Tile
         R = R as Tile
+
         ret L.rank == R.rank && L.file == R.file
     }
 
@@ -249,7 +257,8 @@ type State {
         for r in range(8) {
             res += '|'
             for f in range(8) {
-                res += '%s|' % (Piece.names_ucd[self[(r, f)]],)
+                #res += '%s|' % (Piece.names_ucd[self[(r, f)]],)
+                res += '%s|' % (Piece.names_ascii[self[(r, f)]],)
             }
             res += '\n'
         }
@@ -262,8 +271,8 @@ type State {
     func __getelem(self, key) {
         key = key as Tile as int
         # Check colors
+        m = bb_hot(key)
         for c in self.c {
-            m = bb_hot(key)
             if self.c[c] & m {
                 # Check which piece it is
                 for p in self.p {

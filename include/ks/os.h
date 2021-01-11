@@ -1,5 +1,10 @@
 /* ks/os.h - `os` module
  *
+ * 'os' types are typically lower cased, since they are close to builtins --
+ *   these are meant to be a generic interface not specifically based on the
+ *   C-API (although many functions may share or have similar names). The functionality
+ *   is also more complete (i.e. 'rm()' allows 'parents=true' to recursively remove
+ *   directories, which is a pain in languages that directly wrap the C-API, like Python)
  * 
  * @author:    Cade Brown <cade@kscript.org>
  *             Gregory Croisdale <greg@kscript.org>
@@ -46,26 +51,26 @@
 struct ksos_cstat {
 
     /* Linux/Unix/BSD/MacOS */
-    struct stat v_stat;
+    struct stat val;
 
 };
 
 #ifdef WIN32
 
-#define KSOS_CSTAT_ISFILE(_stat) (((_stat).v_stat.st_mode & S_IFMT) == S_IFREG)
-#define KSOS_CSTAT_ISDIR(_stat)  (((_stat).v_stat.st_mode & S_IFMT) == S_IFDIR)
+#define KSOS_CSTAT_ISFILE(_stat) (((_stat).val.st_mode & S_IFMT) == S_IFREG)
+#define KSOS_CSTAT_ISDIR(_stat)  (((_stat).val.st_mode & S_IFMT) == S_IFDIR)
 #define KSOS_CSTAT_ISLINK(_stat) (!KSOS_CSTAT_ISFILE(_stat) && !KSOS_CSTAT_ISDIR(_stat))
 
 #else
 
 /* Yield whether a cstat is a regular file */
-#define KSOS_CSTAT_ISFILE(_stat) (S_ISREG((_stat).v_stat.st_mode))
+#define KSOS_CSTAT_ISFILE(_stat) (S_ISREG((_stat).val.st_mode))
 
 /* Yield whether a cstat is a directory */
-#define KSOS_CSTAT_ISDIR(_stat)  (S_ISDIR((_stat).v_stat.st_mode))
+#define KSOS_CSTAT_ISDIR(_stat)  (S_ISDIR((_stat).val.st_mode))
 
 /* Yield whether a cstat is a symlink */
-#define KSOS_CSTAT_ISLINK(_stat) (S_ISLNK((_stat).v_stat.st_mode))
+#define KSOS_CSTAT_ISLINK(_stat) (S_ISLNK((_stat).val.st_mode))
 
 
 #endif
@@ -97,7 +102,7 @@ typedef struct ksos_path_s {
 /* 'os.path.walk' - Iterator over OS paths
  *
  */
-typedef struct ksos_path_walk_s {
+typedef struct ksos_walk_s {
     KSO_BASE
 
     /* If 'true', then generate directories, files, and then yield subdirectories recursively 
@@ -136,8 +141,20 @@ typedef struct ksos_path_walk_s {
 
     }* stk;
 
-}* ksos_path_walk;
+}* ksos_walk;
 
+
+/* 'os.stat' - File status result
+ *
+ * 
+ */
+typedef struct ksos_stat_s {
+    KSO_BASE
+
+    /* Wrapped value */
+    struct ksos_cstat val;
+
+}* ksos_stat;
 
 
 /* 'os.frame' - Single execution frame
@@ -271,42 +288,16 @@ typedef struct ksos_proc_s {
 } *ksos_proc;
 
 
-/** Functions **/
+/* Functions */
 
-
-
-/** Misc. Process/Environment Functions **/
-
-/* Execute a command and wait as if run in shell - returns exit code
+/* Return an object wrapper around a stat value
  */
-KS_API int ksos_exec(ks_str cmd);
-
-/* Forks current process - returns 0 if parent, pid > 0 if else
- */
-KS_API int ksos_fork();
-
-/* Creates a pipe as according to the cstd
- */
-KS_API int ksos_pipe(int* fd);
-
-/* Duplicates an fd according to the cstd
- */
-KS_API int ksos_dup2(int oldfd, int newfd);
+KS_API ksos_stat ksos_stat_wrap(struct ksos_cstat val);
 
 
-/* Wait for a pid, and calculate the status
- */
-KS_API bool ksos_waitpid(int pid, int* status);
-
-/* Tell whether 'pid' refers to an alive process
- */
-KS_API bool ksos_isalive(int pid, bool* out);
-
-/* Attempt to send a signal to a pid
- */
-KS_API bool ksos_kill(int pid, int sig);
 
 
+/** Misc. Utilities **/
 
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found
@@ -321,7 +312,64 @@ KS_API bool ksos_setenv(ks_str key, ks_str val);
  */
 KS_API ksos_path ksos_getcwd();
 
-/** Filesystem/Paths **/
+/* Query information about the path, symbolic link, and open file description (respectively)
+ */
+KS_API bool ksos_pstat(struct ksos_cstat* self, kso path);
+KS_API bool ksos_lstat(struct ksos_cstat* self, kso path);
+KS_API bool ksos_fstat(struct ksos_cstat* self, int fd);
+
+/* Calculate the sub-directories and files within 'path' (which should be a directory)
+ *
+ * '*dirs' and '*files' may be NULL or a valid list. If they are NULL, they are allocated,
+ *   otherwise they are cleared before the operation happens
+ */
+KS_API bool ksos_listdir(kso path, ks_list* dirs, ks_list* files);
+
+
+/* Convert a string path to a string. If it is already a string, a new reference
+ *   is returned
+ */
+KS_API ks_str ksos_path_str(kso path);
+
+/* Attempts to resolve 'path' to an absolute path
+ */
+KS_API kso ksos_path_real(kso path);
+
+
+/* Return whether 'path' exists, and set '*res' to whether it does
+ */
+KS_API bool ksos_path_exists(kso path, bool* res);
+
+/* Calculate whether 'path' is a file */
+KS_API bool ksos_path_isfile(kso path, bool* res);
+
+/* Calculate whether 'path' is a directory */
+KS_API bool ksos_path_isdir(kso path, bool* res);
+
+/* Calculate whether 'path' is a symbolic link */
+KS_API bool ksos_path_islink(kso path, bool* res);
+
+
+
+/* Changes the current working direcotory to a given path
+ */
+KS_API bool ksos_chdir(kso path);
+
+/* Creates a directory with the given mode
+ *
+ * If 'parents' is given, then parents are created as well 
+ */
+KS_API bool ksos_mkdir(kso path, int mode, bool parents);
+
+/* Remove a file or directory from the filesystem
+ *
+ * If 'children' is given, then a directory will be removed recursively. Otherwise,
+ *   non-empty directories will throw an error
+ */
+KS_API bool ksos_rm(kso path, bool children);
+
+
+
 
 /* Create a new path from a C-style string, which will split on seperators
  *
@@ -343,43 +391,35 @@ KS_API ksos_path ksos_path_join(kso* paths, int len);
 KS_API ksos_path ksos_path_parent(kso self);
 
 
-/* Attempts to resolve 'path' to an absolute path */
-KS_API ksos_path ksos_path_real(kso path);
+/** Process **/
 
-/* Performs a C-style 'stat' on a path object
+/* Execute a command and wait as if run in shell - returns exit code
  */
-KS_API bool ksos_path_stat(kso path, struct ksos_cstat* out);
-KS_API bool ksos_path_lstat(kso path, struct ksos_cstat* out);
-KS_API bool ksos_path_fstat(int fd, struct ksos_cstat* out);
+KS_API int ksos_exec(ks_str cmd);
 
-/* Return whether 'path' exists, and set '*res' to whether it does
+/* Forks current process - returns 0 if parent, pid > 0 if else
  */
-KS_API bool ksos_path_exists(kso path, bool* res);
+KS_API int ksos_fork();
 
-/* Calculate whether 'path' is a file */
-KS_API bool ksos_path_isfile(kso path, bool* res);
-
-/* Calculate whether 'path' is a directory */
-KS_API bool ksos_path_isdir(kso path, bool* res);
-
-/* Calculate whether 'path' is a symbolic link */
-KS_API bool ksos_path_islink(kso path, bool* res);
-
-/* Return a list of directories and files in a given directory */
-KS_API bool ksos_path_listdir(kso path, ks_list* dirs, ks_list* files);
-
-/* Attempts to create a directory. If 'parents' is given, then parents are created as well */
-KS_API bool ksos_path_mkdir(kso path, int mode, bool parents);
-
-/* Attempts to remove a path (file or directory). If 'children' is given, then children are recursively 
- *   removed as well (otherwise, non-empty directories throw errors) 
+/* Creates a pipe as according to the cstd
  */
-KS_API bool ksos_path_rm(kso path, bool children);
+KS_API int ksos_pipe(int* fd);
 
-/* Changes the current working direcotory to a given path
+/* Duplicates an fd according to the cstd
  */
-KS_API bool ksos_path_chdir(kso path);
+KS_API int ksos_dup2(int oldfd, int newfd);
 
+/* Wait for a pid, and calculate the status
+ */
+KS_API bool ksos_waitpid(int pid, int* status);
+
+/* Tell whether 'pid' refers to an alive process
+ */
+KS_API bool ksos_isalive(int pid, bool* out);
+
+/* Attempt to send a signal to a pid
+ */
+KS_API bool ksos_kill(int pid, int sig);
 
 
 /** Threading **/
@@ -443,8 +483,9 @@ KS_API bool ksos_mutex_trylock(ksos_mutex self);
 
 /* Types */
 KS_API_DATA ks_type
+    ksost_stat,
     ksost_path,
-    ksost_path_walk,
+    ksost_walk,
     ksost_thread,
     ksost_frame,
     ksost_mutex,

@@ -66,9 +66,11 @@ void _ksi_io_StringIO();
 void _ksi_io_BytesIO();
 
 ks_module _ksi_os();
+void _ksi_os_stat();
 void _ksi_os_mutex();
 void _ksi_os_thread();
 void _ksi_os_path();
+void _ksi_os_walk();
 void _ksi_os_frame();
 void _ksi_os_proc();
 
