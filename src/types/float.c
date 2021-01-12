@@ -8,8 +8,8 @@
 #define T_NAME "float"
 
 /* Precision (in digits) for regular and scientific output */
-#define F_PREC_REG (KS_CFLOAT_DIG/2+2)
-#define F_PREC_SCI (KS_CFLOAT_DIG-2)
+#define F_PREC_REG (KS_CFLOAT_DIG)
+#define F_PREC_SCI (KS_CFLOAT_DIG)
 
 /* Absolute value at which numbers are printed in scientific format as opposed to regular */
 #define A_SCI_BIG 1.0e10

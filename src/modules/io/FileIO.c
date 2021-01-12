@@ -31,13 +31,12 @@ ksio_FileIO ksio_FileIO_wrap(ks_type tp, FILE* fp, bool do_close, ks_str src, ks
 ksio_FileIO ksio_FileIO_fdopen(int fd, ks_str src, ks_str mode) {
 #ifdef KS_HAVE_fdopen
     FILE* res = fdopen(fd, mode->data);
-
     if (!res) {
-        KS_THROW(kst_OSError, "Failed to fdopen %i: %s", fd, strerror(errno));
+        KS_THROW_ERRNO(errno, "Failed to fdopen %i", fd);
         return NULL;
     }
 
-    return ksio_FileIO_wrap(ksiot_FileIO, res, true, src, mode);
+    return ksio_FileIO_wrap(ksiot_FileIO, res, false /* don't close */, src, mode);
 #else
     KS_THROW(kst_OSError, "Failed to fdopen: platform did not provide a 'fdopen()' function");
     return -1;
@@ -71,7 +70,7 @@ static KS_TFUNC(T, init) {
      */
     self->fp = fopen(src->data, mode->data);
     if (!self->fp) {
-        KS_THROW(kst_IOError, "Failed to open %R: %s", src, strerror(errno));
+        KS_THROW_ERRNO(errno, "Failed to open %R", src);
         KS_DECREF(src);
         return NULL;
     }

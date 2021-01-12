@@ -16,7 +16,7 @@ static KS_TFUNC(M, system) {
 
     int res = system(cmd->data);
     if (res < 0) {
-        KS_THROW(kst_Error, "Executing command failed: %s", strerror(errno));
+        KS_THROW_ERRNO(errno, "Executing command failed");
         return NULL;
     }
 

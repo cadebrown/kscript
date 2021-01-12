@@ -11,7 +11,7 @@ p = os.proc("yes")
 
 p.kill()
 
-print ("after")
+#print ("after", next(p.stdout))
 
 
 """p = os.proc("yes")

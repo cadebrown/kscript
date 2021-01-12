@@ -6,6 +6,9 @@
  *   os.stat.gid: Group ID of owner
  *   os.stat.uid: User ID of owner
  *   os.stat.size: Size of the file, in bytes
+ *   os.stat.mtime: Time of last modification
+ *   os.stat.atime: Time of last access
+ *   os.stat.ctime: Time of last status change
  * 
  * TODO: os.stat.dev is actually typically a composition of major and minor ID's.
  * For example, 'os.stat("README.md").dev == 2049', which actually should be decomposed as:
@@ -90,6 +93,18 @@ static KS_TFUNC(T, getattr) {
         return (kso)ks_int_new(self->val.val.st_size);
     } else if (ks_str_eq_c(attr, "mode", 4)) {
         return (kso)ks_int_new(self->val.val.st_mode);
+    } else if (ks_str_eq_c(attr, "mtime", 5)) {
+        struct timespec t = self->val.val.st_mtim;
+        ks_cfloat x = t.tv_sec + t.tv_nsec / 1000000000.0;
+        return (kso)ks_float_new(x);
+    } else if (ks_str_eq_c(attr, "atime", 5)) {
+        struct timespec t = self->val.val.st_atim;
+        ks_cfloat x = t.tv_sec + t.tv_nsec / 1000000000.0;
+        return (kso)ks_float_new(x);
+    } else if (ks_str_eq_c(attr, "ctime", 5)) {
+        struct timespec t = self->val.val.st_ctim;
+        ks_cfloat x = t.tv_sec + t.tv_nsec / 1000000000.0;
+        return (kso)ks_float_new(x);
     }
 
     KS_THROW_ATTR(self, attr);

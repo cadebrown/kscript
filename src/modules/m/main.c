@@ -22,6 +22,17 @@ static void* arg_error(char* argname, char* expr) {
     return NULL;
 }
 
+bool ksm_isclose(ks_cfloat x, ks_cfloat y, ks_cfloat rel_err, ks_cfloat abs_err) {
+    ks_cfloat ax = fabs(x), ay = fabs(y);
+    ks_cfloat amxy = ax > ay ? ax : ay;
+
+    ks_cfloat realerr = rel_err * amxy;
+    if (abs_err > realerr) realerr = abs_err;
+
+    return fabs(x - y) <= realerr;
+}
+
+
 
 /* MT: Math Templates, to reduce code duplication */
 
@@ -529,6 +540,24 @@ static KS_TFUNC(m, choose) {
     return (kso)ks_int_newzn(res);
 }
 
+static KS_TFUNC(m, isclose) {
+    kso x, y;
+    ks_cfloat rel_err = 1e-6, abs_err = 1e-6;
+    KS_ARGS("x y ?abs_err:cfloat ?rel_err:cfloat", &x, &y, &abs_err, &rel_err);
+
+    if (kso_is_complex(x) || kso_is_complex(y)) {
+        ks_ccomplex cx, cy;
+        if (!kso_get_cc(x, &cx) || !kso_get_cc(y, &cy)) return NULL;
+
+        return KSO_BOOL(ksm_isclose(cx.re, cy.re, rel_err, abs_err) && ksm_isclose(cx.im, cy.im, rel_err, abs_err));
+    } else {
+        ks_cfloat fx, fy;
+        if (!kso_get_cf(x, &fx) || !kso_get_cf(y, &fy)) return NULL;
+
+        return KSO_BOOL(ksm_isclose(fx, fy, rel_err, abs_err));
+    }
+}
+
 
 /* Export */
 
@@ -600,6 +629,9 @@ ks_module _ksi_m() {
 
         {"fact",                   ksf_wrap(m_fact_, M_NAME ".fact(x)", "Calculate the factorial of 'x'")},
         {"choose",                 ksf_wrap(m_choose_, M_NAME ".choose(n, k)", "Calculate the binomial coefficient at 'n' and 'k' (also known as 'n choose k')\n\n    This value is 'm.fact(n) // (m.fact(k) * m.fact(n - k))'")},
+
+
+        {"isclose",                ksf_wrap(m_isclose_, M_NAME ".isclose(x, y, abs_err=1e-6, rel_err=1e-6)", "Calculate whether 'x' and 'y' are close, within a relative error of 'rel_err' and absolute error of 'abs_err'. By default, returns true if they are within 9 digits of accuracy")},
 
     ));
 

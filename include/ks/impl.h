@@ -80,7 +80,7 @@ ks_module _ksi_getarg();
 void _ksi_getarg_Parser();
 
 ks_module _ksi_time();
-void _ksi_time_struct();
+void _ksi_time_DateTime();
 
 ks_module _ksi_net();
 void _ksi_net_SocketIO();

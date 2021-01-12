@@ -166,6 +166,21 @@ ksos_path ksos_path_parent(kso self) {
     KS_DECREF(tmp);
     return res;
 }
+ks_str ksos_path_last(kso self) {
+    ksos_path p0 = ksos_path_new_o(self);
+    if (!p0) return NULL;
+
+    if (p0->parts->len == 0) {
+        KS_DECREF(p0);
+        return ks_str_new(-1, "");
+    } else {
+        ks_str res = (ks_str)p0->parts->elems[p0->parts->len - 1];
+        KS_INCREF(res);
+        KS_DECREF(p0);
+        return res;
+    }
+
+}
 
 kso ksos_path_real(kso path) {
 #ifdef KS_HAVE_realpath
@@ -188,8 +203,8 @@ kso ksos_path_real(kso path) {
             return (kso)res;
         }
     } else {
+        KS_THROW_ERRNO(errno, "Failed to determine real path for %R", sp);
         KS_DECREF(sp);
-        KS_THROW(kst_OSError, "Failed to determine real path for %R: %s", sp, strerror(errno));
         return NULL;
     }
 #else
@@ -359,6 +374,13 @@ static KS_TFUNC(T, parent) {
     return (kso)ksos_path_parent(self);
 }
 
+static KS_TFUNC(T, last) {
+    kso self;
+    KS_ARGS("self", &self);
+
+    return (kso)ksos_path_last(self);
+}
+
 static KS_TFUNC(T, exists) {
     kso self;
     KS_ARGS("self", &self);
@@ -419,6 +441,7 @@ void _ksi_os_path() {
         {"__div",                  ksf_wrap(T_div_, T_NAME ".__div(L, R)", "")},
 
         {"parent",                 ksf_wrap(T_parent_, T_NAME ".parent(self)", "Computes the parent path")},
+        {"last",                   ksf_wrap(T_last_, T_NAME ".last(self)", "Computes the last element of the path")},
 
         {"join",                   ksf_wrap(T_join_, T_NAME ".join(*args)", "Joins paths together, accepts 'str', 'os.path', and other path-like objects")},
         {"real",                   ksf_wrap(T_abs_, T_NAME ".real(self)", "Computes the real path (i.e. actual location within the filesystem)\n\n    Returns a path with an absolute root")},
@@ -427,8 +450,6 @@ void _ksi_os_path() {
         {"isfile",                 ksf_wrap(T_isfile_, T_NAME ".isfile(self)", "Computes whether 'self' is a regular file")},
         {"isdir",                  ksf_wrap(T_isdir_, T_NAME ".isdir(self)", "Computes whether 'self' is a directory")},
         {"islink",                 ksf_wrap(T_islink_, T_NAME ".islink(self)", "Computes whether 'self' is a symbolic link")},
-
-        {"walk",                   KS_NEWREF(ksost_walk)},
 
     ));
     

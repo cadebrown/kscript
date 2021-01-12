@@ -695,6 +695,18 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame clos
         }
     }
 
+    /* If '...' is called, recurse on the last function called */
+    if (func == KSO_DOTDOTDOT) {
+        if (th->frames->len < 1) {
+            KS_THROW(kst_Error, "Calling '...' has to happen inside of another frame (but there were none)");
+            return NULL;
+        } else {
+            ksos_frame parframe = (ksos_frame)th->frames->elems[th->frames->len - 1];
+            return kso_call(parframe->func, nargs, args);
+        }
+    }
+    
+
     kso res = NULL;
     if (kso_issub(func->type, kst_func) && func->type->i__call == kst_func->i__call) {
         /* If given a standard function which is not a subtype that overrides the calling feature */

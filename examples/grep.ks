@@ -29,7 +29,7 @@ func search(p) {
     }
 
     if p.isdir() {
-       # (ds, fs) = p.listdir()
+        (ds, fs) = os.listdir(p)
         # Check files
         for f in fs {
             search(p / f)
@@ -51,7 +51,7 @@ func search(p) {
                 print (prefix, line)
             }
         }
-        close(fp)
+        fp.close()
     }
 }
 

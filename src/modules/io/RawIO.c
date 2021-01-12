@@ -117,7 +117,7 @@ static KS_TFUNC(T, init) {
 	self->fd = (flags & O_CREAT) ? open(src->data, flags, m) : open(src->data, flags);
 #endif
     if (self->fd < 0) {
-        KS_THROW(kst_IOError, "Failed to open %R: %s", src, strerror(errno));
+        KS_THROW_ERRNO(errno, "Failed to open %R", src);
         return NULL;
     }
 
@@ -153,7 +153,46 @@ static KS_TFUNC(T, str) {
     ksio_RawIO self;
     KS_ARGS("self:*", &self, ksiot_RawIO);
 
-    return (kso)ks_fmt("<%T (src=%R, mode=%R)>", self, self->src, self->mode);
+    return (kso)ks_fmt("<%T (fd=%i, src=%R, mode=%R)>", self, self->fd, self->src, self->mode);
+}
+
+static KS_TFUNC(T, int) {
+    ksio_RawIO self;
+    KS_ARGS("self:*", &self, ksiot_RawIO);
+
+    return (kso)ks_int_new(self->fd);
+}
+
+
+
+
+static KS_TFUNC(T, getattr) {
+    ksio_RawIO self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, ksiot_RawIO, &attr, kst_str);
+
+    if (ks_str_eq_c(attr, "fd", 2)) {
+        return (kso)ks_int_new(self->fd);
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
+
+
+static KS_TFUNC(T, setattr) {
+    ksio_RawIO self;
+    ks_str attr;
+    kso val;
+    KS_ARGS("self:* attr:* val", &self, ksiot_RawIO, &attr, kst_str, &val);
+
+    if (ks_str_eq_c(attr, "fd", 2)) {
+        KS_THROW(kst_AttrError, "Cannot set '.fd', is read only");
+        return NULL;
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
 }
 
 static KS_TFUNC(T, read) {
@@ -212,6 +251,9 @@ void _ksi_io_RawIO() {
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, src, mode='r')", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__integral",             ksf_wrap(T_int_, T_NAME ".__integral(self)", "Acts as 'self.fileno'")},
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+        {"__setattr",              ksf_wrap(T_setattr_, T_NAME ".__setattr(self, attr)", "")},
 
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},

@@ -58,6 +58,13 @@
 
 /** All Functions **/
 
+/* Returns whether 'x' and 'y' are close, within a relative and absolute error margin
+ *
+ * Specifically:
+ *   abs(x - y) <= max(rel_err * max(abs(x), abs(y)), abs_err)
+ */
+KS_API bool ksm_isclose(ks_cfloat x, ks_cfloat y, ks_cfloat rel_err, ks_cfloat abs_err);
+
 KS_API ks_cfloat ksm_gamma(ks_cfloat x);
 KS_API ks_cfloat ksm_zeta(ks_cfloat x);
 

@@ -50,6 +50,7 @@ static ks_module
     G_io = NULL,
     G_os = NULL,
     G_getarg = NULL
+    //G_time = NULL
 ;
 
 

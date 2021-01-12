@@ -19,7 +19,7 @@ bool ksio_close(ksio_BaseIO self) {
         ksio_FileIO fio = (ksio_FileIO)self;
         if (fio->do_close && fio->fp) {
             if (fclose(fio->fp) != 0) {
-                KS_THROW(kst_IOError, "Failed to close %R: %s", self, strerror(errno));
+                KS_THROW_ERRNO(errno, "Failed to close %R");
                 return false;
             }
         }
@@ -32,7 +32,7 @@ bool ksio_close(ksio_BaseIO self) {
 
         if (rio->do_close && rio->fd >= 0) {
             if (close(rio->fd) != 0) {
-                KS_THROW(kst_IOError, "Failed to close %R: %s", self, strerror(errno));
+                KS_THROW_ERRNO(errno, "Failed to close %R");
                 return false;
             }
         }
@@ -81,7 +81,7 @@ bool ksio_seek(ksio_BaseIO self, ks_cint pos, int whence) {
         int rc = fseek(fio->fp, pos, whence);
         int eno = errno;
         if (rc < 0) {
-            KS_THROW(kst_IOError, "Failed to seek %R: %s", self, strerror(eno));
+            KS_THROW_ERRNO(errno, "Failed to seek %R", self);
             return NULL;
         }
 
@@ -104,7 +104,7 @@ bool ksio_seek(ksio_BaseIO self, ks_cint pos, int whence) {
         int rc = lseek(rio->fd, pos, whence);
         int eno = errno;
         if (rc < 0) {
-            KS_THROW(kst_IOError, "Failed to seek %R: %s", self, strerror(eno));
+            KS_THROW_ERRNO(errno, "Failed to seek %R", self);
             return false;
         }
 
@@ -156,7 +156,7 @@ ks_cint ksio_tell(ksio_BaseIO self) {
         long rc = ftell(fio->fp);
         int eno = errno;
         if (rc < 0) {
-            KS_THROW(kst_IOError, "Failed to tell %R: %s", self, strerror(eno));
+            KS_THROW_ERRNO(errno, "Failed to tell %R", self);
             return -1;
         }
 
@@ -168,7 +168,7 @@ ks_cint ksio_tell(ksio_BaseIO self) {
         int rc = lseek(rio->fd, 0, SEEK_CUR);
         int eno = errno;
         if (rc < 0) {
-            KS_THROW(kst_IOError, "Failed to tell %R: %s", self, strerror(eno));
+            KS_THROW_ERRNO(errno, "Failed to tell %R", self);
             return -1;
         }
 
@@ -267,7 +267,7 @@ bool ksio_trunc(ksio_BaseIO self, ks_cint sz) {
 #else
         int rc = ftruncate(fileno(fio->fp), sz);
         if (rc < 0) {
-            KS_THROW(kst_IOError, "Failed to trunc %R: %s", self, strerror(errno));
+            KS_THROW_ERRNO(errno, "Failed to trunc %R", self);
             return false;
         }
 #endif
@@ -282,7 +282,7 @@ bool ksio_trunc(ksio_BaseIO self, ks_cint sz) {
 #else
 		int rc = ftruncate(rio->fd, sz);
 		if (rc < 0) {
-			KS_THROW(kst_IOError, "Failed to trunc %R: %s", self, strerror(errno));
+            KS_THROW_ERRNO(errno, "Failed to trunc %R", self);
 			return false;
 		}
 #endif
@@ -352,7 +352,7 @@ ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data) {
         fio->sz_r += real_sz;
 
         if (real_sz == 0 && sz_b != 0) {
-            KS_THROW(kst_IOError, "Failed to read from '%T' object: %s", fio, strerror(eno));
+            KS_THROW_ERRNO(eno, "Failed to read from %R", self);
             return -1;
         }
 
@@ -367,7 +367,7 @@ ks_ssize_t ksio_readb(ksio_BaseIO self, ks_ssize_t sz_b, void* data) {
         int eno = errno;
         KS_GIL_LOCK();
         if (real_sz < 0) {
-            KS_THROW(kst_IOError, "Failed to read from '%T' object: %s", rio, strerror(eno));
+            KS_THROW_ERRNO(eno, "Failed to read from %R", self);
             return -1;
         }
 
@@ -576,7 +576,7 @@ bool ksio_writeb(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
         int eno = errno;
         KS_GIL_LOCK();
         if (real_sz < 0) {
-            KS_THROW(kst_IOError, "Failed to write to '%T' object: %s", rio, strerror(eno));
+            KS_THROW_ERRNO(eno, "Failed to write to %R", self);
             return -1;
         }
 
@@ -651,7 +651,7 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
         int eno = errno;
         KS_GIL_LOCK();
         if (real_sz < 0) {
-            KS_THROW(kst_IOError, "Failed to write to '%T' object: %s", rio, strerror(eno));
+            KS_THROW_ERRNO(eno, "Failed to write to %R", self);
             return -1;
         }
 

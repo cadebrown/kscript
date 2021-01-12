@@ -479,6 +479,24 @@ struct ks_eikv {
 /* Missing method (typically a '__' method) */
 #define KS_THROW_METH(_obj, _meth) KS_THROW(kst_TypeError, "'%T' object had no '%s' method", _obj, _meth)
 
+/* Throws a return status given by 'errno'
+ */
+#define KS_THROW_ERRNO(_errno_val, ...) do { \
+    /* Get a template of 'OSError', for a specific errno */ \
+    int _errno_valc = _errno_val; \
+    ks_int _errno_valo = ks_int_new(_errno_valc); \
+    ks_type _tet = ks_type_template(kst_OSError, 1, (kso[]){ (kso)_errno_valo }); \
+    assert(_tet != NULL); \
+    KS_DECREF(_errno_valo); \
+    /* Format the requirements */ \
+    ks_str _msgval = ks_fmt(__VA_ARGS__); \
+    ks_str _genmsgval = ksos_strerr(_errno_valc); \
+    KS_THROW(_tet, "%S (%S)", _msgval, _genmsgval); \
+    KS_DECREF(_msgval); \
+    KS_DECREF(_genmsgval); \
+    KS_DECREF(_tet); \
+} while (0)
+
 
 /* Throw an 'OutOfIter' Exception
  */

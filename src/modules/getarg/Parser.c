@@ -296,6 +296,21 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
             }
 
             tmp = ks_list_new(a.num, pos->elems + si);
+            if (a.trans != KSO_NONE && a.trans != (kso)kst_str) {
+                /* Transform in place */
+                for (k = 0; k < tmp->len; ++k) {
+                    kso ob = tmp->elems[k];
+                    kso obt = kso_call(a.trans, 1, &ob);
+                    if (!obt) {
+                        KS_DECREF(tmp);
+                        KS_DECREF(res);
+                        KS_DECREF(pos);
+                        return NULL;
+                    }
+                    KS_DECREF(ob);
+                    tmp->elems[k] = obt;
+                }
+            }
 
             if (a.num == 1) {
                 ks_dict_set_h(res, (kso)a.name, a.name->v_hash, tmp->elems[0]);
@@ -329,6 +344,23 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
             assert (i <= pos->len);
 
             tmp = ks_list_new(a.num, pos->elems + si);
+
+            if (a.trans != KSO_NONE && a.trans != (kso)kst_str) {
+                /* Transform in place */
+                for (k = 0; k < tmp->len; ++k) {
+                    kso ob = tmp->elems[k];
+                    kso obt = kso_call(a.trans, 1, &ob);
+                    if (!obt) {
+                        KS_DECREF(tmp);
+                        KS_DECREF(res);
+                        KS_DECREF(pos);
+                        return NULL;
+                    }
+                    KS_DECREF(ob);
+                    tmp->elems[k] = obt;
+                }
+            }
+
             if (a.num == 1) {
                 ks_dict_set_h(res, (kso)a.name, a.name->v_hash, tmp->elems[0]);
             } else {
@@ -344,6 +376,22 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
             assert (i <= pos->len);
 
             tmp = ks_list_new(num, pos->elems + si);
+            if (a.trans != KSO_NONE && a.trans != (kso)kst_str) {
+                /* Transform in place */
+                for (k = 0; k < tmp->len; ++k) {
+                    kso ob = tmp->elems[k];
+                    kso obt = kso_call(a.trans, 1, &ob);
+                    if (!obt) {
+                        KS_DECREF(tmp);
+                        KS_DECREF(res);
+                        KS_DECREF(pos);
+                        return NULL;
+                    }
+                    KS_DECREF(ob);
+                    tmp->elems[k] = obt;
+                }
+            }
+
             ks_dict_set_h(res, (kso)a.name, a.name->v_hash, (kso)tmp);
             KS_DECREF(tmp);
         }
@@ -355,6 +403,22 @@ ks_dict ksga_parse(ksga_Parser self, ks_list args) {
             assert (i <= pos->len);
 
             tmp = ks_list_new(a.num, pos->elems + si);
+            if (a.trans != KSO_NONE && a.trans != (kso)kst_str) {
+                /* Transform in place */
+                for (k = 0; k < tmp->len; ++k) {
+                    kso ob = tmp->elems[k];
+                    kso obt = kso_call(a.trans, 1, &ob);
+                    if (!obt) {
+                        KS_DECREF(tmp);
+                        KS_DECREF(res);
+                        KS_DECREF(pos);
+                        return NULL;
+                    }
+                    KS_DECREF(ob);
+                    tmp->elems[k] = obt;
+                }
+            }
+
             if (a.num == 1) {
                 ks_dict_set_h(res, (kso)a.name, a.name->v_hash, tmp->elems[0]);
             } else {

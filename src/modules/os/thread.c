@@ -132,7 +132,7 @@ bool ksos_thread_start(ksos_thread self) {
 
     int stat = pthread_create(&self->pth_, NULL, init_thread_pthreads, self);
     if (stat != 0) {
-        KS_THROW(kst_OSError, "Failed to start thread: %s", strerror(stat));
+        KS_THROW_ERRNO(stat, "Failed to start thread");
         return false;
     }
 
@@ -161,7 +161,7 @@ bool ksos_thread_join(ksos_thread self) {
     int stat = pthread_join(self->pth_, NULL);
     KS_GIL_LOCK();
     if (stat != 0) {
-        KS_THROW(kst_OSError, "Failed to join thread: %s", strerror(stat));
+        KS_THROW_ERRNO(stat, "Failed to join thread");
         return false;
     }
     self->is_active = false;
@@ -199,11 +199,13 @@ static KS_TFUNC(T, new) {
     ks_type tp;
     kso of;
     kso args = (kso)_ksv_emptytuple;
-    KS_ARGS("tp:* of ?args", &tp, kst_type, &of, &args);
+    ks_str name = NULL;
+    KS_ARGS("tp:* of ?args ?name:*", &tp, kst_type, &of, &args, &name, kst_str);
+    //if (name == KSO_NONE) name = NULL;
 
     ks_tuple rr = ks_tuple_newi(args);
     if (!rr) return NULL;
-    ksos_thread res = ksos_thread_new(tp, NULL, of, rr);
+    ksos_thread res = ksos_thread_new(tp, name, of, rr);
     KS_DECREF(rr);
 
     return (kso)res;
@@ -229,6 +231,12 @@ static KS_TFUNC(T, join) {
 
     return KSO_NONE;
 }
+static KS_TFUNC(T, isalive) {
+    ksos_thread self;
+    KS_ARGS("self:*", &self, ksost_thread);
+
+    return KSO_BOOL(self->is_active);
+}
 
 /* Export */
 
@@ -237,12 +245,13 @@ ks_type ksost_thread = &tp;
 
 void _ksi_os_thread() {
     _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, "Thread of execution, which is a single strand of execution happening (possibly) at the same time as other threads\n\n    Although these are typically wrapped by OS-level threads, there is also the Global Interpreter Lock (GIL) which prevents bytecodes from executing at the same time", KS_IKV(
-        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of, args=none)", "")},
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of, args=none, name=none)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
 
         {"start",                  ksf_wrap(T_start_, T_NAME ".start(self)", "Start executing a thread")},
         {"join",                   ksf_wrap(T_join_, T_NAME ".join(self)", "Wait for a thread to finish executing")},
+        {"isalive",                ksf_wrap(T_isalive_, T_NAME ".isalive(self)", "Poll whether the thread is alive")},
     ));
 
     ks_str tmp = ks_str_new(-1, "main");
@@ -257,7 +266,7 @@ void _ksi_os_thread() {
     /* Create a per-thread keyed variable */
     int stat = pthread_key_create(&this_thread_key, NULL);
     if (stat != 0) {
-        KS_THROW(kst_Error, "Failed to create pthread key: %s", strerror(stat));
+        KS_THROW_ERRNO(stat, "Failed to create pthread key");
         kso_exit_if_err();
     }
 

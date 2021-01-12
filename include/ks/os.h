@@ -99,7 +99,7 @@ typedef struct ksos_path_s {
 
 }* ksos_path;
 
-/* 'os.path.walk' - Iterator over OS paths
+/* 'os.walk' - Iterator over OS paths
  *
  */
 typedef struct ksos_walk_s {
@@ -295,9 +295,16 @@ typedef struct ksos_proc_s {
 KS_API ksos_stat ksos_stat_wrap(struct ksos_cstat val);
 
 
-
-
 /** Misc. Utilities **/
+
+
+/* Return a string reprsenting an errno value, or NULL if it was invalid
+ */
+KS_API ks_str ksos_strerr(int errno_val);
+
+/* Return a string representing the mode for an open file descriptor
+ */
+KS_API ks_str ksos_fdmode(int fd);
 
 /* Attempt to retrieve an environment variable, and return 'defa' if none was found
  * If 'defa==NULL', then an exception will be thrown if the key was not found
@@ -305,6 +312,11 @@ KS_API ksos_stat ksos_stat_wrap(struct ksos_cstat val);
  */
 KS_API kso ksos_getenv(ks_str key, kso defa);
 KS_API bool ksos_setenv(ks_str key, ks_str val);
+
+/* Attempt to delete an environment variable
+ */
+KS_API bool ksos_delenv(ks_str key);
+
 
 /* Attempt to retrieve the current working directory, and return NULL if an error
  * has occurred. In the event that the c command getcwd() is not available,
@@ -390,6 +402,11 @@ KS_API ksos_path ksos_path_join(kso* paths, int len);
  */
 KS_API ksos_path ksos_path_parent(kso self);
 
+/* Returns the last element of the path
+ */
+KS_API ks_str ksos_path_last(kso self);
+
+
 
 /** Process **/
 
@@ -397,17 +414,25 @@ KS_API ksos_path ksos_path_parent(kso self);
  */
 KS_API int ksos_exec(ks_str cmd);
 
-/* Forks current process - returns 0 if parent, pid > 0 if else
+/* Forks current process - returns 0 if parent, pid > 0 if else, or < 0 if
+ *   there was an error
  */
 KS_API int ksos_fork();
 
-/* Creates a pipe as according to the cstd
+/* Creates a pipe, and sets '*fdr' to the read-end of the pipe,
+ *   and '*fdw' as the write-end of the pipe
  */
-KS_API int ksos_pipe(int* fd);
+KS_API bool ksos_pipe(int* fdr, int* fdw);
 
-/* Duplicates an fd according to the cstd
+/* Duplicates a file descriptor 'fd'
+ *
+ * If 'to' < 0, then a new file descriptor is created and returned (i.e. lowest unused one)
+ * Otherwise, it acts like the `dup2` function and first closes `to`, and then assigns that
+ *   file descriptor to be the duplicate
+ * 
  */
-KS_API int ksos_dup2(int oldfd, int newfd);
+KS_API int ksos_dup(int fd, int to);
+
 
 /* Wait for a pid, and calculate the status
  */
@@ -419,8 +444,7 @@ KS_API bool ksos_isalive(int pid, bool* out);
 
 /* Attempt to send a signal to a pid
  */
-KS_API bool ksos_kill(int pid, int sig);
-
+KS_API bool ksos_signal(int pid, int sig);
 
 /** Threading **/
 

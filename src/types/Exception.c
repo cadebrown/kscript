@@ -118,4 +118,8 @@ void _ksi_Exception() {
          
     DO_SUBTYPES(INIT)
 
+
+    /* For errno */
+    ks_type_set(kst_OSError, _ksva__template, (kso)ks_tuple_new(1, (kso[]){ KSO_NONE }));
+
 }

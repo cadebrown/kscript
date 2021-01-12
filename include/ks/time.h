@@ -64,10 +64,32 @@
 
 /* Types */
 
-/* 'time.struct' - represents a calender date
- * All values here are 0-indexed
+
+/* time.Delta - represents a difference between times
+ *
  */
-typedef struct kstime_struct_s {
+typedef struct kstime_Delta_s {
+    KSO_BASE
+
+    /* Number of days elapsed (additive)
+     */
+    ks_cint days;
+
+    /* Number of seconds elapsed (additive)
+     */
+    ks_cint secs;
+
+    /* Number of nano-seconds elapsed (additive)
+     */
+    ks_cint nanos;
+
+}* kstime_Delta;
+
+
+/* time.DateTime - represents a broken-down date, 
+ *
+ */
+typedef struct kstime_DateTime_s {
     KSO_BASE
 
     /* Year (absolute)
@@ -100,6 +122,15 @@ typedef struct kstime_struct_s {
      */
     ks_cint sec;
 
+    /* Nano-second within the second
+     * In range(10 ** 9)
+     */
+    ks_cint nano;
+
+    /* Timezone name (or NULL if not known) */
+    ks_str zone;
+
+
     /* Day within the week
      * By convention, Monday==0
      * For most calendar systems, in range(7)
@@ -115,52 +146,59 @@ typedef struct kstime_struct_s {
      */
     bool is_dst;
 
-    /* Timezone name (or NULL if not known) */
-    ks_str zone;
 
     /* Seconds off of UTC (east) */
     ks_cint off_gmt;
 
-}* kstime_struct;
+}* kstime_DateTime;
 
 
 /* Functions */
 
-/** Timers/clocks **/
+/* Utility function to return the number of nano-seconds in a TSE
+ */
+KS_API ks_cint kstime_extrananos(ks_cfloat tse);
 
 /* Return the time since epoch, in seconds
  */
 KS_API ks_cfloat kstime_time();
 
-
-/** Time Structure Conversions **/
-
-
-/* Wrap a C-style time structure
+/* Return the time since process started, in seconds
  */
-KS_API kstime_struct kstime_wrap(struct tm tc);
+KS_API ks_cfloat kstime_clock();
 
-/* Unwrap and get back a C-style time structure
+/* Wrap a C-style datetime into a 'time.DateTime'
  */
-KS_API struct tm kstime_unwrap(kstime_struct ts);
+KS_API kstime_DateTime kstime_wrap(struct tm val, ks_cint nanos);
+KS_API kstime_DateTime kstime_wrapt(ks_type tp, struct tm val, ks_cint nanos);
 
-/* Convert a time-since-epoch value into a UTC time-struct using 'gmtime()'
+/* Unwrap a 'time.DateTime' to a C-style datetime
  */
-KS_API kstime_struct kstime_struct_new_utc(ks_cfloat tse);
+KS_API struct tm kstime_unwrap(kstime_DateTime self);
 
-/* Convert a time-since-epoch value into a localtime time-struct using 'localtime()'
+/* Get the time-since-epoch represented by a datetime
  */
-KS_API kstime_struct kstime_struct_new_local(ks_cfloat tse);
+KS_API ks_cfloat kstime_DateTime_tse(kstime_DateTime self);
 
 
+/* Convert a time-since-epoch value into a UTC time structure
+ */
+KS_API kstime_DateTime kstime_new_utc(ks_cfloat tse);
+
+/* Convert a time-since-epoch value into a local time
+ */
+KS_API kstime_DateTime kstime_new_local(ks_cfloat tse);
+
+/* Convert a time-since-epoch value into a time with the given timezone
+ */
+KS_API kstime_DateTime kstime_new_tz(ks_cfloat tse, kso tz);
 
 
-/** String <-> Time **/
 
 /** Specific format strings **/
 #define KSTIME_FMT_ISO8601 "%FT%T%z"
 
-/* Apply string formatting to a time-struct, using similar semantics to 'strftime()'
+/* Return a formatted time string, using similar semantics to 'strftime()'
  * Format Codes:
  *   %y: Year modulo 100 (00...99)
  *   %Y: Year with century, in format '%-04i' (0001...9999)
@@ -190,23 +228,19 @@ KS_API kstime_struct kstime_struct_new_local(ks_cfloat tse);
  *   %X: Locale's default time representation
  *   %%: Literal '%'
  */
-KS_API ks_str kstime_fmt(const char* fmt, kstime_struct ts);
+KS_API ks_str kstime_format(const char* fmt, kstime_DateTime ts);
 
-/* Fallback formatting. Most of the time, the same time as '%c', but '%c' is more generic.
- * This function is generally not recommended
+/* Parse a string, according to a format string (see 'kstime_format()' for format)
  */
-KS_API ks_str kstime_asc(kstime_struct ts);
+KS_API kstime_DateTime kstime_parse(const char* fmt, const char* str);
 
-/* Parse a string, according to a format string (see 'kstime_fmt()' for format)
- */
-KS_API kstime_struct kstime_parse(const char* fmt, const char* str);
 
 
 /* Exported */
 
 KS_API_DATA ks_type
 
-    kstimet_struct
+    kstimet_DateTime
 
 ;
 

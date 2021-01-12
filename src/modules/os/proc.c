@@ -11,60 +11,6 @@
 
 /* C-API */
 
-bool ksos_waitpid(int pid, int* status) {
-#ifdef KS_HAVE_waitpid
-    if (waitpid(pid, status, 0) < 0) {
-        KS_THROW(kst_OSError, "Failed to waitpid: error using waitpid(%i)", pid);
-        return false;
-    }
-
-    return true;
-#else
-    KS_THROW(kst_OSError, "Failed to waitpid: platform did not provide a 'waitpid()' function");
-    return false;
-#endif
-}
-
-bool ksos_kill(int pid, int sig) {
-#ifdef KS_HAVE_kill
-    int res = kill(pid, sig);
-    if (res < 0) {
-        KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", pid, sig, strerror(errno));
-        return false;
-    }
-
-    return true;
-#else
-    KS_THROW(kst_OSError, "Failed to kill: platform did not provide a 'kill()' function");
-    return false;
-#endif
-}
-
-bool ksos_isalive(int pid, bool* out) {
-#ifdef KS_HAVE_kill
-    // attempt send empty signal
-    int res = kill(pid, 0);
-
-    // if res < 0 and ESRCH, pid has no process. Otherwise, print error.a
-    if (res < 0) {
-        if (errno == ESRCH) {
-            *out = false;
-            return true;
-        }
-        else {
-            KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", pid, 0, strerror(errno));
-            return false;
-        }
-    // if res >= 0, pid has a process
-    } else {
-        *out = true;
-        return true;
-    }
-#else
-    KS_THROW(kst_OSError, "Failed to isalive(%i): platform did not provide a 'kill()' function", pid);
-    return false;
-#endif
-}
 
 /* Type Functions */
 
@@ -122,50 +68,54 @@ static KS_TFUNC(T, init) {
 	return NULL;
 #else
     /* Create pipes */
-    int pin[2];
-    int pout[2];
-    int perr[2];
-    if (ksos_pipe(pin) < 0 || ksos_pipe(pout) || ksos_pipe(perr)) {
-        if (pin[0] >= 0) close(pin[0]);
-        if (pin[1] >= 0) close(pin[1]);
-        if (pout[0] >= 0) close(pout[0]);
-        if (pout[1] >= 0) close(pout[1]);
-        if (perr[0] >= 0) close(perr[0]);
-        if (perr[1] >= 0) close(perr[1]);
+    int pin[2] = { -1, -1 };
+    int pout[2] = { -1, -1 };
+    int perr[2] = { -1, -1 };
+
+    /* Close all created so far */
+    #define CLOSEALL() do { \
+        if (pin[0] >= 0) close(pin[0]); \
+        if (pin[1] >= 0) close(pin[1]); \
+        if (pout[0] >= 0) close(pout[0]); \
+        if (pout[1] >= 0) close(pout[1]); \
+        if (perr[0] >= 0) close(perr[0]); \
+        if (perr[1] >= 0) close(perr[1]); \
+    } while (0)
+
+
+    /* Attempt to open 3 new pipes (TODO: allow specifying which) */
+    if (!ksos_pipe(&pin[0], &pin[1]) < 0 || !ksos_pipe(&pout[0], &pout[1]) || !ksos_pipe(&perr[0], &perr[1])) {
+        CLOSEALL();
         ks_free(cargv);
         return NULL;
     }
 
+    /* Fork the process, so we can communicate */
     int pid;
     if ((pid = ksos_fork()) < 0) {
-        if (pin[0] >= 0) close(pin[0]);
-        if (pin[1] >= 0) close(pin[1]);
-        if (pout[0] >= 0) close(pout[0]);
-        if (pout[1] >= 0) close(pout[1]);
-        if (perr[0] >= 0) close(perr[0]);
-        if (perr[1] >= 0) close(perr[1]);
+        CLOSEALL();
         ks_free(cargv);
         return NULL;
     }
 
     if (pid == 0) {
         /* We are the child process */
-        dup2(pin[0], STDIN_FILENO);
-        dup2(pout[1], STDOUT_FILENO);
-        dup2(perr[1], STDERR_FILENO);
 
-        close(pin[0]);
-        close(pin[1]);
-        close(pout[0]);
-        close(pout[1]);
-        close(perr[0]);
-        close(perr[1]);
+        /* Duplicate those existing pipes we created before we forked, so the child process writes to those */
+        if (!ksos_dup(pin[0], STDIN_FILENO) || !ksos_dup(pout[1], STDOUT_FILENO) || !ksos_dup(perr[1], STDERR_FILENO)) {
+            CLOSEALL();
+            return NULL;
+        }
 
+        /* Close everything, since we are done and now the stdin/stdout/stderr are set up */
+        CLOSEALL();
+
+        /* Execute the process */
         int rc = execvp(cargv[0], cargv);
-        exit(1);
+        exit(0);
     }
 
-    /* Close unused pipes */
+    /* Close just the unused pipes */
     close(pin[0]);
     close(pout[1]);
     close(perr[1]);
@@ -233,16 +183,10 @@ static KS_TFUNC(T, isalive) {
     ksos_proc self;
     KS_ARGS("self:*", &self, ksost_proc);
 
-    if (!ksos_kill(self->pid, 0)) {
-        if (errno == ESRCH) {
-            return KSO_FALSE;
-        } else {
-            KS_THROW(kst_OSError, "Failed to kill(%i, %i): %s", self->pid, 0, strerror(errno));
-            return NULL;
-        }
-    } else {
-        return KSO_TRUE;
-    }
+    bool g;
+    if (!ksos_isalive(self->pid, &g)) return NULL;
+
+    return KSO_BOOL(g);
 }
 
 static KS_TFUNC(T, signal) {
@@ -250,7 +194,7 @@ static KS_TFUNC(T, signal) {
     ks_cint sig;
     KS_ARGS("self:* signal:cint", &self, ksost_proc, &sig);
 
-    if (!ksos_kill(self->pid, (int) sig)) return NULL;
+    if (!ksos_signal(self->pid, sig)) return NULL;
 
     return KSO_NONE;
 }
@@ -260,9 +204,9 @@ static KS_TFUNC(T, kill) {
     KS_ARGS("self:*", &self, ksost_proc);
 
 #ifdef SIGKILL
-	if (!ksos_kill(self->pid, SIGKILL)) return NULL;
+	if (!ksos_signal(self->pid, SIGKILL)) return NULL;
 #else
-	if (!ksos_kill(self->pid, 9)) return NULL;
+	if (!ksos_signal(self->pid, 9)) return NULL;
 #endif
 
     return KSO_NONE;
@@ -284,7 +228,7 @@ void _ksi_os_proc() {
 
         {"join",                   ksf_wrap(T_join_, T_NAME ".join(self)", "Waits for the process to finish executing and returns the return code")},
         {"isalive",                ksf_wrap(T_isalive_, T_NAME ".isalive(self)", "Returns True if process is still running, False if dead")},
-        {"signal",                 ksf_wrap(T_signal_, T_NAME ".signal(self, code)", "Sends a signal to process and returns the return code")},
-        {"kill",                   ksf_wrap(T_kill_, T_NAME ".kill(self)", "Sends -9 to the process and returns the return code")},
+        {"signal",                 ksf_wrap(T_signal_, T_NAME ".signal(self, code)", "Sends a signal to process")},
+        {"kill",                   ksf_wrap(T_kill_, T_NAME ".kill(self)", "Attempts to kill the process (by sending 'SIGKILL', typically 9) to the process")},
     ));
 }

@@ -34,11 +34,11 @@ static KS_TFUNC(T, free) {
 
 static KS_TFUNC(T, new) {
     ks_type tp;
-    kso of;
+    kso path;
     bool topdown = false;
-    KS_ARGS("tp:* of ?topdown:bool", &tp, kst_type, &of, &topdown);
+    KS_ARGS("tp:* path ?topdown:bool", &tp, kst_type, &path, &topdown);
 
-    ksos_path p = ksos_path_new_o(of);
+    ksos_path p = ksos_path_new_o(path);
     if (!p) KS_DECREF(p);
 
     ks_list dirs = NULL, files = NULL;
@@ -163,7 +163,7 @@ void _ksi_os_walk() {
 
     _ksinit(ksost_walk, kst_object, T_NAME, sizeof(struct ksos_walk_s), -1, "Recursive iterator through directory entries", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
-        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, src='', topdown=false)", "")},
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, path='.', topdown=false)", "")},
        // {"__repr",                 ksf_wrap(TW_repr_, TW_NAME ".__repr(self)", "")},
 
         {"__next",                 ksf_wrap(T_next_, T_NAME ".__next(self)", "")},
