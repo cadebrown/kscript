@@ -167,6 +167,10 @@ KS_API ks_cfloat kstime_time();
  */
 KS_API ks_cfloat kstime_clock();
 
+/* Sleep for a given amount of time, in seconds
+ */
+KS_API void kstime_sleep(ks_cfloat dur);
+
 /* Wrap a C-style datetime into a 'time.DateTime'
  */
 KS_API kstime_DateTime kstime_wrap(struct tm val, ks_cint nanos);
