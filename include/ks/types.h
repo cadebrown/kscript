@@ -406,10 +406,8 @@ struct ks_regex_nfa {
     };
 };
 
-/* 'regex' - regular expression pattern, which can be used to match strings
+/* regex - regular expression pattern, which can be used to match strings
  *
- * 
- * 
  */
 typedef struct ks_regex_s {
     KSO_BASE
@@ -427,6 +425,29 @@ typedef struct ks_regex_s {
     int s0, sf;
 
 }* ks_regex;
+
+/* regex.match - represents a match found while searching for a regex
+ *
+ */
+typedef struct ks_regex_match_s {
+    KSO_BASE
+
+    /* Pattern being matched */
+    ks_regex pat;
+
+    /* Source that it was matched within */
+    ks_str src;
+
+    /*  */
+    struct ks_regex_match_group_s {
+
+        /* Start (inclusive) and stop (exclusive) position in bytes in 'src' */
+        int start, stop;
+
+    }* groups;
+
+}* ks_regex_match;
+
 
 /* NFA simulator (level 0)
  *
@@ -447,8 +468,10 @@ typedef struct {
     /* Ping-Pong buffer of the next states */
     bool* next;
 
-} ks_regex_sim0;
+    /* Current match */
+    ks_regex_match match;
 
+} ks_regex_sim0;
 
 
 /* 'range' - (immutable) integral range

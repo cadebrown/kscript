@@ -785,6 +785,22 @@ static KS_TFUNC(T, trunc) {
     return KSO_NONE;
 }
 
+
+static KS_TFUNC(T, printf) {
+    ksio_BaseIO self;
+    ks_str fmt;
+    int nargs;
+    kso* args;
+    KS_ARGS("self:* fmt:* *args", &self, ksiot_BaseIO, &fmt, kst_str, &nargs, &args);
+
+    if (!ks_fmt2(self, fmt->data, nargs, args)) {
+        return NULL;
+    }
+
+    return KSO_NONE;
+}
+
+
 /** Iterable type **/
 
 typedef struct _iter_s {
@@ -917,5 +933,7 @@ void _ksi_io_BaseIO() {
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},
 
+
+        {"printf",                 ksf_wrap(T_printf_, T_NAME ".printf(self, fmt, *args)", "Prints a formatted message to the stream")},
     ));
 }

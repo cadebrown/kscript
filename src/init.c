@@ -222,6 +222,7 @@ _KS_DO_SPEC(_KSACT)
         {"open", (kso)ksf_open},
         
         {"print", (kso)ksf_print},
+        {"printf", (kso)ksf_printf},
         {"pow", (kso)ksf_pow},
 
         {"hash", (kso)ksf_hash},

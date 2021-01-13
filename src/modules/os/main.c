@@ -11,6 +11,7 @@
 /* C-API */
 
 ks_str ksos_strerr(int errno_val) {
+    /* TODO: use strerror_r? Posts online show there is a GNU and POSIX version */
     char* msg_c = strerror(errno_val);
 
     return ks_str_new(-1, msg_c);
@@ -33,9 +34,6 @@ ks_str ksos_fdmode(int fd) {
         return ks_fmt("rb");
     }
 }
-
-
-
 
 kso ksos_getenv(ks_str name, kso defa) {
 #ifdef KS_HAVE_getenv
@@ -83,7 +81,6 @@ bool ksos_setenv(ks_str name, ks_str val) {
 #endif
 }
 
-
 bool ksos_delenv(ks_str name) {
 #if defined(KS_HAVE_setenv)
     if (unsetenv(name->data) != 0) {
@@ -97,7 +94,6 @@ bool ksos_delenv(ks_str name) {
     return false;
 #endif
 }
-
 
 ksos_path ksos_getcwd() {
 #ifdef KS_HAVE_getcwd
@@ -860,7 +856,7 @@ ks_module _ksi_os() {
 
 
         {"exec",                   ksf_wrap(M_exec_, M_NAME ".exec(cmd)", "Attempts to execute a command as if typed in console - returns exit code")},
-        {"fork",                   ksf_wrap(M_fork_, M_NAME ".fork()", "Creates a new process by duplicating the calling process - returns 0 in the child, PID > 0 in the parent, and -1 if there was an error")},
+        {"fork",                   ksf_wrap(M_fork_, M_NAME ".fork()", "Creates a new process by duplicating the calling process - returns 0 in the child, PID > 0 in the parent")},
         {"pipe",                   ksf_wrap(M_pipe_, M_NAME ".pipe()", "Create a new pipe, and return a tuple of '(readio, writeio)' for the readable and writable ends respectively")},
         {"dup",                    ksf_wrap(M_dup_, M_NAME ".dup(fd, to=-1)", "Duplicate a file descriptor 'fd'\n\n    If 'to < 0', then create a new file descriptor and return it. Otherwise, replace 'to' with a copy of 'fd'")},
     

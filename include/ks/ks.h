@@ -374,6 +374,7 @@ KS_API_DATA ks_func
     ksf_exit,
 
     ksf_print,
+    ksf_printf,
 
     ksf_hash,
     ksf_abs,
@@ -780,6 +781,12 @@ KS_API bool kso_is_callable(kso obj);
 KS_API ks_str ks_fmt(const char* fmt, ...);
 KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
 
+/* Formatting with purely kscript objects --
+ *
+ * TODO: document format specifiers
+ */
+KS_API bool ks_fmt2(ksio_BaseIO bio, const char* fmt, int nargs, kso* args);
+
 
 /*** Type Functions ***/
 
@@ -888,7 +895,6 @@ KS_API bool ks_str_eq_c(ks_str L, const char* data, ks_ssize_t len_b);
 KS_API ks_ssize_t ks_str_find(ks_str self, ks_str substr, ks_ssize_t min_c, ks_ssize_t max_c, ks_ssize_t* idx_b);
 
 
-
 /* Convert between strings of length 1 and ordinal codepoints
  */
 KS_API ks_str ks_str_chr(ks_ucp ord);
@@ -898,6 +904,40 @@ KS_API ks_ucp ks_str_ord(ks_str chr);
  */
 KS_API ks_list ks_str_split(ks_str self, ks_str by);
 KS_API ks_list ks_str_split_c(const char* self, const char* by);
+KS_API ks_list ks_str_split_any(ks_str self, int nby, ks_str* by);
+
+/* Convert a string to all upper-case, using 'ucd'
+ */
+KS_API ks_str ks_str_upper(ks_str self);
+
+/* Convert a string to all lower-case, using 'ucd'
+ */
+KS_API ks_str ks_str_lower(ks_str self);
+
+/* Calculate whether all characters are space
+ */
+KS_API bool ks_str_isspace(ks_str self);
+
+/* Calculate whether all characters are printable
+ */
+KS_API bool ks_str_isprint(ks_str self);
+
+/* Calculate whether all characters are numeric
+ */
+KS_API bool ks_str_isnum(ks_str self);
+
+/* Calculate whether all characters are letters
+ */
+KS_API bool ks_str_isalpha(ks_str self);
+
+/* Calculate whether all characters are letters or numeric
+ */
+KS_API bool ks_str_isalnum(ks_str self);
+
+/* Calculate whether 'self' is a valid identifier
+ */
+KS_API bool ks_str_isident(ks_str self);
+
 
 
 /* Create a new 'bytes'
@@ -917,6 +957,7 @@ KS_API ks_bytes ks_bytes_newo(ks_type tp, kso obj);
 /* Create a new regular-expression from a descriptor string
  */
 KS_API ks_regex ks_regex_new(ks_str expr);
+
 
 /* Initialize a 'sim0'
  */
@@ -947,7 +988,7 @@ KS_API bool ks_regex_exact(ks_regex self, ks_str str);
 
 /* Returns whether the regex matched anywhere
  */
-KS_API bool ksre_Regex_matches(ks_regex self, ks_str str);
+KS_API bool ks_regex_matches(ks_regex self, ks_str str);
 
 
 

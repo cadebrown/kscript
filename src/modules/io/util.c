@@ -654,6 +654,429 @@ bool ksio_fmtv(ksio_BaseIO self, const char* fmt, va_list ap) {
     return true;
 }
 
+bool ks_fmt2(ksio_BaseIO bio, const char* fmt, int nargs, kso* args) {
+
+    int fmt_len = strlen(fmt);
+    int p = 0, l = 0;
+    int ai = 0;
+    kso a;
+    while (p < fmt_len) {
+        l = p;
+        while (p < fmt_len && fmt[p] != '%') {
+            p++;
+        }
+        ksio_addbuf(bio, p - l, fmt + l);
+
+        if (fmt[p] == '%') {
+            /* Parse printf-style formatting: 
+             * %[+- 0]*<width>?(\.<prec>)?<spec>
+             */
+            char c = fmt[++p];
+
+            /* '+', '-', ' ', and '0' flags respectively */
+            bool fP = false, fM = false, fS = false, fZ = false;
+            while (true) {
+                if (c == '+') {
+                    fP = true;
+                } else if (c == '-') {
+                    fM = true;
+                } else if (c == ' ') {
+                    fS = true;
+                } else if (c == '0') {
+                    fZ = true;
+                } else break;
+
+                /* Advance character */
+                c = fmt[++p];
+            }
+
+            /* Parse width and precision */
+            int width = -1, prec = -1;
+
+            /* <width> */
+            if (c == '*') {
+                if (ai >= nargs) {
+                    KS_THROW(kst_Error, "More format specifiers than arguments");
+                    return false;
+                }
+                ks_cint cv;
+                if (!kso_get_ci(args[ai++], &cv)) {
+                    return false;
+                }
+                width = cv;
+                c = fmt[++p];
+            } else if (c >= '0' && c <= '9') {
+                width = 0;
+                while (c >= '0' && c <= '9') {
+                    width = 10 * width + (c - '0');
+                    c = fmt[++p];
+                }
+            }
+
+            /* .<prec> */
+            if (c == '.') {
+                c = fmt[++p];
+                if (c == '*') {
+                    if (ai >= nargs) {
+                        KS_THROW(kst_Error, "More format specifiers than arguments");
+                        return false;
+                    }
+
+                    ks_cint cv;
+                    if (!kso_get_ci(args[ai++], &cv)) {
+                        return false;
+                    }
+                    prec = cv;
+                    c = fmt[++p];
+                } else if (c >= '0' && c <= '9') {
+                    prec = 0;
+                    while (c >= '0' && c <= '9') {
+                        prec = 10 * prec + (c - '0');
+                        c = fmt[++p];
+                    }
+                }
+            }
+
+            if (c == '%') {
+                /* literal '%' */
+                c = fmt[++p];
+                ksio_addbuf(bio, 1, "%");
+            } else {
+                /* Actually have arguments */
+                if (ai >= nargs) {
+                    KS_THROW(kst_Error, "More format specifiers than arguments");
+                    return false;
+                }
+                a = args[ai++];
+
+                if (c == 's' || c == 'S') {
+                    /* String conversion */
+                    if (!ksio_add(bio, "%S", a)) return false;
+                } else if (c == 'r' || c == 'R') {
+                    /* Repr conversion */
+                    if (!ksio_add(bio, "%R", a)) return false;
+                } else if (c == 't' || c == 'T') {
+                    /* Type conversion */
+                    if (!ksio_add(bio, "%T", a)) return false;
+                } else if (c == 'i' || c == 'I' || c == 'd' || c == 'D') {
+                    /* Integer conversion */
+                    ks_int ia = kso_int(a);
+                    if (!ia) {
+                        return false;
+                    }
+
+                    char* tmp = ks_malloc(mpz_sizeinbase(ia->val, 10) + 4);
+                    mpz_get_str(tmp, 10, ia->val);
+                    int rsz = strlen(tmp), i;
+
+                    /* Calculate number of spaces needed */
+                    int nsp = 0;
+                    if (width >= 0) {
+                        nsp = width - rsz;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    bool need_plus = fP && tmp[0] != '-';
+                    
+                    /* If '+' and actual sign is not given, then add it manually */
+                    if (need_plus) {
+                        nsp--;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    if (!fM) {
+                        /* Right-justified */
+                        if (fZ && need_plus) ksio_addbuf(bio, 1, "+");
+
+                        /* Fill beforehand */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, fZ ? "0" : " ");
+                        }
+
+                        if (!fZ && need_plus) ksio_addbuf(bio, 1, "+");
+                    } else {
+                        if (need_plus) ksio_addbuf(bio, 1, "+");
+                    }
+                    
+                    //if (need_plus) 
+
+                    /* Add actual digits and seperator */
+                    ksio_addbuf(bio, rsz, tmp);
+
+                    if (fM) {
+                        /* Left justify, so spaces go after */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, " ");
+                        }
+                    }
+
+                    ks_free(tmp);
+                    KS_DECREF(ia);
+                } else if (c == 'x' || c == 'X') {
+                    /* Integer conversion */
+                    ks_int ia = kso_int(a);
+                    if (!ia) {
+                        return false;
+                    }
+                    int base = 16;
+                    char* tmp = ks_malloc(mpz_sizeinbase(ia->val, base) + 4);
+                    mpz_get_str(tmp, 10, ia->val);
+                    int rsz = strlen(tmp), i;
+
+                    /* Calculate number of spaces needed */
+                    int nsp = 0;
+                    if (width >= 0) {
+                        nsp = width - rsz;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    bool need_plus = fP && tmp[0] != '-';
+                    
+                    /* If '+' and actual sign is not given, then add it manually */
+                    if (need_plus) {
+                        nsp--;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    if (!fM) {
+                        /* Right-justified */
+                        if (fZ && need_plus) ksio_addbuf(bio, 1, "+");
+
+                        /* Fill beforehand */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, fZ ? "0" : " ");
+                        }
+
+                        if (!fZ && need_plus) ksio_addbuf(bio, 1, "+");
+                    } else {
+                        if (need_plus) ksio_addbuf(bio, 1, "+");
+                    }
+                    
+                    /* Add actual digits and seperator */
+                    ksio_addbuf(bio, rsz, tmp);
+
+                    if (fM) {
+                        /* Left justify, so spaces go after */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, " ");
+                        }
+                    }
+
+                    ks_free(tmp);
+                    KS_DECREF(ia);
+                } else if (c == 'b' || c == 'B') {
+                    /* Integer conversion */
+                    ks_int ia = kso_int(a);
+                    if (!ia) {
+                        return false;
+                    }
+                    int base = 2;
+                    char* tmp = ks_malloc(mpz_sizeinbase(ia->val, base) + 4);
+                    mpz_get_str(tmp, base, ia->val);
+                    int rsz = strlen(tmp), i;
+
+                    /* Calculate number of spaces needed */
+                    int nsp = 0;
+                    if (width >= 0) {
+                        nsp = width - rsz;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    bool need_plus = fP && tmp[0] != '-';
+                    
+                    /* If '+' and actual sign is not given, then add it manually */
+                    if (need_plus) {
+                        nsp--;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    if (!fM) {
+                        /* Right-justified */
+                        if (fZ && need_plus) ksio_addbuf(bio, 1, "+");
+
+                        /* Fill beforehand */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, fZ ? "0" : " ");
+                        }
+
+                        if (!fZ && need_plus) ksio_addbuf(bio, 1, "+");
+                    } else {
+                        if (need_plus) ksio_addbuf(bio, 1, "+");
+                    }
+                    
+                    /* Add actual digits and seperator */
+                    ksio_addbuf(bio, rsz, tmp);
+
+                    if (fM) {
+                        /* Left justify, so spaces go after */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, " ");
+                        }
+                    }
+
+                    ks_free(tmp);
+                    KS_DECREF(ia);
+                } else if (c == 'o' || c == 'O') {
+                    /* Integer conversion */
+                    ks_int ia = kso_int(a);
+                    if (!ia) {
+                        return NULL;
+                    }
+                    int base = 8;
+                    char* tmp = ks_malloc(mpz_sizeinbase(ia->val, base) + 4);
+
+                    mpz_get_str(tmp, base, ia->val);
+                    int rsz = strlen(tmp), i;
+
+                    /* Calculate number of spaces needed */
+                    int nsp = 0;
+                    if (width >= 0) {
+                        nsp = width - rsz;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    bool need_plus = fP && tmp[0] != '-';
+                    
+                    /* If '+' and actual sign is not given, then add it manually */
+                    if (need_plus) {
+                        nsp--;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    if (!fM) {
+                        /* Right-justified */
+                        if (fZ && need_plus) ksio_addbuf(bio, 1, "+");
+
+                        /* Fill beforehand */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, fZ ? "0" : " ");
+                        }
+
+                        if (!fZ && need_plus) ksio_addbuf(bio, 1, "+");
+                    } else {
+                        if (need_plus) ksio_addbuf(bio, 1, "+");
+                    }
+                    
+                    /* Add actual digits and seperator */
+                    ksio_addbuf(bio, rsz, tmp);
+
+                    if (fM) {
+                        /* Left justify, so spaces go after */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, " ");
+                        }
+                    }
+                    ks_free(tmp);
+                    KS_DECREF(ia);
+
+                } else if (c == 'f' || c == 'F') {
+                    /* Integer conversion */
+                    ks_cfloat cf;
+                    if (!kso_get_cf(a, &cf)) {
+                        return NULL;
+                    }
+
+                    /* Number of zeros afterwards */
+                    int nza = 0;
+
+                    /* Number of spaces padding */
+                    int nsp = 0;
+                    int i;
+
+                    bool isreg = ks_cfloat_isreg(cf);
+
+                    char tmpb[256];
+                    char* tmp = tmpb;
+
+                    int rsz = ks_cfloat_to_str(tmpb, sizeof(tmpb) - 2, cf, false, prec < 0 ? KS_CFLOAT_DIG : prec, 10);
+                    if (rsz > sizeof(tmpb) - 2) {
+                        /* Dynamically allocate */
+                        tmp = ks_malloc(rsz + 1);
+                        int rrsz = ks_cfloat_to_str(tmp, rsz, cf, false, prec < 0 ? KS_CFLOAT_DIG : prec, 10);
+                        assert(rsz == rrsz);
+                    }
+
+                    /* Check if we need a specific size */
+                    if (prec >= 0 && isreg) {
+                        /* Find decimal point */
+                        int dp = rsz - 1;
+                        while (dp > 0 && tmpb[dp] != '.') {
+                            dp--;
+                        }
+
+                        /* Number of zeros afterwards */
+                        nza = prec - (rsz - dp) + 1;
+                        if (nza < 0) nza = 0;
+                    }
+
+                    /* Calculate number of spaces needed */
+                    if (width >= 0) {
+                        nsp = width - rsz - nza;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    bool need_plus = fP && tmp[0] != '-';
+                    
+                    /* If '+' and actual sign is not given, then add it manually */
+                    if (need_plus) {
+                        nsp--;
+                        if (nsp < 0) nsp = 0;
+                    }
+
+                    if (!fM) {
+                        /* Right-justified */
+                        if (fZ && need_plus) ksio_addbuf(bio, 1, "+");
+
+                        /* Fill beforehand */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, fZ && isreg ? "0" : " ");
+                        }
+
+                        if (!fZ && need_plus) ksio_addbuf(bio, 1, "+");
+                    } else {
+                        if (need_plus) ksio_addbuf(bio, 1, "+");
+                    }
+                    
+                    //if (need_plus) 
+
+                    /* Add actual digits and seperator */
+                    ksio_addbuf(bio, rsz, tmp);
+
+                    /* Fill zeros after */
+                    if (isreg) {
+                        for (i = 0; i < nza; ++i) {
+                            ksio_addbuf(bio, 1, "0");
+                        }
+                    }
+
+                    if (fM) {
+                        /* Left justify, so spaces go after */
+                        for (i = 0; i < nsp; ++i) {
+                            ksio_addbuf(bio, 1, " ");
+                        }
+                    }
+
+                    if (tmp != tmpb) ks_free(tmp);
+
+                } else {
+                    KS_THROW(kst_Error, "Unknown format specifier: '%%%c'", c);
+                    return NULL;
+                }
+                
+                c = fmt[++p];
+            }
+        }
+    }
+
+    if (ai < nargs) {
+        KS_THROW(kst_Error, "More arguments than format specifiers");
+        return NULL;
+    }
+    return true;
+}
+
+
+
 bool ksio_fmt(ksio_BaseIO self, const char* fmt, ...) {
     va_list ap;
     va_start(ap, fmt);

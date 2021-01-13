@@ -31,6 +31,7 @@ ks_func
     ksf_exit,
 
     ksf_print,
+    ksf_printf,
 
     ksf_hash,
     ksf_abs,
@@ -79,7 +80,26 @@ static KS_FUNC(print) {
     */
     return KSO_NONE;
 }
+static KS_FUNC(printf) {
+    ks_str fmt;
+    int n_args;
+    kso* args;
+    KS_ARGS("fmt:* *args", &fmt, kst_str, &n_args, &args);
 
+    /* Where to output to */
+    ksio_StringIO sio = ksio_StringIO_new();
+
+    if (!ks_fmt2(sio, (ksio_BaseIO)fmt->data, n_args, args)) {
+        KS_DECREF(sio);
+        return NULL;
+    }
+
+    ksio_BaseIO out = (ksio_BaseIO)ksos_stdout;
+    ksio_addbuf(out, sio->len_b, sio->data);
+    KS_DECREF(sio);
+
+    return KSO_NONE;
+}
 
 static KS_FUNC(hash) {
     kso obj;
@@ -273,6 +293,7 @@ void _ksi_funcs() {
     F(open, "open(src, mode='r')", "Opens a file on disk, and returns an IO object which can be read from (or written to, based on 'mode')");
 
     F(print, "print(*args)", "Prints out all the arguments to 'os.stdout', seperated by spaces, and followed by a newline")
+    F(printf, "printf(fmt, *args)", "Prints a formatted message to 'os.stdout', with no seperators or newline")
 
     F(hash, "hash(obj)", "Computes the hash of an object, which is an integer\n\n    Delegates to 'type(obj).__hash(obj)'");
     F(abs, "abs(obj)", "Computes absolute value of an object\n\n    Delegates to 'type(obj).__abs(obj)'");

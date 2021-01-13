@@ -22,8 +22,8 @@ kstime_DateTime kstime_wrapt(ks_type tp, struct tm tc, ks_cint nano) {
 
     res->year = 1900 + tc.tm_year;
 
-    res->month = tc.tm_mon;
-    res->day = tc.tm_mday - 1;
+    res->month = tc.tm_mon + 1;
+    res->day = tc.tm_mday;
 
     res->hour = tc.tm_hour;
     res->min = tc.tm_min;
@@ -32,7 +32,6 @@ kstime_DateTime kstime_wrapt(ks_type tp, struct tm tc, ks_cint nano) {
 
     res->w_day = tc.tm_wday;
     res->y_day = tc.tm_yday;
-
 
     res->is_dst = tc.tm_isdst; /* TODO: check for -1 */
 
@@ -58,13 +57,12 @@ struct tm kstime_unwrap(kstime_DateTime ts) {
 
     res.tm_year = ts->year - 1900; /* relative to 1900 */
 
-    res.tm_mon = ts->month;
+    res.tm_mon = ts->month - 1;
+    res.tm_mday = ts->day; /* 1-based */
 
     res.tm_hour = ts->hour;
     res.tm_min = ts->min;
     res.tm_sec = ts->sec;
-
-    res.tm_mday = ts->day + 1; /* 1-based */
 
     res.tm_wday = ts->w_day;
     res.tm_yday = ts->y_day;
@@ -263,7 +261,7 @@ static KS_TFUNC(T, getattr) {
     ks_str attr;
     KS_ARGS("self:* attr:*", &self, kstimet_DateTime, &attr, kst_str);
 
-    if (ks_str_eq_c(attr, "zone", 4)) {
+    if (ks_str_eq_c(attr, "tz", 4)) {
         return KS_NEWREF(self->zone ? (kso)self->zone : KSO_NONE);
     } else if (ks_str_eq_c(attr, "year", 4)) {
         return (kso)ks_int_new(self->year);
@@ -279,20 +277,16 @@ static KS_TFUNC(T, getattr) {
         return (kso)ks_int_new(self->sec);
     } else if (ks_str_eq_c(attr, "nano", 4)) {
         return (kso)ks_int_new(self->nano);
-    }else if (ks_str_eq_c(attr, "isdst", 5)) {
+    } else if (ks_str_eq_c(attr, "isdst", 5)) {
         return KSO_BOOL(self->is_dst);
+    } else if (ks_str_eq_c(attr, "tse", 3)) {
+        return (kso)ks_float_new(kstime_DateTime_tse(self));
     }
 
     KS_THROW_ATTR(self, attr);
     return NULL;
 }
 
-static KS_TFUNC(T, tse) {
-    kstime_DateTime self;
-    KS_ARGS("self:*", &self, kstimet_DateTime);
-
-    return (kso)ks_float_new(kstime_DateTime_tse(self));
-}
 
 
 /* Export */
@@ -303,12 +297,10 @@ ks_type kstimet_DateTime = &tp;
 void _ksi_time_DateTime() {
     _ksinit(kstimet_DateTime, kst_object, T_NAME, sizeof(struct kstime_DateTime_s), -1, "Structure describing a point in time", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
-        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none, tz=none)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__getattr",            ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
-
-        {"tse",                  ksf_wrap(T_tse_, T_NAME ".tse(self)", "Compute the time-since-epoch")},
 
     ));
 

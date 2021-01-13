@@ -98,12 +98,12 @@ typedef struct kstime_DateTime_s {
     ks_cint year;
     
     /* Month within the year
-     * For most calendar systems, is in the range(12)
+     * For most calendar systems, is in the range(1, 13)
      */
     ks_cint month;
 
     /* Day within the month
-     * For most calendar systems, is in range(31)
+     * For most calendar systems, is in range(1, 32)
      */
     ks_cint day;
 

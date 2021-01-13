@@ -527,8 +527,6 @@ ks_regex ks_regex_new(ks_str expr) {
 }
 
 
-
-
 /* High level interface */
 
 bool ks_regex_exact(ks_regex self, ks_str str) {
@@ -588,7 +586,6 @@ bool ks_regex_matches(ks_regex self, ks_str str) {
 }
 
 
-
 /* sim0 */
 
 
@@ -601,6 +598,8 @@ void ks_regex_sim0_init(ks_regex_sim0* sim, int n_states, struct ks_regex_nfa* s
 
     int i;
     for (i = 0; i < n_states; ++i) sim->cur[i] = sim->next[i] = false;
+
+    sim->match = NULL;
 
 }
 
@@ -766,11 +765,9 @@ static KS_TFUNC(T, new) {
     return (kso)ks_regex_newt(tp, expr);
 }
 
-
 static KS_TFUNC(T, str) {
     ks_regex self;
     KS_ARGS("self:*", &self, kst_regex);
-
 
     return (kso)ks_fmt("%T(%R)", self, self->expr);
 }

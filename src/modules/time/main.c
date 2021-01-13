@@ -118,7 +118,6 @@ ks_str kstime_format(const char* fmt, kstime_DateTime ts) {
 kstime_DateTime kstime_parse(const char* fmt, const char* str) {
 #ifdef KS_HAVE_strptime
     struct tm ctm = {};
-    ctm.tm_gmtoff = 0;
     char* endp = strptime(str, fmt, &ctm);
     if (!endp) {
         KS_THROW(kst_Error, "Failed to parse time string '%s' as format '%s'", str, fmt);
@@ -141,6 +140,12 @@ static KS_TFUNC(M, now) {
     return (kso)kstime_new_utc(kstime_time());
 }
 
+static KS_TFUNC(M, localnow) {
+    KS_ARGS("");
+
+    return (kso)kstime_new_local(kstime_time());
+}
+
 static KS_TFUNC(M, time) {
     KS_ARGS("");
 
@@ -161,12 +166,10 @@ static KS_TFUNC(M, sleep) {
     return KSO_NONE;
 }
 
-
-
 static KS_TFUNC(M, format) {
-    ks_str fstr = NULL;
     kso t = KSO_NONE;
-    KS_ARGS("?fstr:* ?t", &fstr, kst_str, &t);
+    ks_str fstr = NULL;
+    KS_ARGS("?val ?fmt:*", &t, &fstr, kst_str);
 
     if (t == KSO_NONE || kso_is_num(t)) {
         ks_cfloat tse = 0;
@@ -190,10 +193,10 @@ static KS_TFUNC(M, format) {
 }
 
 static KS_TFUNC(M, parse) {
-    ks_str fstr, vstr;
-    KS_ARGS("fstr:* vstr:*", &fstr, kst_str, &vstr, kst_str);
+    ks_str val, fmt = NULL;
+    KS_ARGS("val:* ?fmt:*", &val, kst_str, &fmt, kst_str);
 
-    return (kso)kstime_parse(fstr->data, vstr->data);
+    return (kso)kstime_parse(fmt?fmt->data:KSTIME_FMT_ISO8601, val->data);
 }
 
 /* Export */
@@ -213,13 +216,14 @@ ks_module _ksi_time() {
 
         /* Functions */
 
-        {"now",                    ksf_wrap(M_now_, M_NAME ".now()", "Get the current time as a 'time.DateTime' object")},
+        {"now",                    ksf_wrap(M_now_, M_NAME ".now()", "Get the current time as a 'time.DateTime' object, in UTC")},
+        {"localnow",               ksf_wrap(M_localnow_, M_NAME ".localnow()", "Get the current time as a 'time.DateTime' object, in the local time zone")},
         {"time",                   ksf_wrap(M_time_, M_NAME ".time()", "Calculates the time (in seconds) since the epoch (normally 1970-01-01), not counting leap seconds\n\n    Sometimes referred to as 'Unix Time'")},
         {"clock",                  ksf_wrap(M_clock_, M_NAME ".clock()", "Calculates the time (in seconds) since the process start time")},
         {"sleep",                  ksf_wrap(M_sleep_, M_NAME ".sleep(dur)", "Sleep for a given duration (in seconds)")},
 
-        {"format",                 ksf_wrap(M_format_, M_NAME ".format(fmt=time.ISO8601, val=none)", "Returns a time (default: now) formatted according to printf-like format specifiers\n\n   Specifiers:\n      %y: Year modulo 100 (00...99)\n      %Y: Year with century, in format '%-04i' (0001...9999)\n      %b: Month in locale (abbreviated)\n      %B: Month in locale (full)\n      %m: Month as zero-padded number (01...12)\n      %U: Week of the year as as a decimal number (Sunday==0)\n            (days before the first sunday are week 0)\n      %W: Week of the year as as a decimal number (Monday==0)\n            (days before the first monday are week 0)\n      %j: Yearday in '%03i' (001...366)\n      %d: Monthday as zero-padded number (01...31)\n      %a: Weekday in locale (abbreviated)\n      %A: Weekday in locale (full)\n      %w: Weekday as integer (0==Monday)\n      %H: Hour (in 24-hour clock) as zero-padded number (00...23)\n      %I: Hour (in 12 hour clock) as zero-padded number (00, 12)\n      %M: Minute as zero-padded number (00-59)\n      %S: Seconds as zero-padded decimal number (00-59)\n      %f: Microsecond as decimal number, formatted as '%-06i'\n      %z: Zone UTC offset in '(+|-)HHMM[SS.[ffffff]]'\n      %Z: Zone name (or empty if there was none)\n      %p: Locale's equiv of AM/PM\n      %c: Locale's full default date/time representation\n      %x: Locale's default date representation\n      %X: Locale's default time representation\n      %%: Literal '%'")},
-        {"parse",                  ksf_wrap(M_parse_, M_NAME ".parse(fmt, val)", "Parses 'val' (which should be a string in the correct format) according to format string 'fmt'\n\n    See 'time.format()''s documentation for descriptions of the format string")},
+        {"format",                 ksf_wrap(M_format_, M_NAME ".format(val=none, fmt=time.ISO8601)", "Returns a time (default: now) formatted according to printf-like format specifiers\n\n   Specifiers:\n      %y: Year modulo 100 (00...99)\n      %Y: Year with century, in format '%-04i' (0001...9999)\n      %b: Month in locale (abbreviated)\n      %B: Month in locale (full)\n      %m: Month as zero-padded number (01...12)\n      %U: Week of the year as as a decimal number (Sunday==0)\n            (days before the first sunday are week 0)\n      %W: Week of the year as as a decimal number (Monday==0)\n            (days before the first monday are week 0)\n      %j: Yearday in '%03i' (001...366)\n      %d: Monthday as zero-padded number (01...31)\n      %a: Weekday in locale (abbreviated)\n      %A: Weekday in locale (full)\n      %w: Weekday as integer (0==Monday)\n      %H: Hour (in 24-hour clock) as zero-padded number (00...23)\n      %I: Hour (in 12 hour clock) as zero-padded number (00, 12)\n      %M: Minute as zero-padded number (00-59)\n      %S: Seconds as zero-padded decimal number (00-59)\n      %f: Microsecond as decimal number, formatted as '%-06i'\n      %z: Zone UTC offset in '(+|-)HHMM[SS.[ffffff]]'\n      %Z: Zone name (or empty if there was none)\n      %p: Locale's equiv of AM/PM\n      %c: Locale's full default date/time representation\n      %x: Locale's default date representation\n      %X: Locale's default time representation\n      %%: Literal '%'")},
+        {"parse",                  ksf_wrap(M_parse_, M_NAME ".parse(val, fmt=time.ISO8601)", "Parses 'val' (which should be a string in the correct format) according to format string 'fmt'\n\n    See 'time.format()''s documentation for descriptions of the format string")},
 
     ));
 
