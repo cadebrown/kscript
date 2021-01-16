@@ -90,7 +90,7 @@
  */
 #define NX_MAXRANK 16
 
-/* Maximum broadcast size (i.e. maximum number of elements in a single kernel)
+/* Maximum broadcast size (i.e. maximum number of arguments to a single kernel)
  *
  */
 #define NX_MAXBCS 16
@@ -472,6 +472,10 @@ typedef struct nx_view_s {
  */
 typedef int (*nxf_elem)(int N, nx_t* args, int len, void* extra);
 
+/* Function signature for broadcasting/function application of any degrees
+ */
+typedef int (*nxf_Nd)(int N, nx_t* args, void* extra);
+
 
 
 /* Utility macros */
@@ -485,6 +489,10 @@ typedef int (*nxf_elem)(int N, nx_t* args, int len, void* extra);
 /* Create an array descriptor (does not create a reference to 'dtype')
  */
 KS_API nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_ssize_t* shape, ks_ssize_t* strides);
+
+/* Create an array descriptor with a new axis inserted
+ */
+KS_API nx_t nx_with_newaxis(nx_t from, int axis);
 
 /* Calculate a broadcast shape, returning a shape-only array descriptor
  *
@@ -518,6 +526,9 @@ KS_API nx_t nx_getshape(kso obj);
  */
 KS_API void* nx_szdot(void* data, int rank, ks_ssize_t* strides, ks_size_t* idxs);
 
+/* Get the size of the product of the shape
+ */
+KS_API ks_size_t nx_szprod(int rank, ks_size_t* shape);
 
 /* Cast 'X' to a given data type ('dtype') (keeping as-is if it can), and store in '*R'
  * 
@@ -554,6 +565,15 @@ KS_API bool nx_enc(nx_dtype dtype, kso obj, void* data);
  */
 KS_API int nx_apply_elem(nxf_elem func, int N, nx_t* args, void* extra);
 
+/* Apply an Nd-wise function to the arguments, where 'M' is the number of dimensions
+ *
+ * Returns either 0 if all executions returned 0, or the first non-zero code
+ *   encountered by calling 'func()'
+ */
+KS_API int nx_apply_Nd(nxf_Nd func, int N, nx_t* args, int M, void* extra);
+
+
+
 
 
 /** Creation Routines **/
@@ -576,6 +596,16 @@ KS_API nx_array nx_array_newo(ks_type tp, kso objh, nx_dtype dtype);
 
 
 /** Operations **/
+
+/* Fill R with zeros
+ */
+KS_API bool nx_zero(nx_t R);
+
+
+/* Fill R[X[i]] = 1
+ */
+KS_API bool nx_onehot(nx_t X, nx_t R);
+
 
 /* Compute 'R = X', but type casted to 'R's type. Both must be numeric */
 KS_API bool nx_cast(nx_t X, nx_t R);
@@ -742,8 +772,17 @@ KS_API bool nxrand_normal(nxrand_State self, nx_t R, nx_t u, nx_t o);
 
 /** Submodule: 'nx.la' (linear algebra) **/
 
+/* Create matrices with 'X' as the diagonal (expands a dimension)
+ */
+KS_API bool nxla_diag(nx_t X, nx_t R);
+
+
 /* R = X @ Y */
 KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
+
+
+/* R = X ** n (matrix power) */
+KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
 
 
 /** Submodule: 'nx.cv' (computer vision / image processing) **/

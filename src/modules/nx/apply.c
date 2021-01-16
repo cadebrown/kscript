@@ -104,3 +104,105 @@ int nx_apply_elem(nxf_elem func, int N, nx_t* args, void* extra) {
     return res;
 }
 
+/* Internal apply function */
+static int I_apply_Nd(nxf_Nd func, nx_t ebc, int N, nx_t* abc, nx_t* abcS, int M, ks_size_t* idxs, void* extra) {
+    ks_cint i, j;
+
+    /* We are looping over all the dimensions not being forwarded to the caller */
+    int loop_N = ebc.rank - M;
+
+    /* Zero out indices */
+    for (i = 0; i < loop_N; ++i) idxs[i] = 0;
+
+    while (true) {
+
+        /* Set data pointers for the slices (strides & dimensions stay the same) */
+        for (i = 0; i < N; ++i) {
+            abcS[i].data = nx_szdot(abc[i].data, loop_N, abc[i].strides, idxs);
+        }
+
+        /* Apply to 1D slice */
+        int res = func(N, abcS, extra);
+        if (res) return res;
+
+        /* Increase least significant index */
+        i = loop_N - 1;
+        if (i < 0) break;
+        idxs[i]++;
+
+        while (i >= 0 && idxs[i] >= ebc.shape[i]) {
+            idxs[i] = 0;
+            i--;
+            if (i >= 0) idxs[i]++;
+        }
+
+        /* Done; overflowed */
+        if (i < 0) break;
+    }
+
+    return 0;
+}
+
+int nx_apply_Nd(nxf_Nd func, int N, nx_t* args, int M, void* extra) {
+    assert(N > 0);
+    assert(N <= NX_MAXBCS);
+    assert(M > 0);
+    assert(M <= NX_MAXRANK);
+
+    /* Calculate a broadcast size */
+    nx_t ebc = nx_make_bcast(N, args);
+    if (ebc.rank < 0) {
+        return -1;
+    }
+    if (ebc.rank < M) {
+        KS_THROW(kst_SizeError, "Operation requires at least %i-D inputs", M);
+        return -1;
+    }
+    assert(ebc.rank >= M);
+
+    /* Loop indices */
+    ks_size_t idxs[NX_MAXRANK];
+
+    /* Create new arguments arrays, one fully padded, and the other that is a single slice
+     *   of the other one, given to 'func'
+     */
+    nx_t abc[NX_MAXBCS], abcS[NX_MAXBCS];
+
+    int i, j, jr;
+    for (i = 0; i < N; ++i) {
+        /* 'abc[i]' gives the entire 'i'th input broadcasted to the maximum rank size */
+        abc[i] = args[i];
+        abc[i].rank = ebc.rank;
+
+        /* Extend dimensions to the left */
+        for (j = 0; j < ebc.rank - args[i].rank; ++j) {
+            abc[i].shape[j] = 1;
+            abc[i].strides[j] = 0;
+        }
+
+        /* Copy the rest, aligned to the right */
+        for (jr = 0; j < abc[i].rank; ++j, ++jr) {
+            abc[i].shape[j] = args[i].shape[jr];
+            abc[i].strides[j] = abc[i].shape[j] == 1 ? 0 : args[i].strides[jr];
+        }
+
+        /* 'abcS[i]' gives the slice of the 'i'th input broadcasted to the desired size ('M') */
+        abcS[i] = abc[i];
+
+        /* Pad to maximum rank */
+        abcS[i].rank = M;
+
+        /* We should copy from the right of 'abc[i]', since it will be a right-most slice */
+        for (j = 0; j < abcS[i].rank; ++j) {
+            abcS[i].shape[j] = abc[i].shape[j + abc[i].rank - M];
+            abcS[i].strides[j] = abc[i].strides[j + abc[i].rank - M];
+        }
+
+    }
+
+    int res = I_apply_Nd(func, ebc, N, abc, abcS, M, idxs, extra);
+    return res;
+}
+
+
+

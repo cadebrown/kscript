@@ -38,6 +38,24 @@ nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_ssize_t* shape, ks_ssize_t
     return self;
 }
 
+nx_t nx_with_newaxis(nx_t from, int axis) {
+    assert(from.rank < NX_MAXRANK);
+    nx_t res = nx_make(from.data, from.dtype, from.rank + 1, from.shape, from.strides);
+
+    /* Scoot over existing shape/strides */
+    int i;
+    for (i = res.rank - 1; i > axis; --i) {
+        res.shape[i] = from.shape[i - 1];
+        res.strides[i] = from.strides[i - 1];
+    }
+
+    res.shape[axis] = 1;
+    res.strides[axis] = 0;
+
+    return res;
+}
+
+
 nx_t nx_make_bcast(int N, nx_t* args) {
     assert(N > 0);
     int i, j;
@@ -118,6 +136,15 @@ void* nx_szdot(void* data, int rank, ks_ssize_t* strides, ks_size_t* idxs) {
         res += strides[i] * idxs[i];
     }
     return (void*)res;
+}
+
+ks_size_t nx_szprod(int rank, ks_size_t* shape) {
+    ks_size_t res = 1;
+    int i;
+    for (i = 0; i < rank; ++i) {
+        res *= shape[i];
+    }
+    return res;
 }
 
 
@@ -399,6 +426,55 @@ bool nx_enc(nx_dtype dtype, kso obj, void* out) {
 
 
 /* Module Functions */
+
+
+
+static KS_TFUNC(M, onehot) {
+    ks_cint newdim;
+    kso x, r = KSO_NONE;
+    KS_ARGS("x newdim:cint ?r", &x, &newdim, &r);
+
+    nx_t vX, vR;
+    kso rX, rR;
+
+    if (!nx_get(x, NULL, &vX, &rX)) {
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output */
+        nx_dtype dtype = nxd_bl;
+
+        nx_t shape = nx_with_newaxis(vX, vX.rank);
+        shape.shape[vX.rank] = newdim;
+        r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+        if (!r) {
+            KS_NDECREF(rX);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(r);
+
+    }
+
+    if (!nx_get(r, NULL, &vR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_onehot(vX, vR)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+    return r;
+}
+
 
 static KS_TFUNC(M, neg) {
     kso x, r = KSO_NONE;
@@ -1909,6 +1985,7 @@ ks_module _ksi_nx() {
 
         /* Submodules */
         {"rand",                   (kso)_ksi_nxrand()},
+        {"la",                     (kso)_ksi_nx_la()},
         
         /* Types */
 
@@ -1948,6 +2025,7 @@ ks_module _ksi_nx() {
 
         /* Functions */
 
+        {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to\n\n    Indices in 'x' are taken modulo 'newdim'")},
         {"neg",                    ksf_wrap(M_neg_, M_NAME ".neg(x, r=none)", "Computes elementwise negation")},
         {"abs",                    ksf_wrap(M_abs_, M_NAME ".abs(x, r=none)", "Computes elementwise absolute value")},
         {"conj",                   ksf_wrap(M_conj_, M_NAME ".conj(x, r=none)", "Computes elementwise conjugation")},

@@ -97,6 +97,10 @@ ks_module _ksi_nx();
 void _ksi_nx_dtype();
 void _ksi_nx_array();
 void _ksi_nx_view();
+ks_module _ksi_nx_la();
+ks_module _ksi_nx_fft();
+
+
 
 void _ksi_nk_Context();
 void _ksi_nk_Image();
