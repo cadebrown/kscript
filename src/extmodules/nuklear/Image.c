@@ -15,35 +15,35 @@
 
 /* C-API */
 
-ksnk_Image ksnk_Image_new(ks_type tp, nxar_t img) {
+ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
     int w, h, d;
 
     /* RGBA data */
-    nxc_uchar* data = NULL;
-    nx_dtype dt = nxd_uchar;
+    nx_u8* data = NULL;
+    nx_dtype dt = nxd_u8;
 
     if (img.rank == 2) {
         /* Black and white */
-        h = img.dims[0];
-        w = img.dims[1];
+        h = img.shape[0];
+        w = img.shape[1];
         d = 1;
         data = ks_malloc(dt->size * w * h * 4);
         
         if (!nx_fpcast(
-            (nxar_t) {
+            nx_make(
+                img.data,
+                img.dtype,
+                3,
+                (ks_size_t[]) { img.shape[0], img.shape[1], 1 },
+                (ks_ssize_t[]) { img.strides[0], img.strides[1], 0 }
+            ),
+            nx_make(
                 data,
                 dt,
                 3,
                 (ks_size_t[]){ h, w, 3 },
-                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size },
-            },
-            (nxar_t) {
-                img.data,
-                img.dtype,
-                3,
-                (ks_size_t[]) { img.dims[0], img.dims[1], 1 },
-                (ks_ssize_t[]) { img.strides[0], img.strides[1], 0 },
-            }
+                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size }
+            )
         )) {
             ks_free(data);
             return NULL;
@@ -51,20 +51,20 @@ ksnk_Image ksnk_Image_new(ks_type tp, nxar_t img) {
 
         /* Set alpha channel */
         if (!nx_fpcast(
-            (nxar_t) {
+            nx_make(
+                (nx_F[]){ 1 },
+                nxd_F,
+                0,
+                NULL,
+                NULL
+            ),
+            nx_make(
                 &data[3],
                 dt,
                 3,
                 (ks_size_t[]){ h, w, 1 },
-                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size },
-            },
-            (nxar_t) {
-                (nxc_float[]){ 1.0 },
-                nxd_float,
-                0,
-                NULL,
-                NULL
-            }
+                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size }
+            )
         )) {
             ks_free(data);
             return NULL;
@@ -73,9 +73,9 @@ ksnk_Image ksnk_Image_new(ks_type tp, nxar_t img) {
 
     } else if (img.rank == 3) {
         /* Color */
-        h = img.dims[0];
-        w = img.dims[1];
-        d = img.dims[2];
+        h = img.shape[0];
+        w = img.shape[1];
+        d = img.shape[2];
         if (d > 4) d = 4;
 
         if (d == 1) {
@@ -91,36 +91,35 @@ ksnk_Image ksnk_Image_new(ks_type tp, nxar_t img) {
 
         data = ks_malloc(dt->size * w * h * 4);
         if (!nx_fpcast(
-            (nxar_t) {
+            img,
+            nx_make(
                 data,
                 dt,
                 3,
                 (ks_size_t[]){ h, w, d },
-                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size },
-            },
-            img
+                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size }
+            )
         )) {
             ks_free(data);
             return NULL;
         }
 
-
         /* Set alpha channel */
         if (d < 4 && !nx_fpcast(
-            (nxar_t) {
+            nx_make(
+                (nx_F[]){ 1.0 },
+                nxd_F,
+                0,
+                NULL,
+                NULL
+            ),
+            nx_make(
                 &data[3],
                 dt,
                 3,
                 (ks_size_t[]){ h, w, 1 },
-                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size },
-            },
-            (nxar_t) {
-                (nxc_float[]){ 1.0 },
-                nxd_float,
-                0,
-                NULL,
-                NULL
-            }
+                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size }
+            )
         )) {
             ks_free(data);
             return NULL;
@@ -211,15 +210,14 @@ static KS_TFUNC(T, new) {
     kso img;
     KS_ARGS("tp:* img", &tp, kst_type, &img);
 
-    nxar_t ar;
+    nx_t ar;
     kso rr;
-    if (!nxar_get(img, NULL, &ar, &rr)) {
+    if (!nx_get(img, NULL, &ar, &rr)) {
         return NULL;
     }
 
-
     ksnk_Image self = ksnk_Image_new(tp, ar);
-
+    KS_NDECREF(rr);
     return (kso)self;
 }
 

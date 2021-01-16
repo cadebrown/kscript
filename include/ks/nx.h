@@ -1,7 +1,7 @@
 /* ks/nx.h - header for the nx (NumeriX) library in kscript
  * 
  * This module is a numerical computation library, specifically meant for vectorized inputs and tensor
- *   math. It deals (typically) with a tensor (C-type: 'nxar_t') that has a given data type ('nx_dtype', 
+ *   math. It deals (typically) with a tensor (C-type: 'nx_t') that has a given data type ('nx_dtype', 
  *   which may be a C-style type, or 'object' for generic operations), as well as dimensions and strides.
  * 
  * Submodules:
@@ -83,74 +83,243 @@
 #endif
 
 
-/** C-style types **/
+/* Constants */
 
-/*** Integers ***/
-typedef   signed char  nxc_schar;
-typedef unsigned char  nxc_uchar;
-typedef   signed short nxc_sshort;
-typedef unsigned short nxc_ushort;
-typedef   signed int   nxc_sint;
-typedef unsigned int   nxc_uint;
-typedef   signed long long nxc_slong;
-typedef unsigned long long nxc_ulong;
+/* Maximum rank of a tensor, used so statically allocating tensor sizes/strides is possible, reducing
+ *   overhead
+ */
+#define NX_MAXRANK 16
 
-
-#define nxc_schar_MIN (-128)
-#define nxc_schar_MAX (127)
-#define nxc_uchar_MIN (0)
-#define nxc_uchar_MAX (255)
-
-#define nxc_sshort_MIN (-32768)
-#define nxc_sshort_MAX (32767)
-#define nxc_ushort_MIN (0)
-#define nxc_ushort_MAX (65536)
-
-#define nxc_sint_MIN (-2147483648LL)
-#define nxc_sint_MAX (2147483647LL)
-#define nxc_uint_MIN (0ULL)
-#define nxc_uint_MAX (4294967295ULL)
-
-#define nxc_slong_MIN (-9223372036854775807LL-1)
-#define nxc_slong_MAX (9223372036854775807LL)
-#define nxc_ulong_MIN (0ULL)
-#define nxc_ulong_MAX (1844674407370955161ULL)
+/* Maximum broadcast size (i.e. maximum number of elements in a single kernel)
+ *
+ */
+#define NX_MAXBCS 16
 
 
+/* Sized-integers */
+typedef   bool     nx_bl;
+typedef   int8_t   nx_s8;
+typedef  uint8_t   nx_u8;
+typedef   int16_t  nx_s16;
+typedef  uint16_t  nx_u16;
+typedef   int32_t  nx_s32;
+typedef  uint32_t  nx_u32;
+typedef   int64_t  nx_s64;
+typedef  uint64_t  nx_u64;
 
-/*** Floats ***/
-typedef float nxc_float;
-typedef double nxc_double;
-typedef long double nxc_longdouble;
-typedef long double nxc_float128;
+#define nx_blv(_val) ((_val) ? 1 : 0)
 
-/*** Complexes ***/
-typedef struct { nxc_float re, im; } nxc_complexfloat;
-typedef struct { nxc_double re, im; } nxc_complexdouble;
-typedef struct { nxc_longdouble re, im; } nxc_complexlongdouble;
-typedef struct { nxc_float128 re, im; } nxc_complexfloat128;
+#define nx_blMIN  (0)
+#define nx_s8MIN  (-128)
+#define nx_u8MIN  (0)
+#define nx_s16MIN (-32768)
+#define nx_u16MIN (0)
+#define nx_s32MIN (-2147483648LL)
+#define nx_u32MIN (0ULL)
+#define nx_s64MIN (-9223372036854775807LL-1)
+#define nx_u64MIN (0ULL)
+
+#define nx_blMAX  (1)
+#define nx_s8MAX  (127)
+#define nx_u8MAX  (255)
+#define nx_s16MAX (32767)
+#define nx_u16MAX (65536)
+#define nx_s32MAX (2147483647LL)
+#define nx_u32MAX (4294967295ULL)
+#define nx_s64MAX (9223372036854775807LL)
+#define nx_u64MAX (1844674407370955161ULL)
+
+
+/* 'half' (H) type - half precision real
+ *
+ */
+#if defined(KS_HAVE__Float16)
+  typedef _Float16 nx_H;
+#elif defined(KS_HAVE___float16)
+  typedef __float16 nx_H;
+#elif defined(KS_HAVE___fp16)
+  typedef __fp16 nx_H;
+#else
+  typedef float nx_H;
+#endif
+
+/* 'float' (F) type - wrapper around C 'float'
+ *
+ */
+typedef float       nx_F;
+
+/* 'double' (D) type - wrapper around C 'double'
+ *
+ */
+typedef double      nx_D;
+
+/* 'long double' (L) type - wrapper around C 'long double'
+ *
+ */
+typedef long double nx_L;
+
+/* 'fp128' (E) type - 128 bit floating point value
+ *
+ * NOTE: This is not the 'long double' type in C
+ */
+#if defined(KS_HAVE__Float128)
+  typedef _Float128 nx_E;
+  #define nx_Eval(_val) _val##q
+#elif defined(KS_HAVE___float128)
+  typedef __float128 nx_E;
+  #define nx_Eval(_val) _val##q
+#else
+  typedef long double nx_E;
+  #define nx_Eval(_val) _val
+#endif
+
+#define nx_HINF INFINITY
+#define nx_FINF INFINITY
+#define nx_DINF INFINITY
+#define nx_LINF INFINITY
+#define nx_EINF INFINITY
+
+#define nx_HNAN KS_CFLOAT_NAN
+#define nx_FNAN KS_CFLOAT_NAN
+#define nx_DNAN KS_CFLOAT_NAN
+#define nx_LNAN KS_CFLOAT_NAN
+#define nx_ENAN KS_CFLOAT_NAN
+
+#define nx_HEPS FLT_EPSILON
+#define nx_FEPS FLT_EPSILON
+#define nx_DEPS DBL_EPSILON
+#define nx_LEPS LDBL_EPSILON
+#ifdef FLT128_EPSILON
+  #define nx_EEPS FLT128_EPSILON
+#else
+  #define nx_EEPS nx_Eval(1.92592994438723585305597794258492732e-34)
+#endif
+
+#define nx_HMIN FLT_MIN
+#define nx_FMIN FLT_MIN
+#define nx_DMIN DBL_MIN
+#define nx_LMIN LDBL_MIN
+#ifdef FLT128_MIN
+  #define nx_EMIN FLT128_MIN
+#else
+  #define nx_EMIN nx_Eval(3.36210314311209350626267781732175260e-4932)
+#endif
+
+#define nx_HMAX FLT_MAX
+#define nx_FMAX FLT_MAX
+#define nx_DMAX DBL_MAX
+#define nx_LMAX LDBL_MAX
+#ifdef FLT128_MAX
+  #define nx_EMAX FLT128_MAX
+#else
+  #define nx_EMAX nx_Eval(1.18973149535723176508575932662800702e4932)
+#endif
+
+
+/* 'complex half' (cH) - complex half precision
+ *
+ */
+typedef struct {
+    nx_H re, im;
+} nx_cH;
+
+/* 'complex float' (cF) - complex single precision
+ *
+ */
+typedef struct {
+    nx_F re, im;
+} nx_cF;
+
+/* 'complex double' (cD) - complex double precision
+ *
+ */
+typedef struct {
+    nx_D re, im;
+} nx_cD;
+
+/* 'complex long double' (cD) - complex double precision
+ *
+ */
+typedef struct {
+    nx_L re, im;
+} nx_cL;
+
+/* 'complex fp128' (cE) - complex 128 bit floating precision
+ *
+ */
+typedef struct {
+    nx_E re, im;
+} nx_cE;
+
+
+/* Aliases to realtype */
+#define nx_cHr nx_E
+#define nx_cFr nx_F
+#define nx_cDr nx_D
+#define nx_cLr nx_L
+#define nx_cEr nx_E
+
+#define nx_cHrINF nx_HINF
+#define nx_cFrINF nx_FINF
+#define nx_cDrINF nx_DINF
+#define nx_cLrINF nx_LINF
+#define nx_cErINF nx_EINF
+
+#define nx_cHrNAN nx_HNAN 
+#define nx_cFrNAN nx_FNAN 
+#define nx_cDrNAN nx_DNAN 
+#define nx_cLrNAN nx_LNAN 
+#define nx_cErNAN nx_ENAN 
+
+#define nx_cHrMIN nx_HMIN
+#define nx_cFrMIN nx_FMIN
+#define nx_cDrMIN nx_DMIN
+#define nx_cLrMIN nx_LMIN
+#define nx_cErMIN nx_EMIN
+
+#define nx_cHrMAX nx_HMAX
+#define nx_cFrMAX nx_FMAX
+#define nx_cDrMAX nx_DMAX
+#define nx_cLrMAX nx_LMAX
+#define nx_cErMAX nx_EMAX
+
+#define nx_cHrEPS nx_HEPS
+#define nx_cFrEPS nx_FEPS
+#define nx_cDrEPS nx_DEPS
+#define nx_cLrEPS nx_LEPS
+#define nx_cErEPS nx_EEPS
+
 
 
 /** Types **/
 
 enum nx_dtype_kind {
-    NX_DTYPE_KIND_NONE      = 0,
+    NX_DTYPE_NONE      = 0,
 
-    /* C-style integer */
-    NX_DTYPE_KIND_CINT      = 1,
+    /* C-style integer type */
+    NX_DTYPE_INT      = 1,
 
-    /* IEEE Formatted Float */
-    NX_DTYPE_KIND_CFLOAT    = 2,
+    /* C-style floating point type */
+    NX_DTYPE_FLOAT    = 2,
 
-    /* Complex IEEE number */
-    NX_DTYPE_KIND_CCOMPLEX  = 3,
+    /* C-style complex floating point type, with two components
+     *
+     * Should act like a structure defined as:
+     * 
+     * struct ComplexType {
+     *   RealType re, im;
+     * };
+     * 
+     */
+    NX_DTYPE_COMPLEX  = 3,
 
-    /* Structure of other datatypes */
-    NX_DTYPE_KIND_CSTRUCT   = 4,
-
-    /* TODO: Add structures */
+    /* C-style structure, with arbitrary number of members
+     *
+     */
+    NX_DTYPE_STRUCT   = 4,
 
 };
+
 
 /* 'nx.dtype' - type representing a data format
  *
@@ -175,12 +344,14 @@ struct nx_dtype_struct_member {
 struct nx_dtype_s {
     KSO_BASE
 
-    /* name of the type */
+    /* Name of the type */
     ks_str name;
 
-    /* size in bytes of the data type */
-    int size;
+    /* Special code for the name, which is either the name, or a shortened version (i.e. 'F' for float) */
+    ks_str namecode;
 
+    /* Size (in bytes) of the data type */
+    int size;
 
     /* the kind of data type */
     enum nx_dtype_kind kind;
@@ -202,17 +373,15 @@ struct nx_dtype_s {
     };
 };
 
-/* 'nxar_t' - C array descriptor, generic representation of any tensor (nx.array, nx.view,
- *              existing C pointers, etc)
- *
- * Functions should accept these, that way the data can come from anywhere (either kscript objects,
- *   or C objects)
- *
+/* 'nx_t' - Array descriptor object, which is a generic representation of a tensor
+ * 
  */
 typedef struct {
-    
+
     /* Pointer to the start of the data 
-     * May only be NULL if the array was empty
+     *
+     * May be NULL if the array was empty, or returned as a result of a size
+     *   calculation (i.e. data does not matter)
      */
     void* data;
 
@@ -220,263 +389,198 @@ typedef struct {
      *   element
      */
     nx_dtype dtype;
-    
-    /* Number of dimensions of the array */
+
+    /* Number of dimensions of the array (i.e. the rank) */
     int rank;
-    
-    /* Array of dimensions/sizes
-     *
-     * The units are elements
-     * 
-     * So, the total number of elements is the product of these
-     *   numbers
-     * 
-     */
-    ks_size_t* dims;
-    
-    /* Array of strides (used for index calculation)
-     *
-     * The units are BYTES not elements
-     * 
-     */
-    ks_ssize_t* strides;
 
-} nxar_t;
+    /* Shape of the tensor, which is the length in each dimension (in elements)
+     *
+     * Only the first 'rank' members are initialized
+     * 
+     * The total number of elements is the product of the first 'rank' numbers
+     */
+    ks_size_t shape[NX_MAXRANK];
 
-/* 'nx.array' - N-dimensional tensor/array type
- *
- * This is a dense array of a given data type, which is allocated for this object
+    /* Strides of the tensor, which is the distance between elements in each dimension (in bytes)
+     *
+     * Only the first 'rank' members are initialized
+     * 
+     * For dense arrays (i.e. all contained in this descriptor), set up is:
+     *   strides[rank - 1] = dtype->size
+     *   ...
+     *   strides[i] = strides[i + 1] * shape[i + 1]
+     * 
+     * (i.e. row-major)
+     */
+    ks_ssize_t strides[NX_MAXRANK];
+
+} nx_t;
+
+/* 'nx.array' - Dense multi-dimensional array object
  * 
  */
 typedef struct nx_array_s {
     KSO_BASE
 
-    /* Array descriptor, which owns the 'data' pointer, and 'obj' should be NULL */
-    nxar_t ar;
+    /* Array descriptor
+     *
+     * This data pointer is owned, so it is freed when the array is freed
+     * 
+     * A reference is held to 'val->dtype'
+     */
+    nx_t val;
 
 }* nx_array;
 
-
-/* Create 'nxar_t' from C-style initializers
- */
-#define NXAR_(_data, _dtype, _rank, _dims, _strides) ((nxar_t){ \
-    .data = (_data), \
-    .dtype = (_dtype), \
-    .rank = (_rank), \
-    .dims = (_dims), \
-    .strides = (_strides), \
-})
-
-/* Return whether the array descriptor is a scalar (0D), vector (1D), or matrix (2D) */
-#define NXAR_ISSCALAR(_ar) ((_ar).rank == 0)
-#define NXAR_ISVECTOR(_ar) ((_ar).rank == 1)
-#define NXAR_ISMATRIX(_ar) ((_ar).rank == 2)
-
-
-/* 'nx.view' - Tensor view of a data source
+/* 'nx.view' - View of a multi-dimensional array
  *
- * This just points to data -- nothing is allocated
+ * This just points to data -- nothing is allocated, but a reference is held to an
+ *   object to which it points
  * 
- * Additionally, 'strides' may be 0, negative, or non-multiples of the element
+ * Additionally, 'val.strides' may be 0, negative, or non-multiples of the element
  *   size
  *
  */
 typedef struct nx_view_s {
     KSO_BASE
 
-    /* Array descriptor, which does NOT own the 'data' pointer
+    /* Array descriptor
+     *
+     * A reference is held to 'val->dtype'
      */
-    nxar_t ar;
+    nx_t val;
 
-    /* Reference to free (the data is from this object) */
+    /* Opaque reference held
+     *
+     * The data in 'val' requires this object to be alive, so a reference is held
+     *   while the view is active
+     */
     kso ref;
 
 }* nx_view;
 
-/* Calculate whether a dtype is C-arithmetic-able */
-#define NX_DTYPE_ISCARITH(_dt) ((_dt)->kind == NX_DTYPE_KIND_CINT || (_dt)->kind == NX_DTYPE_KIND_CFLOAT)
-#define NX_DTYPE_ISARITH(_dt) (NX_DTYPE_ISCARITH(_dt) || (_dt)->kind == NX_DTYPE_KIND_CCOMPLEX)
 
-
-/* C function type for an element-wise function application
+/* Function signature for broadcasting/function application to inputs
  *
- * This function will be called with the number of inputs (N), and an array of that many array descriptors
- *   (inp), which are all 1-dimensional (i.e. rank==1), and an auxiliary data pointer which may be whatever
- *   the caller gives to the function
+ * This function will be called with the number of inputs ('N'), and the array descriptors for 
+ *   each input ('args'), and an opaque pointer that is passed ('extra'), which may hold any data, or
+ *   be NULL. 'len' is given as the length  
+ * 
+ * This function should calculate, within the 'args' array, the result of the computation. For example,
+ *   the 'add' kernel would take (A, B, R) as 'args', and compute 'R[i] = A[i] + B[i]' for each input
+ *   index
+ */
+typedef int (*nxf_elem)(int N, nx_t* args, int len, void* extra);
+
+
+
+/* Utility macros */
+
+/* Tests wheter '_dtype' is a builtin numeric type (i.e. is 'int', 'float', or 'complex' kind) */
+#define NX_ISNUM(_dtype) ((_dtype)->kind == NX_DTYPE_INT || (_dtype)->kind == NX_DTYPE_FLOAT || (_dtype)->kind == NX_DTYPE_COMPLEX)
+
+
+/* Functions */
+
+/* Create an array descriptor (does not create a reference to 'dtype')
+ */
+KS_API nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_ssize_t* shape, ks_ssize_t* strides);
+
+/* Calculate a broadcast shape, returning a shape-only array descriptor
  *
- * This function should calculate, within the 'inp' array, the result of the computation. For example, the 'add'
- *   kernel would take 'A, B, R' inputs, and compute 'R[:] = A[:] + B[:]', elementwise
- * 
- * Flow:
- *   scalar, ... -> scalar, ...
- * 
+ * If result.rank < 0, an error is thrown and you should either catch it
+ *   or signal it. Otherwise, the result contains 'rank' and 'dims' initialized to the size of the
+ *   broadcast result. All other fields are uninitialized
  */
-typedef int (*nx_elem_cf)(int N, nxar_t* inp, int len, void* _data);
+KS_API nx_t nx_make_bcast(int N, nx_t* args);
 
-/* C function type for a vector-wise function application
+/* Calculate the result of a numeric operation on two types, 'X' and 'Y'
  *
- * While given the same arguments as 'nx_elem_cf', this type of function is used to indicate that the operation
- *   is on the entire vector instead of applied to each element. 
+ * A new reference is not returned, so don't dereference the result! Only works
+ *   for numeric types
+ */
+KS_API nx_dtype nx_cast2(nx_dtype X, nx_dtype Y);
+
+/* Calculate a shape, returning a shape-only array descriptor
  *
- * For example, if given the 'qsort' kernel, it should take arguments 'A, R', and compute 'R[:] = qsort(A[:])'
- * 
- * Flow:
- *   [N,], ... -> [M,], ...
- * 
- */
-typedef int (*nx_vec_cf)(int N, nxar_t* inp, int len, void* _data);
-
-
-/** Macro/Utils **/
-
-/* Get-Element-Pointer (GEP) of an element of an array (located at '_data'),
- *   with a stride (of bytes) of '_stride', at index '_idx' (in elements)
- */
-#define NX_gep(_data, _stride, _idx) ((void*)((ks_uint)(_data) + (_stride) * (_idx)))
-
-/* Get-Element (GE) of an array (located in '_data', as C-type '_tp'), with the given stride
- *   (in bytes), and index (in elements)
- */
-#define NX_ge(_tp, _data, _stride, _idx) (*(_tp*)NX_gep((_data), (_stride), (_idx)))
-
-/* Get-Element of 1D-array
+ * If 'obj' is 'none' the resulting shape is a scalar
+ * If 'obj' is an integer, the resulting shape is a 1D array
+ * If 'obj' is an iterable, the resulting shape is 'obj'
  *
- * NOTE: This macro is not well defined for other dimensional arrays -- only call
- *   with 1D arrays
- * 
+ * If result.rank < 0, an error is thrown and you should either catch it
+ *   or signal it. Otherwise, the result contains 'rank' and 'dims' initialized to the size of the
+ *   broadcast result. All other fields are uninitialized
  */
-#define NXAR_ge1(_tp, _nxar, _idx) NX_ge(_tp, (_nxar).data, (_nxar).strides[0], (_idx))
+KS_API nx_t nx_getshape(kso obj);
 
-/* Get-Element-Pointer of N-dimensional array
+/* Computes 'data + strides[:] * idxs[:]'
  *
- * NOTE: '_idxes' must be the same length as the rank of tensor, and be of type:
- *   'ks_uint*' (or 'ks_size_t*')
- * 
- * 
  */
-#define NXAR_gepN(_tp, _to, _nxar, _idxes) do { \
-    ks_uint _gNr = (ks_uint)(_nxar).data; \
-    ks_uint* _gNidxes = _idxes; \
-    int _gNi; \
-    for (_gNi = 0; _gNi < (_nxar).rank; ++_gNi) { \
-        _gNr += (_nxar).strides[_idx] * _gNidxes[i]; \
-    } \
-    _to = (_tp*)_gNr; \
-} while (0)
+KS_API void* nx_szdot(void* data, int rank, ks_ssize_t* strides, ks_size_t* idxs);
 
 
-/** Functions **/
-
-/*** Configuration/Operation Helpers ***/
-
-/* Calculate a broadcast size, returning an array of the dimsnions and setting '*orank' to the
- *   the rank (and thus size) of the result array.
+/* Cast 'X' to a given data type ('dtype') (keeping as-is if it can), and store in '*R'
  * 
- * The result is allocated with 'ks_malloc()', and should be 'ks_free()''d, or if it was NULL,
- *   an error was thrown explaining the problem
+ * '*tofree' is set to a pointer that should be passed to 'ks_free()' after you are done
+ *   with '*R'. It may be set to NULL if no extra data allocation was needed
  */
-KS_API ks_size_t* nx_calc_bcast(int N, nxar_t* inp, int* orank);
+KS_API bool nx_getcast(nx_t X, nx_dtype dtype, nx_t* R, void** tofree);
 
-/* Return the datatype that should be used as the result of a numeric calculations between 2 types
+/* Convert an object into an array descriptor of a given datatype (or NULL to calculate
+ *   a default)
  *
- * NOTE: This is only valid when they are expected to be the same type. For division and floor division,
- *   custom care should be taken
- */
-KS_API nx_dtype nx_calc_numcast(nx_dtype da, nx_dtype db);
-
-
-/** Application **/
-
-/* Apply an element-wise C-style function on a number of inputs
- *
- * Returns either 0 if all executions returned 0, or the first non-zero code
- *   encountered
- */
-KS_API int nx_apply_elem(nx_elem_cf cf, int N, nxar_t* inp, void* _data);
-
-
-/** Utils **/
-
-/* Convert 'obj' into a list of sizes. Essentially, expects an iterable of integers,
- *   which are converted
+ * Sets '*res' to the array, and '*ref' to a reference that must be held and destroyed
+ *   while using the array descriptor (or NULL for none needed)
  * 
- * Returns an allocated array (via ks_malloc()), or NULL if an error was thrown
+ * Return success
  */
-KS_API ks_size_t* nx_getsize(kso obj, int* num);
+KS_API bool nx_get(kso obj, nx_dtype dtype, nx_t* res, kso* ref);
 
-
-/* Cast 'x' to a requested type (keeping as is if it can) and store in B, and return success.
+/* Adds the string representation of 'X' to an IO-like object
  *
- * If 'ref' is set to non-NULL, then you should KS_DECREF() that after you are done with '*r'
- * 
  */
-KS_API bool nx_getcast(nxar_t x, nx_dtype to, nxar_t* r, kso* ref);
+KS_API bool nx_getstr(ksio_BaseIO bio, nx_t X);
 
-/* Adds the string representation to an IO object
- */
-KS_API bool nxar_tostr(ksio_BaseIO bio, nxar_t x);
-
-/* Convert an object into an 'nxar_t' of a given type (or NULL to allow any/default)
- *
- * Sets 'res' to the result, and 'ref' to a reference that should be deleted using
- *   'KS_NDECREF()' (as it may be NULL in the case no object was created)
- * 
- * Returns success, or throws an error
- */
-KS_API bool nxar_get(kso obj, nx_dtype dtype, nxar_t* res, kso* ref);
-
-
-/** nx.dtype **/
-
-/* Encode object into datatype, returning status
+/* Encode object into memory
  *
  * Ensure that the 'out' holds 'dtype->size' bytes
  */
-KS_API bool nx_dtype_enc(nx_dtype dtype, kso obj, void* out);
+KS_API bool nx_enc(nx_dtype dtype, kso obj, void* data);
 
-/* Decode low-level value into kscript object
+/* Apply an element-wise function application on the arguments
  *
- * Ensure that the 'out' holds 'dtype->size' bytes, and is valid
+ * Returns either 0 if all executions returned 0, or the first non-zero code
+ *   encountered by calling 'func()'
  */
-KS_API bool nx_dtype_dec(nx_dtype dtype, void* obj, kso* out);
+KS_API int nx_apply_elem(nxf_elem func, int N, nx_t* args, void* extra);
 
 
-/** nx.array **/
 
-/* Create a new, dense array from the data in 'data', or initialized to the dtype's 'default' value if 'data==NULL'
- * The new array will have the same dims and rank, but it will be tightly packed, so the strides may be different if 'data' was not
- *   tightly packed
- */
-KS_API nx_array nx_array_newc(ks_type tp, nx_dtype dtype, int rank, ks_size_t* dims, ks_ssize_t* strides, void* data);
+/** Creation Routines **/
 
-/* Create a new array from an object, with a given datatype (may be NULL for a default)
+/* Create a new dense array from 'data', or initialized to zeros if 'data == NULL'. The new array
+ *   will have the same rank and shape, but it will be tightly packed and so the strides may be different if
+ *   'data' was not tightly packed
  *
- * If 'obj' is not iterable, it will be converted to a [,] scalar. Otherwise,
- *   it is searched recursively, and it is assumed to have equal dimensions,
- *   and then each non-iterable object is converted to the corresponding element
- *   in the resultant array
  */
-KS_API nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype);
+KS_API nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t* strides);
+
+/* Create a new dense array from an object, with a given datatype (may be NULL for a default)
+ *
+ * If 'obj' is iterable, it will be converted recursively and dimensions will
+ *   be checked, and each non-iterable object is converted to a scalar value
+ * Otherwise, if 'obj' is not iterable, it will be converted to a scalar of rank 0
+ *
+ */
+KS_API nx_array nx_array_newo(ks_type tp, kso objh, nx_dtype dtype);
 
 
-/* Return a pointer to a specific element */
-static void* nx_get_ptr(void* data, int N, ks_size_t* dims, ks_ssize_t* strides, ks_ssize_t* idxs) {
-    ks_uint res = (ks_uint)data;
-    int i;
-    for (i = 0; i < N; ++i) {
-        res += idxs[i] * strides[i];
-    }
+/** Operations **/
 
-    return (void*)res;
-}
+/* Compute 'R = X', but type casted to 'R's type. Both must be numeric */
+KS_API bool nx_cast(nx_t X, nx_t R);
 
-
-/** Conversions **/
-
-/* Compute 'r = x', but type casted to 'r's type. Both must be numeric */
-KS_API bool nx_cast(nxar_t r, nxar_t x);
-
-/* Compute 'r = x', but with floating/fixed point conversions automatic
+/* Compute 'R = X', but with floating/fixed point conversions automatic
  *
  * For examples, floats are normally in the range [-1, 1], and integers have
  *   their own ranges. 
@@ -484,75 +588,106 @@ KS_API bool nx_cast(nxar_t r, nxar_t x);
  * Unsigned integers are converted into their appropriate float range in [0, 1], 
  *   and signed integers are converted to floats between [-1, 1]. The reverse is also true
  */
-KS_API bool nx_fpcast(nxar_t r, nxar_t x);
+KS_API bool nx_fpcast(nx_t X, nx_t R);
+
+/*** Math Operations ***/
+
+/* R = -X */
+KS_API bool nx_neg(nx_t X, nx_t R);
+
+/* R = abs(X) 
+ * This kernel is special: If you give it a complex -> real abs, you must provide
+ *   the arguments in the correct type
+ */
+KS_API bool nx_abs(nx_t X, nx_t R);
+
+/* R = ~X  (conjugation) */
+KS_API bool nx_conj(nx_t X, nx_t R);
+
+/* R = fmin(X, Y) */
+KS_API bool nx_fmin(nx_t X, nx_t Y, nx_t R);
+/* R = fmax(X, Y) */
+KS_API bool nx_fmax(nx_t X, nx_t Y, nx_t R);
 
 
+/* R = clip(X, min=Y, max=Z) */
+KS_API bool nx_clip(nx_t X, nx_t Y, nx_t Z, nx_t R);
 
-/** Math Operations **/
+/* R = X + Y */
+KS_API bool nx_add(nx_t X, nx_t Y, nx_t R);
 
-/* r = x + y */
-KS_API bool nx_add(nxar_t r, nxar_t x, nxar_t y);
+/* R = X - Y */
+KS_API bool nx_sub(nx_t X, nx_t Y, nx_t R);
 
-/* r = x - y */
-KS_API bool nx_sub(nxar_t r, nxar_t x, nxar_t y);
+/* R = X * Y */
+KS_API bool nx_mul(nx_t X, nx_t Y, nx_t R);
 
-/* r = x * y */
-KS_API bool nx_mul(nxar_t r, nxar_t x, nxar_t y);
+/* R = X / Y */
+KS_API bool nx_div(nx_t X, nx_t Y, nx_t R);
 
-/* r = x % y */
-KS_API bool nx_mod(nxar_t r, nxar_t x, nxar_t y);
+/* R = X // Y */
+KS_API bool nx_floordiv(nx_t X, nx_t Y, nx_t R);
 
-/* r = sqrt(x) */
-KS_API bool nx_sqrt(nxar_t r, nxar_t x);
+/* R = X % Y */
+KS_API bool nx_mod(nx_t X, nx_t Y, nx_t R);
 
-/* r = cbrt(x) */
-KS_API bool nx_cbrt(nxar_t r, nxar_t x);
+/* R = exp(X) */
+KS_API bool nx_exp(nx_t X, nx_t R);
 
-/* r = pow(x, y) */
-KS_API bool nx_pow(nxar_t r, nxar_t x, nxar_t y);
+/* R = log(X) */
+KS_API bool nx_log(nx_t X, nx_t R);
 
-/* r = hypot(x, y) */
-KS_API bool nx_hypot(nxar_t r, nxar_t x, nxar_t y);
+/* R = sqrt(X) */
+KS_API bool nx_sqrt(nx_t X, nx_t R);
 
-/* r = sin(x) */
-KS_API bool nx_sin(nxar_t r, nxar_t x);
+/* R = cbrt(X) */
+KS_API bool nx_cbrt(nx_t X, nx_t R);
 
-/* r = cos(x) */
-KS_API bool nx_cos(nxar_t r, nxar_t x);
+/* R = pow(X, Y) */
+KS_API bool nx_pow(nx_t X, nx_t Y, nx_t R);
 
-/* r = tan(x) */
-KS_API bool nx_tan(nxar_t r, nxar_t x);
+/* R = hypot(X, Y) */
+KS_API bool nx_hypot(nx_t X, nx_t Y, nx_t R);
 
-/* r = asin(x) */
-KS_API bool nx_asin(nxar_t r, nxar_t x);
+/* R = sin(X) */
+KS_API bool nx_sin(nx_t X, nx_t R);
 
-/* r = acos(x) */
-KS_API bool nx_acos(nxar_t r, nxar_t x);
+/* R = cos(X) */
+KS_API bool nx_cos(nx_t X, nx_t R);
 
-/* r = atan(x) */
-KS_API bool nx_atan(nxar_t r, nxar_t x);
+/* R = tan(X) */
+KS_API bool nx_tan(nx_t X, nx_t R);
 
-/* r = sinh(x) */
-KS_API bool nx_sinh(nxar_t r, nxar_t x);
+/* R = asin(X) */
+KS_API bool nx_asin(nx_t X, nx_t R);
 
-/* r = cosh(x) */
-KS_API bool nx_cosh(nxar_t r, nxar_t x);
+/* R = acos(X) */
+KS_API bool nx_acos(nx_t X, nx_t R);
 
-/* r = atanh(x) */
-KS_API bool nx_tanh(nxar_t r, nxar_t x);
+/* R = atan(X) */
+KS_API bool nx_atan(nx_t X, nx_t R);
 
-/* r = asinh(x) */
-KS_API bool nx_asinh(nxar_t r, nxar_t x);
+/* R = sinh(X) */
+KS_API bool nx_sinh(nx_t X, nx_t R);
 
-/* r = acosh(x) */
-KS_API bool nx_acosh(nxar_t r, nxar_t x);
+/* R = cosh(X) */
+KS_API bool nx_cosh(nx_t X, nx_t R);
 
-/* r = atanh(x) */
-KS_API bool nx_atanh(nxar_t r, nxar_t x);
+/* R = tanh(X) */
+KS_API bool nx_tanh(nx_t X, nx_t R);
+
+/* R = asinh(X) */
+KS_API bool nx_asinh(nx_t X, nx_t R);
+
+/* R = acosh(X) */
+KS_API bool nx_acosh(nx_t X, nx_t R);
+
+/* R = atanh(X) */
+KS_API bool nx_atanh(nx_t X, nx_t R);
+
 
 
 /** Submodule: 'nx.rand' **/
-
 
 /* Number of elements in the state */
 #define NXRAND_N 1024
@@ -584,6 +719,8 @@ typedef struct nxrand_State_s {
 /* Create a new random number generator state */
 KS_API nxrand_State nxrand_State_new(ks_uint seed);
 
+/* Re-start a state and re-seed it */
+KS_API void nxrand_State_seed(nxrand_State self, ks_uint seed);
 
 /* Generate 'nout' uniformly distributed bytes */
 KS_API bool nxrand_randb(nxrand_State self, int nout, unsigned char* out);
@@ -593,16 +730,21 @@ KS_API bool nxrand_randb(nxrand_State self, int nout, unsigned char* out);
 
 /* Fills 'R' with random, uniform floats in [0, 1)
  */
-KS_API bool nxrand_randf(nxrand_State self, nxar_t R);
+KS_API bool nxrand_randf(nxrand_State self, nx_t R);
 
 /* Fills 'R' with values in a normal (Guassian) distribution
  *
  *   u: The mean (default=0.0)
  *   o: The standard deviation (default=1.0)
  */
-KS_API bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o);
+KS_API bool nxrand_normal(nxrand_State self, nx_t R, nx_t u, nx_t o);
+
 
 /** Submodule: 'nx.la' (linear algebra) **/
+
+/* R = X @ Y */
+KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
+
 
 /** Submodule: 'nx.cv' (computer vision / image processing) **/
 
@@ -612,6 +754,13 @@ KS_API bool nxrand_normal(nxrand_State self, nxar_t R, nxar_t u, nxar_t o);
 
 /*  */
 
+/* Globals */
+
+
+KS_API_DATA nxrand_State 
+    nxrand_State_default /* Default random state */
+;
+
 /* Types */
 KS_API_DATA ks_type
     nxt_dtype,
@@ -619,51 +768,32 @@ KS_API_DATA ks_type
     nxt_view,
 
     nxrandt_State
-
 ;
-
-KS_API_DATA nx_dtype
-    nx_uint8,
-    nx_sint8,
-    nx_uint16,
-    nx_sint16,
-    nx_uint32,
-    nx_sint32,
-    nx_uint64,
-    nx_sint64,
-
-    nx_float32,
-    nx_float64,
-    /*
-    nx_float80,
-    nx_float128,
-    */
-    
-    nx_complex32,
-    nx_complex64
-;
-
 
 /* C types */
 KS_API_DATA nx_dtype
-    nxd_schar,
-    nxd_uchar,
-    nxd_sshort,
-    nxd_ushort,
-    nxd_sint,
-    nxd_uint,
-    nxd_slong,
-    nxd_ulong,
+    nxd_bl,
 
-    nxd_float,
-    nxd_double,
-    nxd_longdouble,
-    nxd_float128,
+    nxd_s8,
+    nxd_u8,
+    nxd_s16,
+    nxd_u16,
+    nxd_s32,
+    nxd_u32,
+    nxd_s64,
+    nxd_u64,
 
-    nxd_complexfloat,
-    nxd_complexdouble,
-    nxd_complexlongdouble,
-    nxd_complexfloat128
+    nxd_H,
+    nxd_F,
+    nxd_D,
+    nxd_L,
+    nxd_E,
+
+    nxd_cH,
+    nxd_cF,
+    nxd_cD,
+    nxd_cL,
+    nxd_cE
 ;
 
 

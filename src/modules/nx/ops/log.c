@@ -1,4 +1,4 @@
-/* sqrt.c - 'sqrt' kernel
+/* log.c - 'log' kernel
  *
  * @author: Cade Brown <cade@kscript.org>
  */
@@ -7,7 +7,7 @@
 #include <ks/nxt.h>
 #include <ks/nxm.h>
 
-#define K_NAME "sqrt"
+#define K_NAME "exp"
 
 
 #define LOOPI(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
@@ -31,7 +31,7 @@
     ; \
     ks_cint i; \
     for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        *(TYPE*)pR = TYPE##sqrt(*(TYPE*)pX); \
+        *(TYPE*)pR = TYPE##log(*(TYPE*)pX); \
     } \
     return 0; \
 }
@@ -50,21 +50,10 @@
     ; \
     ks_cint i; \
     for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        TYPE x = *(TYPE*)pX; \
-        if (x.re == 0 && x.im == 0) { \
-            *(TYPE*)pR = x; \
-        } else { \
-            TYPE##r ar = TYPE##rfabs(x.re) / 8, ai = TYPE##rfabs(x.im); \
-            TYPE##r s = 2 * TYPE##rsqrt(ar + TYPE##rhypot(ar, ai / 8)); \
-            TYPE##r d = ai / (2 * s); \
-            if (x.re >= 0.0) { \
-                ((TYPE*)pR)->re = s; \
-                ((TYPE*)pR)->im = TYPE##rcopysign(d, x.im); \
-            } else { \
-                ((TYPE*)pR)->re = d; \
-                ((TYPE*)pR)->im = TYPE##rcopysign(s, x.im); \
-            } \
-        } \
+        TYPE x = *(TYPE*)pX, r; \
+        TYPE##r h = TYPE##rhypot(TYPE##rfabs(x.re), TYPE##rfabs(x.im)); \
+        ((TYPE*)pR)->re = TYPE##rlog(h); \
+        ((TYPE*)pR)->im = TYPE##ratan2(x.im, x.re); \
     } \
     return 0; \
 }
@@ -76,7 +65,7 @@ NXT_PASTE_F(LOOPR);
 NXT_PASTE_C(LOOPC);
 
 
-bool nx_sqrt(nx_t X, nx_t R) {
+bool nx_log(nx_t X, nx_t R) {
     nx_t cX;
     void *fX = NULL;
     if (!nx_getcast(X, R.dtype, &cX, &fX)) {

@@ -10,69 +10,79 @@
 
 /* Internals */
 
-static int kern_copy(int N, nxar_t* inp, int len, void* _data) {
+static int kern_copy(int N, nx_t* args, int len, void* extra) {
     assert(N == 2);
-
     ks_cint i;
-    nx_dtype dR = inp[0].dtype, dX = inp[1].dtype;
-    ks_uint pR = (ks_uint)inp[0].data, pX = (ks_uint)inp[1].data;
-    ks_cint sR = inp[0].strides[0], sX = inp[1].strides[0];
+    nx_t X = args[0], R = args[1];
+    ks_uint pX = (ks_uint)X.data, pR = (ks_uint)R.data;
+    ks_cint sX = X.strides[0], sR = R.strides[0];
 
-    if (sR == inp[0].dtype->size && sX == sR) {
+    if (sR == X.dtype->size && sX == sR) {
         /* Contiguous */
-        memcpy((void*)pR, (void*)pX, inp[0].dtype->size * len);
+        memcpy((void*)pR, (void*)pX, R.dtype->size * len);
     } else {
+        /* Non-continguous */
         for (i = 0; i < len; i++, pR += sR, pX += sX) {
-            memcpy((void*)pR, (void*)pX, inp[0].dtype->size);
+            memcpy((void*)pR, (void*)pX, R.dtype->size);
         }
     }
 
     return 0;
 
 }
+#include <ks/time.h>
 
 /* C-API */
-
-nx_array nx_array_newc(ks_type tp, nx_dtype dtype, int rank, ks_size_t* dims, ks_ssize_t* strides, void* data) {
+nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t* strides) {
     nx_array self = KSO_NEW(nx_array, tp);
 
     KS_INCREF(dtype);
-    self->ar.dtype = dtype;
+    self->val.dtype = dtype;
 
-    self->ar.rank = rank;
+    self->val.rank = rank;
 
-    self->ar.dims = ks_zmalloc(sizeof(*self->ar.dims), self->ar.rank);
-    self->ar.strides = ks_zmalloc(sizeof(*self->ar.strides), self->ar.rank);
-
-    memcpy(self->ar.dims, dims, sizeof(*self->ar.dims) * self->ar.rank);
-
-    /* last stride is the element size */
-    if (self->ar.rank > 0) self->ar.strides[self->ar.rank - 1] = self->ar.dtype->size;
     int i;
-    /* calculate strides for dense tensor, which are products of the last 'N' dimensions times
-     *   the element size
-     */
-    for (i = self->ar.rank - 2; i >= 0; --i) {
-        self->ar.strides[i] = self->ar.strides[i + 1] * self->ar.dims[i + 1];
+    for (i = 0; i < rank; ++i) {
+        self->val.shape[i] = shape[i];
     }
 
-    ks_size_t total_sz = self->ar.dtype->size;
-    for (i = 0; i < self->ar.rank; ++i) total_sz *= self->ar.dims[i];
+    /* Last stride is the element size */
+    if (rank > 0) self->val.strides[rank - 1] = dtype->size;
 
-    self->ar.data = ks_malloc(total_sz);
-    if (!self->ar.data) {
+    /* Calculate strides for dense array, which are the products of the last 'N' dimensions
+     *   times the bytes of each element
+     */
+    for (i = rank - 2; i >= 0; --i) {
+        self->val.strides[i] = self->val.strides[i + 1] * shape[i + 1];
+    }
+
+    /* Calculate total size, which is the product of the dimensions times element size */
+    ks_size_t tsz = dtype->size;
+    for (i = 0; i < rank; ++i) tsz *= shape[i];
+
+    ks_cfloat st = kstime_time();
+
+    self->val.data = ks_malloc(tsz);
+    if (!self->val.data) {
         KS_DECREF(self);
         KS_THROW(kst_Error, "Failed to allocate tensor of large size");
         return NULL;
     }
 
-    
     if (data) {
         /* Initialize with memory copying */
-        if (!nx_apply_elem(kern_copy, 2, (nxar_t[]){ self->ar, NXAR_(data, dtype, rank, dims, strides) }, NULL));
+        if (!nx_apply_elem(kern_copy, 2, (nx_t[]) {
+            nx_make(data, dtype, rank, shape, strides),
+            self->val,
+        }, NULL)) {
+            KS_DECREF(self);
+            return NULL;
+        }
     }
 
     return self;
+
+
 }
 
 /* internal method to tell the full depth of the array, then fill in corresponding dimensions once known, and finally,
@@ -118,17 +128,17 @@ static bool I_array_fill(ks_type tp, nx_dtype dtype, nx_array* resp, kso cur, in
 
         if (my_idx == 0) {
             /* first creation, so create the array */
-            *resp = nx_array_newc(tp, dtype, dep, *dims, NULL, NULL);
+            *resp = nx_array_newc(tp, NULL, dtype, dep, *dims, NULL);
         } else {
             /* already created, so ensure that the element was at maximum depth */
-            if (dep != (*resp)->ar.rank) {
+            if (dep != (*resp)->val.rank) {
                 KS_THROW(kst_SizeError, "Initializing entries had differing dimensions");
                 return false;
             }
         }
 
         /* Convert object */
-        if (!nx_dtype_enc(dtype, cur, NX_gep((*resp)->ar.data, dtype->size, my_idx))) {
+        if (!nx_enc(dtype, cur, (void*)((ks_uint)(*resp)->val.data + dtype->size * my_idx))) {
             return false;
         }
 
@@ -147,7 +157,7 @@ static bool I_array_fill(ks_type tp, nx_dtype dtype, nx_array* resp, kso cur, in
 
     if (dep == 0 && !*resp) {
         /* fill in automatically */
-        *resp = nx_array_newc(tp, dtype, *max_dep + 1, *dims, NULL, NULL);
+        *resp = nx_array_newc(tp, NULL, dtype, *max_dep + 1, *dims, NULL);
     }
 
     return true;
@@ -155,8 +165,18 @@ static bool I_array_fill(ks_type tp, nx_dtype dtype, nx_array* resp, kso cur, in
 
 
 nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
-    if (kso_is_iterable(obj)) {
-        if (!dtype) dtype = nxd_double;
+    if (kso_issub(obj->type, nxt_array)) {
+        nx_t of = ((nx_array)obj)->val;
+        nx_array res = nx_array_newc(tp, NULL, dtype, of.rank, of.shape, NULL);
+
+        if (!nx_cast(of, res->val)) {
+            KS_DECREF(res);
+            return NULL;
+        }
+
+        return res;
+    } else if (kso_is_iterable(obj)) {
+        if (!dtype) dtype = nxd_D;
 
         /* set up temporaries and fill array */
         int idx = 0, max_dep = 0;
@@ -171,30 +191,30 @@ nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
         ks_free(dims);
         return res;
     } else if (kso_is_int(obj)) {
-        if (!dtype) dtype = nxd_double;
+        if (!dtype) dtype = nxd_D;
 
-        nx_array res = nx_array_newc(tp, dtype, 0, NULL, NULL, NULL);
-        if (!nx_dtype_enc(dtype, obj, NX_gep(res->ar.data, dtype->size, 0))) {
+        nx_array res = nx_array_newc(tp, NULL, dtype, 0, NULL, NULL);
+        if (!nx_enc(dtype, obj, res->val.data)) {
             return false;
         }
 
         return res;
     } else if (kso_is_complex(obj)) {
-        if (!dtype) dtype = nxd_complexdouble;
+        if (!dtype) dtype = nxd_cD;
 
-        nx_array res = nx_array_newc(tp, dtype, 0, NULL, NULL, NULL);
+        nx_array res = nx_array_newc(tp, NULL, dtype, 0, NULL, NULL);
 
-        if (!nx_dtype_enc(dtype, obj, NX_gep(res->ar.data, dtype->size, 0))) {
+        if (!nx_enc(dtype, obj, res->val.data)) {
             return false;
         }
 
         return res;
     } else if (kso_is_float(obj)) {
-        if (!dtype) dtype = nxd_double;
+        if (!dtype) dtype = nxd_D;
 
-        nx_array res = nx_array_newc(tp, dtype, 0, NULL, NULL, NULL);
+        nx_array res = nx_array_newc(tp, NULL, dtype, 0, NULL, NULL);
 
-        if (!nx_dtype_enc(dtype, obj, NX_gep(res->ar.data, dtype->size, 0))) {
+        if (!nx_enc(dtype, obj, res->val.data)) {
             return false;
         }
         return res;
@@ -212,20 +232,18 @@ static KS_TFUNC(T, free) {
     nx_array self;
     KS_ARGS("self:*", &self, nxt_array);
 
-    KS_DECREF(self->ar.dtype);
-    ks_free(self->ar.data);
-    ks_free(self->ar.dims);
-    ks_free(self->ar.strides);
+    KS_DECREF(self->val.dtype);
+    ks_free(self->val.data);
     KSO_DEL(self);
 
     return KSO_NONE;
 }
+
 static KS_TFUNC(T, new) {
     ks_type tp;
     kso obj;
-    nx_dtype dtype = nxd_double;
+    nx_dtype dtype = nxd_D;
     KS_ARGS("tp:* obj ?dtype:*", &tp, kst_type, &obj, &dtype, nxt_dtype);
-
 
     return (kso)nx_array_newo(tp, obj, dtype);
 }
@@ -237,7 +255,7 @@ static KS_TFUNC(T, str) {
     /* TODO: add specifics */
     ksio_StringIO sio = ksio_StringIO_new();
 
-    if (!nxar_tostr((ksio_BaseIO)sio, self->ar)) {
+    if (!nx_getstr((ksio_BaseIO)sio, self->val)) {
         KS_DECREF(sio);
         return NULL;
     }
@@ -245,27 +263,42 @@ static KS_TFUNC(T, str) {
     return (kso)ksio_StringIO_getf(sio);
 }
 
-
 static KS_TFUNC(T, getattr) {
     nx_array self;
     ks_str attr;
     KS_ARGS("self:* attr:*", &self, nxt_array, &attr, kst_str);
     
     if (ks_str_eq_c(attr, "shape", 5)) {
-        ks_tuple res = ks_tuple_newe(self->ar.rank);
+        ks_tuple res = ks_tuple_newe(self->val.rank);
 
         int i;
-        for (i = 0; i < self->ar.rank; ++i) {
-            res->elems[i] = (kso)ks_int_new(self->ar.dims[i]);
+        for (i = 0; i < self->val.rank; ++i) {
+            res->elems[i] = (kso)ks_int_new(self->val.shape[i]);
         }
 
         return (kso)res;
+    } else if (ks_str_eq_c(attr, "strides", 7)) {
+
+        ks_tuple res = ks_tuple_newe(self->val.rank);
+
+        int i;
+        for (i = 0; i < self->val.rank; ++i) {
+            res->elems[i] = (kso)ks_int_new(self->val.strides[i]);
+        }
+
+        return (kso)res;
+    } else if (ks_str_eq_c(attr, "rank", 4)) {
+        return (kso)ks_int_new(self->val.rank);
+    }else if (ks_str_eq_c(attr, "dtype", 5)) {
+        return KS_NEWREF(self->val.dtype);
     }
     
     KS_THROW_ATTR(self, attr);
     return NULL;
-
 }
+
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -281,8 +314,27 @@ void _ksi_nx_array() {
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
 
-
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+
+
+/*
+        {"__neg",                  ksf_wrap(T_neg_, T_NAME ".__neg(V)", "")},
+        {"__abs",                  ksf_wrap(T_abs_, T_NAME ".__abs(V)", "")},
+        {"__sqig",                 ksf_wrap(T_sqig_, T_NAME ".__sqig(V)", "")},
+
+        {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
+        {"__sub",                  ksf_wrap(T_sub_, T_NAME ".__sub(L, R)", "")},
+        {"__mul",                  ksf_wrap(T_mul_, T_NAME ".__mul(L, R)", "")},
+        {"__div",                  ksf_wrap(T_div_, T_NAME ".__div(L, R)", "")},
+        {"__floordiv",             ksf_wrap(T_floordiv_, T_NAME ".__floordiv(L, R)", "")},
+        {"__mod",                  ksf_wrap(T_mod_, T_NAME ".__mod(L, R)", "")},
+        {"__pow",                  ksf_wrap(T_pow_, T_NAME ".__pow(L, R)", "")},
+
+        {"isscalar",               ksf_wrap(T_isscalar_, T_NAME ".isscalar(self)", "Computes whether 'self' is a scalar (i.e. 0-rank array)")},
+        {"isvec",                  ksf_wrap(T_isvec_, T_NAME ".isvec(self)", "Computes whether 'self' is a vector (i.e. 1-rank array)")},
+        {"ismat",                  ksf_wrap(T_ismat_, T_NAME ".ismat(self)", "Computes whether 'self' is a matrix (i.e. 2-rank array)")},
+
+        */
 
     ));
 

@@ -1,4 +1,4 @@
-/* mod.c - 'mod' kernel
+/* div.c - 'div' kernel
  *
  * @author: Cade Brown <cade@kscript.org>
  */
@@ -7,7 +7,7 @@
 #include <ks/nxt.h>
 #include <ks/nxm.h>
 
-#define K_NAME "mod"
+#define K_NAME "div"
 
 
 #define LOOPI(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
@@ -26,7 +26,7 @@
     ; \
     ks_cint i; \
     for (i = 0; i < len; i++, pX += sX, pY += sY, pR += sR) { \
-        *(TYPE*)pR = *(TYPE*)pX % *(TYPE*)pY; \
+        *(TYPE*)pR = *(TYPE*)pX / *(TYPE*)pY; \
     } \
     return 0; \
 }
@@ -47,7 +47,7 @@
     ; \
     ks_cint i; \
     for (i = 0; i < len; i++, pX += sX, pY += sY, pR += sR) { \
-        *(TYPE*)pR = TYPE##fmod(*(TYPE*)pX, *(TYPE*)pY); \
+        *(TYPE*)pR = TYPE##floor(*(TYPE*)pX / *(TYPE*)pY); \
     } \
     return 0; \
 }
@@ -69,7 +69,7 @@ NXT_PASTE_F(LOOPF);
 NXT_PASTE_C(LOOPC);
 
 
-bool nx_mod(nx_t X, nx_t Y, nx_t R) {
+bool nx_floordiv(nx_t X, nx_t Y, nx_t R) {
     nx_t cX, cY;
     void *fX = NULL, *fY = NULL;
     if (!nx_getcast(X, R.dtype, &cX, &fX)) {

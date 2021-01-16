@@ -3,160 +3,553 @@
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
-#include <ks/nx.h>
 #include <ks/nxt.h>
 
 #define K_NAME "fpcast"
 
 
-static int kern(int N, nxar_t* inp, int len, void* _data) {
-    assert(N == 2);
-
-    ks_cint i;
-    nx_dtype dR = inp[0].dtype, dX = inp[1].dtype;
-    ks_uint pR = (ks_uint)inp[0].data, pX = (ks_uint)inp[1].data;
-    ks_cint sR = inp[0].strides[0], sX = inp[1].strides[0];
-
-#define CASE_NUM(_dt) else if (dR == _dt) { \
-    NXT_DO_INTS(dX, LOOPI); \
-    NXT_DO_FLOATS(dX, LOOPF); \
-    NXT_DO_COMPLEXS(dX, LOOPC); \
+#define LOOPI(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = nx_blv(*(TYPE*)pX); \
+    } \
+    return 0; \
 }
 
-    /* Integer types */
-#define LOOPI(TYPE) do { \
+#define LOOPF(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = nx_blv(*(TYPE*)pX); \
+    } \
+    return 0; \
+}
+
+#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = nx_blv(((TYPE*)pX)->re) && nx_blv(((TYPE*)pX)->im); \
+    } \
+    return 0; \
+}
+
+#define RNAME bl
+#define RTYPE nx_bl
+#define RTYPE_MIN nx_blMIN
+#define RTYPE_MAX nx_blMAX
+#define KN(_X) kern_##_X##_bl
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#undef LOOPI
+#undef LOOPF
+#undef LOOPC
+
+#define LOOPI(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
     int sa = (int)sizeof(RTYPE) - (int)sizeof(TYPE); \
-    for (i = 0; i < len; i++, pR += sR, pX += sX) { \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
         *(RTYPE*)pR = sa > 0 ? (*(TYPE*)pX << sa) : (*(TYPE*)pX >> -sa); \
     } \
     return 0; \
-} while (0);
-
-#define LOOPF(TYPE) do { \
-    bool sgn = RTYPE_MIN < 0; \
-    for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        *(RTYPE*)pR = sgn ? (*(TYPE*)pX * ((TYPE)RTYPE_MAX - RTYPE_MIN) + RTYPE_MIN) : (*(TYPE*)pX * RTYPE_MAX); \
-    } \
-    return 0; \
-} while (0);
-
-#define LOOPC(TYPE) do { \
-    bool sgn = RTYPE_MIN < 0; \
-    for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        TYPE t; \
-        *(RTYPE*)pR = sgn ? (((TYPE*)pX)->re * ((t.re = RTYPE_MAX) - RTYPE_MIN) + RTYPE_MIN) : (((TYPE*)pX)->re * RTYPE_MAX); \
-    } \
-    return 0; \
-} while (0);
-
-#define MIN(T) T##_MIN
-#define MAX(T) T##_MAX
-
-    if (false) {}
-#define RTYPE nxc_uchar
-#define RTYPE_MIN MIN(nxc_uchar)
-#define RTYPE_MAX MAX(nxc_uchar)
-    CASE_NUM(nxd_uchar)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-
-#define RTYPE nxc_schar
-#define RTYPE_MIN MIN(nxc_schar)
-#define RTYPE_MAX MAX(nxc_schar)
-    CASE_NUM(nxd_schar)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-#define RTYPE nxc_ushort
-#define RTYPE_MIN MIN(nxc_ushort)
-#define RTYPE_MAX MAX(nxc_ushort)
-    CASE_NUM(nxd_ushort)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-#define RTYPE nxc_sshort
-#define RTYPE_MIN MIN(nxc_sshort)
-#define RTYPE_MAX MAX(nxc_sshort)
-    CASE_NUM(nxd_sshort)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-#define RTYPE nxc_uint
-#define RTYPE_MIN MIN(nxc_uint)
-#define RTYPE_MAX MAX(nxc_uint)
-    CASE_NUM(nxd_uint)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-#define RTYPE nxc_sint
-#define RTYPE_MIN MIN(nxc_sint)
-#define RTYPE_MAX MAX(nxc_sint)
-    CASE_NUM(nxd_sint)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-#define RTYPE nxc_ulong
-#define RTYPE_MIN MIN(nxc_ulong)
-#define RTYPE_MAX MAX(nxc_ulong)
-    CASE_NUM(nxd_ulong)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-#define RTYPE nxc_slong
-#define RTYPE_MIN MIN(nxc_slong)
-#define RTYPE_MAX MAX(nxc_slong)
-    CASE_NUM(nxd_slong)
-#undef RTYPE
-#undef RTYPE_MIN
-#undef RTYPE_MAX
-
-
-    /* Float types */
-#undef LOOPI
-#define LOOPI(TYPE) do { \
-    RTYPE sa = (RTYPE)MAX(TYPE) - MIN(TYPE), sb = MIN(TYPE); \
-    bool sgn = MIN(TYPE) < 0; \
-    for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        *(RTYPE*)pR = sgn ? (2 * (RTYPE)(*(TYPE*)pX - sb / 2) / sa) : ((RTYPE)(*(TYPE*)pX - sb) / sa); \
-    } \
-    return 0; \
-} while (0);
-
-#undef LOOPF
-#define LOOPF(TYPE) do { \
-    for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        *(RTYPE*)pR = *(TYPE*)pX; \
-    } \
-    return 0; \
-} while (0);
-
-#undef LOOPC
-#define LOOPC(TYPE) do { \
-    for (i = 0; i < len; i++, pR += sR, pX += sX) { \
-        *(RTYPE*)pR = ((TYPE*)pX)->re; \
-    } \
-    return 0; \
-} while (0);
-
-#define RTYPE nxc_float
-    CASE_NUM(nxd_float)
-#undef RTYPE
-#define RTYPE nxc_double
-    CASE_NUM(nxd_double)
-#undef RTYPE
-#define RTYPE nxc_longdouble
-    CASE_NUM(nxd_longdouble)
-#undef RTYPE
-#define RTYPE nxc_float128
-    CASE_NUM(nxd_float128)
-#undef RTYPE
-
-
-    KS_THROW(kst_TypeError, "Types not supported for '%s' kernel: %R, %R", K_NAME, dR, dX);
-    return 1;
 }
 
-bool nx_fpcast(nxar_t r, nxar_t x) {
-    return !nx_apply_elem(kern, 2, (nxar_t[]){ r, x }, NULL);
+#define LOOPF(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = RTYPE_MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = sgn ? \
+          (TYPE)RTYPE_MAX * *(TYPE*)pX \
+          : (*(TYPE*)pX * (TYPE)RTYPE_MAX); \
+    } \
+    return 0; \
+}
+
+#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = RTYPE_MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = sgn ? \
+          (((TYPE##r)RTYPE_MAX - (TYPE##r)RTYPE_MIN) * (((TYPE*)pX)->re + 1) / 2 + (TYPE##r)RTYPE_MIN) \
+          : (((TYPE*)pX)->re * (TYPE##r)RTYPE_MAX); \
+    } \
+    return 0; \
+}
+
+#define RNAME u8
+#define RTYPE nx_u8
+#define RTYPE_MIN nx_u8MIN
+#define RTYPE_MAX nx_u8MAX
+#define KN(_X) kern_##_X##_u8
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME s8
+#define RTYPE nx_s8
+#define RTYPE_MIN nx_s8MIN
+#define RTYPE_MAX nx_s8MAX
+#define KN(_X) kern_##_X##_s8
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME u16
+#define RTYPE nx_u16
+#define RTYPE_MIN nx_u16MIN
+#define RTYPE_MAX nx_u16MAX
+#define KN(_X) kern_##_X##_u16
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME s16
+#define RTYPE nx_s16
+#define RTYPE_MIN nx_s16MIN
+#define RTYPE_MAX nx_s16MAX
+#define KN(_X) kern_##_X##_s16
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME u32
+#define RTYPE nx_u32
+#define RTYPE_MIN nx_u32MIN
+#define RTYPE_MAX nx_u32MAX
+#define KN(_X) kern_##_X##_u32
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME s32
+#define RTYPE nx_s32
+#define RTYPE_MIN nx_s32MIN
+#define RTYPE_MAX nx_s32MAX
+#define KN(_X) kern_##_X##_s32
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME u64
+#define RTYPE nx_u64
+#define RTYPE_MIN nx_u64MIN
+#define RTYPE_MAX nx_u64MAX
+#define KN(_X) kern_##_X##_u64
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME s64
+#define RTYPE nx_s64
+#define RTYPE_MIN nx_s64MIN
+#define RTYPE_MAX nx_s64MAX
+#define KN(_X) kern_##_X##_s64
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#undef LOOPI
+#undef LOOPF
+#undef LOOPC
+
+
+/* Float Types */
+
+#define LOOPI(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = TYPE##MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = sgn ? \
+          (*(TYPE*)pX + (RTYPE)TYPE##MAX) / ((RTYPE)TYPE##MAX) - 1 \
+          : (*(TYPE*)pX / (RTYPE)TYPE##MAX); \
+    } \
+    return 0; \
+}
+
+
+#define LOOPF(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = RTYPE_MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = *(RTYPE*)pX; \
+    } \
+    return 0; \
+}
+
+#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = RTYPE_MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = *(RTYPE*)pX; \
+    } \
+    return 0; \
+}
+
+#define RNAME H
+#define RTYPE nx_H
+#define RTYPE_MIN nx_HMIN
+#define RTYPE_MAX nx_HMAX
+#define KN(_X) kern_##_X##_H
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME F
+#define RTYPE nx_F
+#define RTYPE_MIN nx_FMIN
+#define RTYPE_MAX nx_FMAX
+#define KN(_X) kern_##_X##_F
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME D
+#define RTYPE nx_D
+#define RTYPE_MIN nx_DMIN
+#define RTYPE_MAX nx_DMAX
+#define KN(_X) kern_##_X##_D
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME L
+#define RTYPE nx_L
+#define RTYPE_MIN nx_LMIN
+#define RTYPE_MAX nx_LMAX
+#define KN(_X) kern_##_X##_L
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME E
+#define RTYPE nx_E
+#define RTYPE_MIN nx_EMIN
+#define RTYPE_MAX nx_EMAX
+#define KN(_X) kern_##_X##_E
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#undef LOOPI
+#undef LOOPF
+#undef LOOPC
+
+
+/* Complex Types */
+
+
+#define LOOPI(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = TYPE##MIN < 0; \
+    RTYPE##r sa = (RTYPE##r)TYPE##MAX - TYPE##MIN, sb = TYPE##MIN; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        ((RTYPE*)pR)->re = sgn ? (2 * (RTYPE##r)(*(TYPE*)pX - sb / 2) / sa) : ((RTYPE##r)(*(TYPE*)pX - sb) / sa); \
+        ((RTYPE*)pR)->im = 0; \
+    } \
+    return 0; \
+}
+
+#define LOOPF(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = RTYPE_MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        ((RTYPE*)pR)->re = *(TYPE*)pX; \
+        ((RTYPE*)pR)->im = 0; \
+    } \
+    return 0; \
+}
+
+#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    bool sgn = RTYPE_MIN < 0; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
+        *(RTYPE*)pR = *(RTYPE*)pX; \
+    } \
+    return 0; \
+}
+
+#define RNAME cH
+#define RTYPE nx_cH
+#define RTYPEr nx_H
+#define RTYPE_MIN nx_cHrMIN
+#define RTYPE_MAX nx_cHrMAX
+#define KN(_X) kern_##_X##_cH
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPEr
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME cF
+#define RTYPE nx_cF
+#define RTYPEr nx_F
+#define RTYPE_MIN nx_cFrMIN
+#define RTYPE_MAX nx_cFrMAX
+#define KN(_X) kern_##_X##_cF
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPEr
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME cD
+#define RTYPE nx_cD
+#define RTYPEr nx_D
+#define RTYPE_MIN nx_cDrMIN
+#define RTYPE_MAX nx_cDrMAX
+#define KN(_X) kern_##_X##_cD
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPEr
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME cL
+#define RTYPE nx_cL
+#define RTYPEr nx_L
+#define RTYPE_MIN nx_cLrMIN
+#define RTYPE_MAX nx_cLrMAX
+#define KN(_X) kern_##_X##_cL
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPEr
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#define RNAME cE
+#define RTYPE nx_cE
+#define RTYPEr nx_E
+#define RTYPE_MIN nx_cErMIN
+#define RTYPE_MAX nx_cErMAX
+#define KN(_X) kern_##_X##_cE
+  NXT_PASTE_I(LOOPI)
+  NXT_PASTE_F(LOOPF)
+  NXT_PASTE_C(LOOPC)
+#undef RNAME
+#undef RTYPE
+#undef RTYPEr
+#undef RTYPE_MIN
+#undef RTYPE_MAX
+#undef KN
+
+#undef LOOPI
+#undef LOOPF
+#undef LOOPC
+
+bool nx_fpcast(nx_t X, nx_t R) {
+    #define LOOP(_X, _R) do { \
+        return !nx_apply_elem(kern_##_X##_##_R, 2, (nx_t[]){ X, R }, NULL); \
+    } while (0);
+
+    NXT_PASTE_ALL2(X.dtype, R.dtype, LOOP);
+    #undef LOOP
+
+    KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);
+    return false;
 }

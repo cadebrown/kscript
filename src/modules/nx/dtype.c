@@ -4,7 +4,6 @@
  * @author:    Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
-#include <ks/nx.h>
 #include <ks/nxt.h>
 
 #define T_NAME "nx.dtype"
@@ -13,104 +12,38 @@
 
 /* C-API */
 
-nx_dtype dtype_get_cint(const char* name, int sz) {
+static nx_dtype make_int(const char* name, const char* namecode, int sz) {
     nx_dtype res = KSO_NEW(nx_dtype, nxt_dtype);
 
     res->name = ks_str_new(-1, name);
-    res->kind = NX_DTYPE_KIND_CINT;
+    res->namecode = ks_str_new(-1, namecode);
+    res->kind = NX_DTYPE_INT;
     res->size = sz;
 
     return res;
 }
 
-nx_dtype dtype_get_cfloat(const char* name, int sz) {
+static nx_dtype make_float(const char* name, const char* namecode, int sz) {
     nx_dtype res = KSO_NEW(nx_dtype, nxt_dtype);
 
     res->name = ks_str_new(-1, name);
-    res->kind = NX_DTYPE_KIND_CFLOAT;
+    res->namecode = ks_str_new(-1, namecode);
+    res->kind = NX_DTYPE_FLOAT;
     res->size = sz;
 
     return res;
 }
 
-nx_dtype dtype_get_ccomplex(const char* name, int sz) {
+static nx_dtype make_complex(const char* name, const char* namecode, int sz) {
     nx_dtype res = KSO_NEW(nx_dtype, nxt_dtype);
 
     res->name = ks_str_new(-1, name);
-    res->kind = NX_DTYPE_KIND_CCOMPLEX;
+    res->namecode = ks_str_new(-1, namecode);
+    res->kind = NX_DTYPE_COMPLEX;
     res->size = sz;
 
     return res;
 }
-
-bool nx_dtype_enc(nx_dtype dtype, kso obj, void* out) {
-    if (dtype->kind == NX_DTYPE_KIND_CINT) {
-        ks_cint val;
-        if (!kso_get_ci(obj, &val)) return false;
-        #define LOOP(TYPE) do { \
-            *(TYPE*)out = val; \
-            return true; \
-        } while (0);
-        NXT_DO_INTS(dtype, LOOP);
-        #undef LOOP
-
-    } else if (dtype->kind == NX_DTYPE_KIND_CFLOAT) {
-        ks_cfloat val;
-        if (!kso_get_cf(obj, &val)) return false;
-        #define LOOP(TYPE) do { \
-            *(TYPE*)out = val; \
-            return true; \
-        } while (0);
-        NXT_DO_FLOATS(dtype, LOOP);
-        #undef LOOP
-
-    } else if (dtype->kind == NX_DTYPE_KIND_CCOMPLEX) {
-        ks_ccomplex val;
-        if (!kso_get_cc(obj, &val)) return false;
-
-        #define LOOP(TYPE) do { \
-            ((TYPE*)out)->re = val.re; \
-            ((TYPE*)out)->im = val.im; \
-            return true; \
-        } while (0);
-        NXT_DO_COMPLEXS(dtype, LOOP);
-        #undef LOOP
-    }
-
-    KS_THROW(kst_TypeError, "Unsupported dtype: %R", dtype);
-    return false;
-}
-
-bool nx_dtype_dec(nx_dtype dtype, void* obj, kso* out) {
-    if (dtype->kind == NX_DTYPE_KIND_CINT) {
-        #define LOOP(TYPE) do { \
-            *out = (kso)ks_int_new(*(TYPE*)obj); \
-            return true; \
-        } while (0);
-        NXT_DO_INTS(dtype, LOOP);
-        #undef LOOP
-
-    } else if (dtype->kind == NX_DTYPE_KIND_CFLOAT) {
-        #define LOOP(TYPE) do { \
-            *out = (kso)ks_float_new(*(TYPE*)obj); \
-            return true; \
-        } while (0);
-        NXT_DO_FLOATS(dtype, LOOP);
-        #undef LOOP
-
-    } else if (dtype->kind == NX_DTYPE_KIND_CCOMPLEX) {
-        #define LOOP(TYPE) do { \
-            *out = (kso)ks_complex_newre(((TYPE*)obj)->re, ((TYPE*)obj)->re); \
-            return true; \
-        } while (0);
-        NXT_DO_COMPLEXS(dtype, LOOP);
-        #undef LOOP
-    }
-
-    KS_THROW(kst_TypeError, "Unsupported dtype: %R", dtype);
-    return false;
-}
-
 
 
 /* Type Functions */
@@ -146,57 +79,42 @@ static KS_TFUNC(T, getattr) {
     return NULL;
 }
 
+static KS_TFUNC(T, call) {
+    nx_dtype self;
+    kso obj;
+    KS_ARGS("self:* obj", &self, nxt_dtype, &obj);
 
+    return (kso)nx_array_newo(nxt_array, obj, self);
+}
 
 /* Export */
 
 static struct ks_type_s tp;
 ks_type nxt_dtype = &tp;
 
-
 nx_dtype
-    nx_uint8,
-    nx_sint8,
-    nx_uint16,
-    nx_sint16,
-    nx_uint32,
-    nx_sint32,
-    nx_uint64,
-    nx_sint64,
+    nxd_bl,
+    nxd_s8,
+    nxd_u8,
+    nxd_s16,
+    nxd_u16,
+    nxd_s32,
+    nxd_u32,
+    nxd_s64,
+    nxd_u64,
 
-    nx_float32,
-    nx_float64,
-    /*
-    nx_float80,
-    nx_float128,
-    */
-    
-    nx_complex32,
-    nx_complex64
+    nxd_H,
+    nxd_F,
+    nxd_D,
+    nxd_L,
+    nxd_E,
 
+    nxd_cH,
+    nxd_cF,
+    nxd_cD,
+    nxd_cL,
+    nxd_cE
 ;
-
-nx_dtype
-    nxd_schar,
-    nxd_uchar,
-    nxd_sshort,
-    nxd_ushort,
-    nxd_sint,
-    nxd_uint,
-    nxd_slong,
-    nxd_ulong,
-
-    nxd_float,
-    nxd_double,
-    nxd_longdouble,
-    nxd_float128,
-
-    nxd_complexfloat,
-    nxd_complexdouble,
-    nxd_complexlongdouble,
-    nxd_complexfloat128
-;
-
 
 
 void _ksi_nx_dtype() {
@@ -207,22 +125,30 @@ void _ksi_nx_dtype() {
 
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
-        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr__(self, attr)", "")},
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+        {"__call",                 ksf_wrap(T_call_, T_NAME ".__call(self, obj)", "")},
 
     ));
-
     
-    nxd_uchar = dtype_get_cint("uchar", sizeof(nxc_uchar));
+    nxd_bl = make_int("bool", "bool", sizeof(nx_bl));
+    nxd_s8 = make_int("s8", "s8", sizeof(nx_s8));
+    nxd_u8 = make_int("u8", "u8", sizeof(nx_u8));
+    nxd_s16 = make_int("s16", "s16", sizeof(nx_s16));
+    nxd_u16 = make_int("u16", "u16", sizeof(nx_u16));
+    nxd_s32 = make_int("s32", "s32", sizeof(nx_s32));
+    nxd_u32 = make_int("u32", "u32", sizeof(nx_u32));
+    nxd_s64 = make_int("s64", "s64", sizeof(nx_s64));
+    nxd_u64 = make_int("u64", "u64", sizeof(nx_u64));
 
-    nxd_float = dtype_get_cfloat("float", sizeof(nxc_float));
-    nxd_double = dtype_get_cfloat("double", sizeof(nxc_double));
-    nxd_longdouble = dtype_get_cfloat("longdouble", sizeof(nxc_longdouble));
-    nxd_float128 = dtype_get_cfloat("float128", sizeof(nxd_float128));
-    nxd_complexfloat = dtype_get_ccomplex("complexfloat", sizeof(nxc_complexfloat));
-    nxd_complexdouble = dtype_get_ccomplex("complexdouble", sizeof(nxc_complexdouble));
-    nxd_complexlongdouble = dtype_get_ccomplex("complexlongdouble", sizeof(nxc_complexlongdouble));
-    nxd_complexfloat128 = dtype_get_ccomplex("complexfloat128", sizeof(nxd_complexfloat128));
+    nxd_H = make_float("half", "H", sizeof(nx_H));
+    nxd_F = make_float("float", "F", sizeof(nx_F));
+    nxd_D = make_float("double", "D", sizeof(nx_D));
+    nxd_L = make_float("longdouble", "L", sizeof(nx_L));
+    nxd_E = make_float("fp128", "E", sizeof(nx_E));
+
+    nxd_cH = make_complex("complexhalf", "cH", sizeof(nx_cH));
+    nxd_cF = make_complex("complexfloat", "cF", sizeof(nx_cF));
+    nxd_cD = make_complex("complexdouble", "cD", sizeof(nx_cD));
+    nxd_cL = make_complex("complexlongdouble", "cL", sizeof(nx_cL));
+    nxd_cE = make_complex("complexfp128", "cE", sizeof(nx_cE));
 }
-
-
-

@@ -15,15 +15,15 @@
 
 #ifndef KS_HAVE_libav
 
+
+#endif
+
 #define STBI_FAILURE_USERMSG
 #define STB_IMAGE_IMPLEMENTATION
 #include "./stb_image.h"
 
 #define STB_IMAGE_WRITE_IMPLEMENTATION
 #include "./stb_image_write.h"
-
-#endif
-
 
 
 /* Utils */
@@ -83,6 +83,9 @@ enum AVPixelFormat ksav_AV_filterfmt(enum AVPixelFormat pix_fmt) {
 }
 
 #else
+#endif
+
+
 
 /* STB callbacks */
 
@@ -142,9 +145,7 @@ void my_stbi_write(void* context, void* data, int size) {
     if (!d->exc && !ksio_writeb(d->out, size, data)) {
         d->exc = true;
     }
-
 }
-#endif
 
 
 kso ksav_imread(kso src) {
@@ -171,7 +172,6 @@ kso ksav_imread(kso src) {
     }
 
     assert(rsidx == vs);
-
     return res;
 #else
     stbi_io_callbacks stbio;
@@ -207,7 +207,7 @@ kso ksav_imread(kso src) {
 #endif
 }
 
-bool ksav_imwrite(kso src, nxar_t data, kso fmt) {
+bool ksav_imwrite(kso src, nx_t data, kso fmt) {
 
     if (!(data.rank == 2 || data.rank == 3)) {
         KS_THROW(kst_Error, "Invalid dimensions, images must have rank 2 or 3, but it was of rank %i", data.rank);
@@ -237,7 +237,7 @@ bool ksav_imwrite(kso src, nxar_t data, kso fmt) {
         return NULL;
     }
 
-#ifdef KS_HAVE_libav
+#ifdef KS_HAVE_libav_TODOCHANGETHIS
     KS_THROW(kst_Error, "TODO: fix libav imwrite");
     KS_DECREF(sf);
     return false;
@@ -256,17 +256,17 @@ bool ksav_imwrite(kso src, nxar_t data, kso fmt) {
         ds.out = src;
     }
 
-    int h = data.dims[0], w = data.dims[1], d = data.rank == 3 ? data.dims[2] : 1;
-    nxc_uchar* dp = ks_zmalloc(sizeof(*dp), h * w * d);
+    int h = data.shape[0], w = data.shape[1], d = data.rank == 3 ? data.shape[2] : 1;
+    nx_u8* dp = ks_zmalloc(sizeof(*dp), h * w * d);
     if (!nx_fpcast(
-        (nxar_t) {
+        data,
+        nx_make(
             dp,
-            nxd_uchar,
+            nxd_u8,
             3,
             (ks_size_t[]){ h, w, d },
             (ks_ssize_t[]){ w * d, d, 1 }
-        },
-        data
+        )
     )) {
         ks_free(dp);
         KS_DECREF(sf);
@@ -335,9 +335,9 @@ static KS_TFUNC(M, imwrite) {
     kso src, data, fmt = KSO_NONE;
     KS_ARGS("src data ?fmt", &src, &data, &fmt);
 
-    nxar_t ar;
+    nx_t ar;
     kso rr;
-    if (!nxar_get(data, NULL, &ar, &rr)) {
+    if (!nx_get(data, NULL, &ar, &rr)) {
         return NULL;
     }
 

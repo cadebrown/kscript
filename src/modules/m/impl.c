@@ -71,7 +71,7 @@ ks_ccomplex ksm_cexp(ks_ccomplex x) {
 
     ks_cfloat rr = a * cxi, ri = a * sxi;
 
-    return KS_CC_MAKE(x.re, x.im);
+    return KS_CC_MAKE(rr, ri);
 }
 ks_ccomplex ksm_clog(ks_ccomplex x) {
     ks_cfloat a_xr = fabs(x.re), a_xi = fabs(x.im);

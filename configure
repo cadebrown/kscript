@@ -441,6 +441,20 @@ if test "${HAVES#*loat128}" != "$HAVES"; then
 else
     check_struct "__float128" "__float128"
 fi
+
+
+check_struct "_Float16" "_Float16"
+if test "${HAVES#*loat16}" != "$HAVES"; then
+    : not checking
+else
+    check_struct "__float16" "__float16"
+fi
+if test "${HAVES#*loat16}" != "$HAVES"; then
+    : not checking
+else
+    check_struct "__fp16" "__fp16"
+fi
+
 check_struct "struct_tm" "struct tm"
 check_struct "clock_t" "clock_t"
 check_struct "struct_timespec" "struct timespec"
@@ -577,7 +591,7 @@ check_func_math2() {
     _name="$1"
     # Assume we have 'd'
     check_func "${_name}f" "f" "f,f"
-    #check_func "${_name}" "d" "d,d"
+    check_func "${_name}" "d" "d,d"
     check_func "${_name}l" "ld" "ld,ld"
     
     # Have [fF]loat128, so check
@@ -638,7 +652,7 @@ if test "${HAVES#*loat128}" != "$HAVES"; then
   check_func sincosf128 "v" "f128,&f128,&f128"
 fi
 
-#check_func_math2 copysign
+check_func_math2 copysign
 #check_func_math2 fmin
 #check_func_math2 fmax
 #check_func_math2 nextafter

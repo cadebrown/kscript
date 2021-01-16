@@ -1,4 +1,4 @@
-/* mul.c - 'mul' kernel
+/* mul.c - 'add' kernel
  *
  * @author: Cade Brown <cade@kscript.org>
  */
@@ -6,59 +6,85 @@
 #include <ks/nx.h>
 #include <ks/nxt.h>
 
-static int kern(int N, nxar_t* inp, int len, void* _data) {
-    assert(N == 3);
-    assert(inp[0].dtype == inp[1].dtype && inp[1].dtype == inp[2].dtype);
+#define K_NAME "mul"
 
-    ks_cint i;
-    nx_dtype dtype = inp[0].dtype;
-    ks_uint pR = (ks_uint)inp[0].data, pX = (ks_uint)inp[1].data, pY = (ks_uint)inp[2].data;
-    ks_cint sR = inp[0].strides[0], sX = inp[1].strides[0], sY = inp[2].strides[0];
 
-#define LOOP(TYPE) do { \
-    for (i = 0; i < len; i++, pR += sR, pX += sX, pY += sY) { \
+#define LOOPR(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 3); \
+    nx_t X = args[0], Y = args[1], R = args[2]; \
+    assert(X.dtype == Y.dtype && Y.dtype == R.dtype); \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pY = (ks_uint)Y.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sY = Y.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pY += sY, pR += sR) { \
         *(TYPE*)pR = *(TYPE*)pX * *(TYPE*)pY; \
     } \
     return 0; \
-} while (0);
+}
 
-    NXT_DO_INTS(dtype, LOOP);
-    NXT_DO_FLOATS(dtype, LOOP);
-#undef LOOP
 
-#define LOOP(TYPE) do { \
-    for (i = 0; i < len; i++, pR += sR, pX += sX, pY += sY) { \
-        TYPE t; \
-        t.re = ((TYPE*)pX)->re * ((TYPE*)pY)->re - ((TYPE*)pX)->im * ((TYPE*)pY)->im; \
+
+#define LOOPC(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
+    assert(N == 3); \
+    nx_t X = args[0], Y = args[1], R = args[2]; \
+    assert(X.dtype == Y.dtype && Y.dtype == R.dtype); \
+    ks_uint \
+        pX = (ks_uint)X.data, \
+        pY = (ks_uint)Y.data, \
+        pR = (ks_uint)R.data  \
+    ; \
+    ks_cint \
+        sX = X.strides[0], \
+        sY = Y.strides[0], \
+        sR = R.strides[0]  \
+    ; \
+    ks_cint i; \
+    for (i = 0; i < len; i++, pX += sX, pY += sY, pR += sR) { \
+        ((TYPE*)pR)->re = ((TYPE*)pX)->re * ((TYPE*)pY)->re - ((TYPE*)pX)->im * ((TYPE*)pY)->im; \
         ((TYPE*)pR)->im = ((TYPE*)pX)->re * ((TYPE*)pY)->im + ((TYPE*)pX)->im * ((TYPE*)pY)->re; \
-        ((TYPE*)pR)->re = t.re; \
     } \
     return 0; \
-} while (0);
-
-    NXT_DO_COMPLEXS(dtype, LOOP);
-#undef LOOP
-
-    return 1;
-}
-
-bool nx_mul(nxar_t r, nxar_t x, nxar_t y) {
-
-    nxar_t tX, tY;
-    kso rX, rY;
-    if (!nx_getcast(x, r.dtype, &tX, &rX)) {
-        return false;
-    }
-    if (!nx_getcast(y, r.dtype, &tY, &rY)) {
-        KS_NDECREF(rX);
-        return false;
-    }
-
-    bool res = !nx_apply_elem(kern, 3, (nxar_t[]){ r, tX, tY }, NULL);
-
-    KS_NDECREF(rX);
-    KS_NDECREF(rY);
-    return res;
 }
 
 
+NXT_PASTE_I(LOOPR);
+NXT_PASTE_F(LOOPR);
+
+NXT_PASTE_C(LOOPC);
+
+
+bool nx_mul(nx_t X, nx_t Y, nx_t R) {
+    nx_t cX, cY;
+    void *fX = NULL, *fY = NULL;
+    if (!nx_getcast(X, R.dtype, &cX, &fX)) {
+        return false;
+    }
+    if (!nx_getcast(Y, R.dtype, &cY, &fY)) {
+        ks_free(fX);
+        return false;
+    }
+
+    #define LOOP(NAME) do { \
+        bool res = !nx_apply_elem(kern_##NAME, 3, (nx_t[]){ cX, cY, R }, NULL); \
+        ks_free(fX); \
+        ks_free(fY); \
+        return res; \
+    } while (0);
+
+    NXT_PASTE_ALL(R.dtype, LOOP);
+    #undef LOOP
+
+    ks_free(fX);
+    ks_free(fY);
+
+    KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R", K_NAME, X.dtype, Y.dtype, R.dtype);
+    return false;
+}

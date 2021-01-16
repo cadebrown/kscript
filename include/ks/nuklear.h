@@ -177,7 +177,7 @@ typedef struct ksnk_Image_s {
 
 /* Create an image handle from an 'nxar_t'
  */
-KS_API ksnk_Image ksnk_Image_new(ks_type tp, nxar_t img);
+KS_API ksnk_Image ksnk_Image_new(ks_type tp, nx_t img);
 
 
 

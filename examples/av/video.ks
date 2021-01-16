@@ -1,5 +1,5 @@
 #!/usr/bin/env ks
-""" vid.ks - read video
+""" video.ks - read video
 
 
 @author: Cade Brown <cade@kscript.org>
@@ -9,7 +9,7 @@
 import av
 
 # Open a video
-fp = av.open("./assets/vid/rabbitman.mp4")
+fp = av.open("./assets/video/rabbitman.mp4")
 
 # Get the best streams
 vid = fp.best_video()

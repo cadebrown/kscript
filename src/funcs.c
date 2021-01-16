@@ -89,7 +89,7 @@ static KS_FUNC(printf) {
     /* Where to output to */
     ksio_StringIO sio = ksio_StringIO_new();
 
-    if (!ks_fmt2(sio, (ksio_BaseIO)fmt->data, n_args, args)) {
+    if (!ks_fmt2((ksio_BaseIO)sio, fmt->data, n_args, args)) {
         KS_DECREF(sio);
         return NULL;
     }

@@ -258,13 +258,12 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
         enum AVPixelFormat pix_fmt = ksav_AV_filterfmt(self->frame->format);
 
         /* Now, specify input and output */
-        nx_dtype idt = NULL, odt = nxd_float;
-
+        nx_dtype idt = NULL, odt = nxd_F;
 
         /* Formats that are easy to process */
         if (pix_fmt == AV_PIX_FMT_RGBA || pix_fmt == AV_PIX_FMT_RGB24 || pix_fmt == AV_PIX_FMT_RGB0) {
             /* RGBA, RGB24, and RGB0 are unsigned bytes, already in RGB order */
-            idt = nxd_uchar;
+            idt = nxd_u8;
 
             /* Stride in elements */
             int stride = 0;
@@ -283,22 +282,24 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
             }
 
             /* Construct result */
-            nx_array res = nx_array_newc(nxt_array, odt, 3, (ks_size_t[]){ h, w, d }, NULL, NULL);
+            nx_array res = nx_array_newc(nxt_array, NULL, odt, 3, (ks_size_t[]){ h, w, d }, NULL);
 
-            if (!nx_fpcast(res->ar, (nxar_t) {
-                self->frame->data[0],
-                idt,
-                3,
-                (ks_size_t[]) { h, w, d },
-                (ks_ssize_t[]){ self->frame->linesize[0], stride * idt->size, idt->size }
-            })) {
+            if (!nx_fpcast(
+                nx_make(
+                    self->frame->data[0], 
+                    idt,
+                    3,
+                    (ks_size_t[]) { h, w, d },
+                    (ks_ssize_t[]){ self->frame->linesize[0], stride * idt->size, idt->size }
+                ),
+                res->val
+            )) {
                 KS_DECREF(res);
                 return NULL;
             }
 
-            /* Restore quick data buffers */
+            kso_catch_ignore();
             return (kso)res;
-
 
         } else {
             /* Weird format, so scale in software */
@@ -322,15 +323,15 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
             if (new_fmt == AV_PIX_FMT_GRAY8)  { 
                 d = 1;
                 stride = 1;
-                idt = nxd_uchar;
+                idt = nxd_u8;
             } else if (new_fmt == AV_PIX_FMT_RGB24) { 
                 d = 3;
                 stride = 3;
-                idt = nxd_uchar;
+                idt = nxd_u8;
             } else if (new_fmt == AV_PIX_FMT_RGBA) { 
                 d = 4;
                 stride = 4;
-                idt = nxd_uchar;
+                idt = nxd_u8;
             } else {
                 assert(false);
             }
@@ -352,23 +353,25 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
             sws_scale(self->swsctx, (const uint8_t* const*)self->frame->data, self->frame->linesize, 0, h, (uint8_t* const[]){ tmp_data, NULL, NULL, NULL }, (int[]){ linesize, 0, 0, 0 });
 
             /* Construct result */
-            nx_array res = nx_array_newc(nxt_array, odt, 3, (ks_size_t[]){ h, w, d }, NULL, NULL);
+            nx_array res = nx_array_newc(nxt_array, NULL, odt, 3, (ks_size_t[]){ h, w, d }, NULL);
 
             if (!nx_fpcast(
-                res->ar, 
-            (nxar_t) {
-                tmp_data,
-                idt,
-                3,
-                (ks_size_t[]) { h, w, d },
-                (ks_ssize_t[]){ linesize, stride * idt->size, idt->size }
-            })) {
-                KS_DECREF(res);
+                nx_make(
+                    tmp_data, 
+                    idt,
+                    3,
+                    (ks_size_t[]) { h, w, d },
+                    (ks_ssize_t[]){ linesize, stride * idt->size, idt->size }
+                ),
+                res->val
+            )) {
                 ks_free(tmp_data);
+                KS_DECREF(res);
                 return NULL;
             }
 
             ks_free(tmp_data);
+            kso_catch_ignore();
             return (kso)res;
         }
 
@@ -388,7 +391,7 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
         enum AVSampleFormat smpfmt = self->frame->format;
 
         /* Create data to hold the result */
-        nxc_float* tmp_data = ks_zmalloc(sizeof(*tmp_data), channels * nsamp);
+        nx_F* tmp_data = ks_zmalloc(sizeof(*tmp_data), channels * nsamp);
 
         /* The samples to use (depends on the sample format) */
         void** samples = (void**)self->frame->data; 
@@ -413,9 +416,10 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
 
 
         /* Construct result */
-        nx_array res = nx_array_newc(nxt_array, nxd_float, 2, (ks_size_t[]){ nsamp, channels }, (ks_ssize_t[]){ channels * sizeof(*tmp_data), sizeof(*tmp_data) }, tmp_data);
+        nx_array res = nx_array_newc(nxt_array, tmp_data, nxd_F, 2, (ks_size_t[]){ nsamp, channels }, (ks_ssize_t[]){ channels * sizeof(*tmp_data), sizeof(*tmp_data) });
         ks_free(tmp_data);
 
+        kso_catch_ignore();
         return (kso)res;
     } else {
         /* Restore quick data buffers */

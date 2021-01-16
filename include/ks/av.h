@@ -208,7 +208,7 @@ KS_API kso ksav_imread(kso src);
  *   str: Source string, i.e. a URL
  * Otherwise, it is assumed to be an IO-like object to write to
  */
-KS_API bool ksav_imwrite(kso src, nxar_t data, kso fmt);
+KS_API bool ksav_imwrite(kso src, nx_t data, kso fmt);
 
 
 
