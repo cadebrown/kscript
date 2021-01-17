@@ -74,6 +74,9 @@ NXT_PASTE_F(LOOPR);
 NXT_PASTE_C(LOOPC);
 
 bool nxla_diag(nx_t X, nx_t R) {
+
+    if (!nx_zero(R)) return NULL;
+
     nx_t cX;
     void *fX = NULL;
     if (!nx_getcast(X, R.dtype, &cX, &fX)) {

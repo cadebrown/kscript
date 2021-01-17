@@ -502,6 +502,13 @@ KS_API nx_t nx_with_newaxis(nx_t from, int axis);
  */
 KS_API nx_t nx_make_bcast(int N, nx_t* args);
 
+/* Get element (like subscripting)
+ *
+ * If result.rank < 0, an error is thrown and you should either catch it
+ *   or signal it
+ */
+KS_API nx_t nx_getelem(nx_t self, int nargs, kso* args);
+
 /* Calculate the result of a numeric operation on two types, 'X' and 'Y'
  *
  * A new reference is not returned, so don't dereference the result! Only works
@@ -594,6 +601,11 @@ KS_API nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, 
  */
 KS_API nx_array nx_array_newo(ks_type tp, kso objh, nx_dtype dtype);
 
+
+/* Create a new view object from a value and reference
+ *
+ */
+KS_API nx_view nx_view_newo(ks_type tp, nx_t val, kso ref);
 
 /** Operations **/
 
@@ -776,25 +788,32 @@ KS_API bool nxrand_normal(nxrand_State self, nx_t R, nx_t u, nx_t o);
  */
 KS_API bool nxla_diag(nx_t X, nx_t R);
 
+/* Calculates Frobenius norm of 'R' and stores it in 'X'
+ *
+ * Therefore, R should be of rank X.rank + 2
+ * 
+ */
+KS_API bool nxla_norm_fro(nx_t X, nx_t R);
 
 /* R = X @ Y */
 KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
 
-
 /* R = X ** n (matrix power) */
 KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
 
-/* Factor 'X := perm(P) @ L @ U', with 'L' being lower triangular
+/* Factor 'X := nx.la.perm(P) @ L @ U', with 'L' being lower triangular
  *   and 'U' being upper triangular, and 'P' being a vector of integers
  *   used for a permutation matrix
  * 
  * X's shape should be [..., N, N]
- * L's shape should be [..., N, M]
- * U's shape should be [..., N, N]
  * P's shape should be [..., 1, N]
+ * L's shape should be [..., N, N]
+ * U's shape should be [..., N, N]
  * 
  */
-KS_API bool nxla_factLU(nx_t X, nx_t L, nx_t U, nx_t P);
+KS_API bool nxla_factPLU(nx_t X, nx_t P, nx_t L, nx_t U);
+
+
 
 
 /** Submodule: 'nx.cv' (computer vision / image processing) **/

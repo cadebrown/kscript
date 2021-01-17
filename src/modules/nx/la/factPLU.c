@@ -2,18 +2,17 @@
  *
  * Factors a matrix into a permute/lower/upper matrix, specifically:
  * 
- *   X := P @ L @ U
+ *   X := nx.la.perm(P) @ L @ U
  * 
  * Where:
- *   P is a permutation matrix 
+ *   P is a permutation matrix (vector of one-hot indicies)
  *   L is a lower triangular matrix
  *   U is an upper triangular matrix
  * 
  * All matrices are NxN
  * 
- * Initially, the kernel accepts (L, U, P) on entry with L containing 'X', and sets L, U, and P
+ * Initially, the kernel accepts (P, L, U) on entry with L containing 'X', and sets L, U, and P
  *   on exit
- * 
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -32,7 +31,7 @@
 
 #define LOOPR(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, void* extra) { \
     assert(N == 3); \
-    nx_t L = args[0], U = args[1], P = args[2]; \
+    nx_t P = args[0], L = args[1], U = args[2]; \
     assert(L.rank == 2 && U.rank == 2 && P.rank == 2); \
     assert(L.dtype == U.dtype); \
     assert(P.dtype == IDX_DTYPE); \
@@ -128,7 +127,7 @@ NXT_PASTE_F(LOOPR);
 
 NXT_PASTE_C(LOOPC);
 
-bool nxla_factLU(nx_t X, nx_t L, nx_t U, nx_t P) {
+bool nxla_factPLU(nx_t X, nx_t P, nx_t L, nx_t U) {
     assert(L.dtype == U.dtype);
     assert(P.dtype == IDX_DTYPE);
 
@@ -144,13 +143,13 @@ bool nxla_factLU(nx_t X, nx_t L, nx_t U, nx_t P) {
     /* Initialize temporary with 'X' */
 
     #define LOOP(NAME) do { \
-        bool res = !nx_apply_Nd(kern_##NAME, 3, (nx_t[]){ L, U, P }, 2, NULL); \
+        bool res = !nx_apply_Nd(kern_##NAME, 3, (nx_t[]){ P, L, U }, 2, NULL); \
         return res; \
     } while (0);
 
     NXT_PASTE_ALL(L.dtype, LOOP);
     #undef LOOP
 
-    KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R", K_NAME, X.dtype, L.dtype, U.dtype);
+    KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R, %R", K_NAME, X.dtype, P.dtype, L.dtype, U.dtype);
     return false;
 }

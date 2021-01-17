@@ -10,6 +10,67 @@
 
 /* C-API */
 
+
+static KS_TFUNC(M, norm) {
+    kso x, r = KSO_NONE;
+    KS_ARGS("x ?r", &x, &r);
+
+    nx_t vX, vR;
+    kso rX, rR;
+    if (!nx_get(x, NULL, &vX, &rX)) {
+        return NULL;
+    }
+
+    if (vX.rank < 2) {
+        KS_THROW(kst_SizeError, "Matrix is expected to be at least 2-D");
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output */
+        nx_dtype dtype = vX.dtype;
+        /* Complex arguments should create real ones for abs */
+        if (dtype == nxd_cH) {
+            dtype = nxd_H;
+        } else if (dtype == nxd_cF) {
+            dtype = nxd_F;
+        } else if (dtype == nxd_cD) {
+            dtype = nxd_D;
+        } else if (dtype == nxd_cL) {
+            dtype = nxd_L;
+        } else if (dtype == nxd_cE) {
+            dtype = nxd_E;
+        }
+
+        r = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank - 2, vX.shape, NULL);
+        if (!r) {
+            KS_NDECREF(rX);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nx_get(r, NULL, &vR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nxla_norm_fro(vX, vR)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+    return r;
+}
+
+
 static KS_TFUNC(M, matmul) {
     kso x, y, r = KSO_NONE;
     KS_ARGS("x y ?r", &x, &y, &r);
@@ -112,7 +173,6 @@ static KS_TFUNC(M, matpow) {
         }
     } else {
         KS_INCREF(r);
-
     }
 
     if (!nx_get(r, NULL, &vR, &rR)) {
@@ -132,8 +192,6 @@ static KS_TFUNC(M, matpow) {
     KS_NDECREF(rR);
     return r;
 }
-
-
 
 static KS_TFUNC(M, perm) {
     kso p, r = KSO_NONE;
@@ -159,7 +217,6 @@ static KS_TFUNC(M, perm) {
         }
     } else {
         KS_INCREF(r);
-
     }
 
     if (!nx_get(r, NULL, &vR, &rR)) {
@@ -179,7 +236,6 @@ static KS_TFUNC(M, perm) {
     KS_NDECREF(rR);
     return r;
 }
-
 
 static KS_TFUNC(M, diag) {
     kso x, r = KSO_NONE;
@@ -205,7 +261,6 @@ static KS_TFUNC(M, diag) {
         }
     } else {
         KS_INCREF(r);
-
     }
 
     if (!nx_get(r, NULL, &vR, &rR)) {
@@ -227,12 +282,12 @@ static KS_TFUNC(M, diag) {
 }
 
 
-static KS_TFUNC(M, factLU) {
-    kso x, l = KSO_NONE, u = KSO_NONE, p = KSO_NONE;
-    KS_ARGS("x ?l ?u ?p", &x, &l, &u, &p);
+static KS_TFUNC(M, factPLU) {
+    kso x, p = KSO_NONE, l = KSO_NONE, u = KSO_NONE;
+    KS_ARGS("x ?p ?l ?u", &x, &p, &l, &u);
 
-    nx_t vX, vL, vU, vP;
-    kso rX, rL, rU, rP;
+    nx_t vX, vP, vL, vU;
+    kso rX, rP, rL, rU;
 
     if (!nx_get(x, NULL, &vX, &rX)) {
         return NULL;
@@ -244,24 +299,30 @@ static KS_TFUNC(M, factLU) {
         return NULL;
     }
 
-    if (l == KSO_NONE) {
-        nx_dtype dtype = vX.dtype;
-
-        l = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
-        u = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
-
+    if (p == KSO_NONE) {
         nx_t psh = vX;
         psh.rank = vX.rank - 1;
         p = (kso)nx_array_newc(nxt_array, NULL, nxd_s32, psh.rank, psh.shape, NULL);
+
+        nx_dtype dtype = vX.dtype;
+        l = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
+        u = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
 
     } else {
         KS_INCREF(l);
         KS_INCREF(u);
         KS_INCREF(p);
     }
-
+   if (!nx_get(p, NULL, &vP, &rP)) {
+        KS_NDECREF(rX);
+        KS_DECREF(l);
+        KS_DECREF(u);
+        KS_DECREF(p);
+        return NULL;
+    }
     if (!nx_get(l, NULL, &vL, &rL)) {
         KS_NDECREF(rX);
+        KS_NDECREF(rP);
         KS_DECREF(l);
         KS_DECREF(u);
         return NULL;
@@ -269,35 +330,29 @@ static KS_TFUNC(M, factLU) {
 
     if (!nx_get(u, NULL, &vU, &rU)) {
         KS_NDECREF(rX);
-        KS_NDECREF(rL);
-        KS_DECREF(l);
-        KS_DECREF(u);
-        return NULL;
-    }
-   if (!nx_get(p, NULL, &vP, &rP)) {
-        KS_NDECREF(rX);
-        KS_NDECREF(rL);
-        KS_DECREF(l);
-        KS_DECREF(u);
-        KS_DECREF(p);
-        return NULL;
-    }
-    if (!nxla_factLU(vX, vL, vU, vP)) {
-        KS_NDECREF(rX);
-        KS_NDECREF(rL);
-        KS_NDECREF(rU);
         KS_NDECREF(rP);
+        KS_NDECREF(rL);
+        KS_DECREF(l);
+        KS_DECREF(u);
         return NULL;
     }
 
+    if (!nxla_factPLU(vX, vP, vL, vU)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rP);
+        KS_NDECREF(rL);
+        KS_NDECREF(rU);
+        return NULL;
+    }
+
+    KS_NDECREF(rP);
     KS_NDECREF(rX);
     KS_NDECREF(rL);
     KS_NDECREF(rU);
-    KS_NDECREF(rP);
     return (kso)ks_tuple_newn(3, (kso[]) {
+        p,
         l,
-        u,
-        p
+        u
     });
 }
 
@@ -309,13 +364,15 @@ ks_module _ksi_nx_la() {
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "NumeriX module", KS_IKV(
 
         /* Functions */
+        {"norm",                   ksf_wrap(M_norm_, M_NAME ".norm(x, r=none)", "Creates a matrix norm")},
+
         {"diag",                   ksf_wrap(M_diag_, M_NAME ".diag(x, r=none)", "Creates a matrix with 'x' as the diagonal")},
         {"perm",                   ksf_wrap(M_perm_, M_NAME ".perm(p, r=none)", "Creates a permutation matrix with 'p' as the row changes")},
 
         {"matmul",                 ksf_wrap(M_matmul_, M_NAME ".matmul(x, y, r=none)", "Computes matrix multiplication")},
         {"matpow",                 ksf_wrap(M_matpow_, M_NAME ".matpow(x, n, r=none)", "Computes matrix power")},
 
-        {"factLU",                 ksf_wrap(M_factLU_, M_NAME ".factLU(x, l=none, r=none)", "Computes LU factorization")},
+        {"factPLU",                ksf_wrap(M_factPLU_, M_NAME ".factPLU(x, p=none, l=none, r=none)", "Computes LU factorization with permutation indicies 'p', returns (P, L, U) such that 'x == nx.la.perm(P) @ L @ U")},
 
     ));
 

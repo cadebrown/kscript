@@ -13,6 +13,15 @@
 
 /* C-API */
 
+nx_view nx_view_newo(ks_type tp, nx_t val, kso ref) {
+    nx_view self = KSO_NEW(nx_view, tp);
+
+    self->val = val;
+    if (ref) KS_INCREF(ref);
+    self->ref = ref;
+
+    return self;
+}
 
 /* Type Functions */
 

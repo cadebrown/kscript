@@ -129,6 +129,83 @@ nx_t nx_make_bcast(int N, nx_t* args) {
     return self;
 }
 
+nx_t nx_getelem(nx_t self, int nargs, kso* args) {
+    nx_t res = nx_make(NULL, self.dtype, 0, NULL, NULL);
+    ks_uint data = (ks_uint)self.data;
+
+    bool had_dotdotdot = false;
+    int i, p = 0;
+    for (i = 0; i < nargs; ++i) {
+        if (kso_is_int(args[i])) {
+            ks_cint v;
+            if (!kso_get_ci(args[i], &v)) {
+                res.rank = -1;
+                return res;
+            }
+
+            if (v < 0) {
+                v = (v % self.shape[p] + self.shape[p]) % self.shape[p];
+            } else if (v >= self.shape[p]) {
+                KS_THROW(kst_IndexError, "Index #i out of range", i);
+                res.rank = -1;
+                return res;
+            }
+
+            data += self.strides[p] * v;
+            p++;
+        } else if (kso_issub(args[i]->type, kst_slice)) {
+            ks_cint start, stop, delta;
+            if (!ks_slice_get_citer((ks_slice)args[i], self.shape[p], &start, &stop, &delta)) {
+                res.rank = -1;
+                return res;
+            }
+
+            res.rank += 1;
+            data += self.strides[p] * start;
+            res.shape[res.rank - 1] = (stop - start) / delta;
+            res.strides[res.rank - 1] = self.strides[p] * delta;
+            p++;
+
+        } else if (args[i] == KSO_DOTDOTDOT) {
+            if (had_dotdotdot) {
+                KS_THROW(kst_IndexError, "Only one '...' allowed per indexing operation");
+                res.rank = -1;
+                return res;
+            }
+            had_dotdotdot = true;
+
+            int nmid = self.rank - nargs;
+            if (nmid < 0) {
+                KS_THROW(kst_IndexError, "Too many indices!");
+                res.rank = -1;
+                return res;
+            }
+
+            int j;
+            for (j = 0; j < nmid; ++j) {
+                res.rank += 1;
+                res.shape[res.rank - 1] = self.shape[p];
+                res.strides[res.rank - 1] = self.strides[p];
+                p++;
+            }
+
+        } else {
+            KS_THROW(kst_TypeError, "Objects of type '%T' cannot be used as indices", args[i]);
+            res.rank = -1;
+            return res; 
+        }
+    }
+
+    for (; p < self.rank; ++p) {
+        res.rank += 1;
+        res.shape[res.rank - 1] = self.shape[p];
+        res.strides[res.rank - 1] = self.strides[p];
+    }
+
+    res.data = (void*)data;
+    return res;
+}
+
 void* nx_szdot(void* data, int rank, ks_ssize_t* strides, ks_size_t* idxs) {
     ks_uint res = (ks_uint)data;
     int i;
@@ -428,6 +505,22 @@ bool nx_enc(nx_dtype dtype, kso obj, void* out) {
 /* Module Functions */
 
 
+static KS_TFUNC(M, zeros) {
+    kso shape = KSO_NONE;
+    nx_dtype dtype = nxd_D;
+    KS_ARGS("?shape ?dtype:*", &shape, &dtype, nxt_dtype);
+
+    nx_t ns = nx_getshape(shape);
+    if (ns.rank < 0) return NULL;
+
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, ns.rank, ns.shape, NULL);
+    if (!nx_zero(res->val)) {
+        KS_DECREF(res);
+        return NULL;
+    }
+
+    return (kso)res;
+}
 
 static KS_TFUNC(M, onehot) {
     ks_cint newdim;
@@ -579,6 +672,8 @@ static KS_TFUNC(M, abs) {
             dtype = nxd_F;
         } else if (dtype == nxd_cD) {
             dtype = nxd_D;
+        } else if (dtype == nxd_cL) {
+            dtype = nxd_L;
         } else if (dtype == nxd_cE) {
             dtype = nxd_E;
         }
@@ -590,7 +685,6 @@ static KS_TFUNC(M, abs) {
         }
     } else {
         KS_INCREF(r);
-
     }
 
     if (!nx_get(r, NULL, &vR, &rR)) {
@@ -2024,6 +2118,8 @@ ks_module _ksi_nx() {
         {"fp128",                  KS_NEWREF(nxd_E)},
 
         /* Functions */
+
+        {"zeros",                  ksf_wrap(M_zeros_, M_NAME ".zeros(shape=none, dtype=nx.double)", "Create an array of zeros")},
 
         {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to\n\n    Indices in 'x' are taken modulo 'newdim'")},
         {"neg",                    ksf_wrap(M_neg_, M_NAME ".neg(x, r=none)", "Computes elementwise negation")},

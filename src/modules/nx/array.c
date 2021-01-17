@@ -297,6 +297,406 @@ static KS_TFUNC(T, getattr) {
     return NULL;
 }
 
+static KS_TFUNC(T, getelem) {
+    nx_array self;
+    int nargs;
+    kso* args;
+    KS_ARGS("self:* *args", &self, nxt_array, &nargs, &args);
+    
+    nx_t res = nx_getelem(self->val, nargs, args);
+    if (res.rank < 0) return NULL;
+
+    return (kso)nx_view_newo(nxt_view, res, (kso)self);
+}
+
+
+static KS_TFUNC(T, add) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_add(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+
+static KS_TFUNC(T, sub) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_sub(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+
+static KS_TFUNC(T, mul) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_mul(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+
+static KS_TFUNC(T, matmul) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    if (aL.rank == 0) {
+        KS_THROW(kst_TypeError, "Scalars are not allowed in matrix multiplication");
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    } else if (aL.rank == 1) {
+        aL = nx_with_newaxis(aL, 1);
+    }
+    if (aR.rank == 0) {
+        KS_THROW(kst_TypeError, "Scalars are not allowed in matrix multiplication");
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    } else if (aR.rank == 1) {
+        aR = nx_with_newaxis(aR, 1);
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    int M = aL.shape[aL.rank - 2], N = aL.shape[aL.rank - 1], K = aR.shape[aR.rank - 1];
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    shape.shape[shape.rank - 1] = K;
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nxla_matmul(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+
+static KS_TFUNC(T, div) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = (aL.dtype->kind == NX_DTYPE_INT && aR.dtype->kind == NX_DTYPE_INT) ? nxd_D : nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_div(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+static KS_TFUNC(T, floordiv) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_floordiv(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+
+static KS_TFUNC(T, mod) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_mod(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
+
+static KS_TFUNC(T, pow) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    nx_t aL, aR;
+    kso rL, rR;
+    if (!nx_get(L, NULL, &aL, &rL)) {
+        return NULL;
+    }
+    if (!nx_get(R, NULL, &aR, &rR)) {
+        KS_NDECREF(rL);
+        return NULL;
+    }
+
+    nx_dtype dtype = nx_cast2(aL.dtype, aR.dtype);
+    if (!dtype) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    nx_t shape = nx_make_bcast(2, (nx_t[]){ aL, aR });
+    if (shape.rank < 0) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+    nx_array res = nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+    if (!res) {
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    if (!nx_pow(aL, aR, res->val)) {
+        KS_DECREF(res);
+        KS_NDECREF(rL);
+        KS_NDECREF(rR);
+        return NULL;
+    }
+
+    KS_NDECREF(rL);
+    KS_NDECREF(rR);
+    return (kso)res;
+}
 
 
 /* Export */
@@ -315,20 +715,23 @@ void _ksi_nx_array() {
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
 
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+        {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *keys)", "")},
 
+        {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
+        {"__sub",                  ksf_wrap(T_sub_, T_NAME ".__sub(L, R)", "")},
+        {"__mul",                  ksf_wrap(T_mul_, T_NAME ".__mul(L, R)", "")},
+        {"__matmul",               ksf_wrap(T_matmul_, T_NAME ".__matmul(L, R)", "")},
+        {"__div",                  ksf_wrap(T_div_, T_NAME ".__div(L, R)", "")},
+        {"__floordiv",             ksf_wrap(T_floordiv_, T_NAME ".__floordiv(L, R)", "")},
+        {"__mod",                  ksf_wrap(T_mod_, T_NAME ".__mod(L, R)", "")},
+        {"__pow",                  ksf_wrap(T_pow_, T_NAME ".__pow(L, R)", "")},
 
 /*
         {"__neg",                  ksf_wrap(T_neg_, T_NAME ".__neg(V)", "")},
         {"__abs",                  ksf_wrap(T_abs_, T_NAME ".__abs(V)", "")},
         {"__sqig",                 ksf_wrap(T_sqig_, T_NAME ".__sqig(V)", "")},
 
-        {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
-        {"__sub",                  ksf_wrap(T_sub_, T_NAME ".__sub(L, R)", "")},
-        {"__mul",                  ksf_wrap(T_mul_, T_NAME ".__mul(L, R)", "")},
-        {"__div",                  ksf_wrap(T_div_, T_NAME ".__div(L, R)", "")},
-        {"__floordiv",             ksf_wrap(T_floordiv_, T_NAME ".__floordiv(L, R)", "")},
-        {"__mod",                  ksf_wrap(T_mod_, T_NAME ".__mod(L, R)", "")},
-        {"__pow",                  ksf_wrap(T_pow_, T_NAME ".__pow(L, R)", "")},
+     
 
         {"isscalar",               ksf_wrap(T_isscalar_, T_NAME ".isscalar(self)", "Computes whether 'self' is a scalar (i.e. 0-rank array)")},
         {"isvec",                  ksf_wrap(T_isvec_, T_NAME ".isvec(self)", "Computes whether 'self' is a vector (i.e. 1-rank array)")},

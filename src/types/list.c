@@ -293,10 +293,8 @@ static KS_TFUNC(T, eq) {
         return KSO_TRUE;
     }
 
-
     return KSO_UNDEFINED;
 }
-
 
 static KS_TFUNC(T, add) {
     kso L, R;
@@ -315,6 +313,41 @@ static KS_TFUNC(T, add) {
     }
     return (kso)res;
 }
+
+static KS_TFUNC(T, mul) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    if (kso_issub(L->type, kst_list) && kso_is_int(R)) {
+        ks_cint ct;
+        if (!kso_get_ci(R, &ct)) {
+            return NULL;
+        }
+        ks_list res = ks_list_new(0, NULL);
+        while (ct > 0) {
+            ks_list_pusha(res, ((ks_list)L)->len, ((ks_list)L)->elems);
+            ct--;
+        }
+
+        return (kso)res;
+
+    } else if (kso_issub(R->type, kst_list) && kso_is_int(L)) {
+        ks_cint ct;
+        if (!kso_get_ci(L, &ct)) {
+            return NULL;
+        }
+        ks_list res = ks_list_new(0, NULL);
+        while (ct > 0) {
+            ks_list_pusha(res, ((ks_list)R)->len, ((ks_list)R)->elems);
+            ct--;
+        }
+
+        return (kso)res;
+    }
+
+    return KSO_UNDEFINED;
+}
+
 static KS_TFUNC(T, push) {
     ks_list self;
     int nargs;
@@ -427,6 +460,7 @@ void _ksi_list() {
         {"__iter",               KS_NEWREF(kst_list_iter)},
         {"__eq",                 ksf_wrap(T_eq_, T_NAME ".__eq(L, R)", "")},
         {"__add",                ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
+        {"__mul",                ksf_wrap(T_mul_, T_NAME ".__mul(L, R)", "")},
 
         {"push",                 ksf_wrap(T_push_, T_NAME ".push(self, *args)", "Pushes any number of arguments on to the end of the list")},
         {"pop",                  ksf_wrap(T_pop_, T_NAME ".pop(self, num=1)", "Pops the given number of arguments off of the end of the list")},

@@ -1463,8 +1463,12 @@ RULE(E14) {
                     is_sl = true;
                     KS_INCREF(ast_none);
                     sub[0] = ast_none;
-
-                    if (TOK.kind == KS_TOK_COL) {
+                    if (TOK.kind == KS_TOK_RPAR || TOK.kind == KS_TOK_RBRC || TOK.kind == KS_TOK_RBRK || TOK.kind == KS_TOK_COM) {
+                        KS_INCREF(ast_none);
+                        sub[1] = ast_none;
+                        KS_INCREF(ast_none);
+                        sub[2] = ast_none;
+                    } else if (TOK.kind == KS_TOK_COL) {
                         EAT();
                         KS_INCREF(ast_none);
                         sub[1] = ast_none;
