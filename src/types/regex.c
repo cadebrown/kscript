@@ -776,9 +776,9 @@ static KS_TFUNC(T, graph) {
     ks_regex self;
     KS_ARGS("self:*", &self, kst_regex);
 
-    ks_graph res = (ks_graph)kso_call((kso)kst_graph, 0, NULL);
+    ks_graph res = (ks_graph)kso_call((kso)ksutilt_Graph, 0, NULL);
     if (!res) return NULL;
-    assert(kso_issub(res->type, kst_graph));
+    assert(kso_issub(res->type, ksutilt_Graph));
 
     ks_cint i, j;
     for (i = 0; i < self->n_states; ++i) {

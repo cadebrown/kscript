@@ -61,6 +61,7 @@
     ; \
     ks_cint i; \
     for (i = 0; i < Xc; ++i) { \
+        /* First index in 'X' is the added axis */ \
         *(TYPE*)R_(i, i) = *(TYPE*)X_(0, i); \
     } \
     return 0; \
@@ -79,7 +80,9 @@ bool nxla_diag(nx_t X, nx_t R) {
         return false;
     }
 
-    /* Now, we need to insert an index just before the last */
+    /* Now, we need to insert an index just before the last, so that the last
+     *   2 dimensions are broadcasted. This is required so that both are the same size
+     */
     cX = nx_with_newaxis(cX, cX.rank - 1);
 
     #define LOOP(NAME) do { \

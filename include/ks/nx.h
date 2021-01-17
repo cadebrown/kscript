@@ -784,6 +784,18 @@ KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
 /* R = X ** n (matrix power) */
 KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
 
+/* Factor 'X := perm(P) @ L @ U', with 'L' being lower triangular
+ *   and 'U' being upper triangular, and 'P' being a vector of integers
+ *   used for a permutation matrix
+ * 
+ * X's shape should be [..., N, N]
+ * L's shape should be [..., N, M]
+ * U's shape should be [..., N, N]
+ * P's shape should be [..., 1, N]
+ * 
+ */
+KS_API bool nxla_factLU(nx_t X, nx_t L, nx_t U, nx_t P);
+
 
 /** Submodule: 'nx.cv' (computer vision / image processing) **/
 

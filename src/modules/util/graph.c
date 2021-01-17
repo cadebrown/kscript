@@ -1,11 +1,10 @@
-/* types/graph.c - 'graph' type
+/* util/graph.c - 'util.Graph' type
  *
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
 
-#define T_NAME "graph"
-
+#define T_NAME "util.Graph"
 
 
 /* C-API */
@@ -93,12 +92,12 @@ static KS_TFUNC(T, init) {
     ks_graph self;
     kso nodes = KSO_NONE;
     kso edges = KSO_NONE;
-    KS_ARGS("self:* ?nodes ?edges", &self, kst_graph, &nodes, &edges);
+    KS_ARGS("self:* ?nodes ?edges", &self, ksutilt_Graph, &nodes, &edges);
 
     ks_graph_clear(self);
 
 
-    if (kso_issub(nodes->type, kst_graph) && edges == KSO_NONE) {
+    if (kso_issub(nodes->type, ksutilt_Graph) && edges == KSO_NONE) {
         ks_cint i, j;
         for (i = 0; i < ((ks_graph)nodes)->n_nodes; ++i) {
             ks_graph_add_node(self, ((ks_graph)nodes)->nodes[i].val);
@@ -193,7 +192,7 @@ static KS_TFUNC(T, init) {
 
 static KS_TFUNC(T, free) {
     ks_graph self;
-    KS_ARGS("self:*", &self, kst_graph);
+    KS_ARGS("self:*", &self, ksutilt_Graph);
 
     ks_cint i, j;
     for (i = 0; i < self->n_nodes; ++i) {
@@ -212,7 +211,7 @@ static KS_TFUNC(T, free) {
 
 static KS_TFUNC(T, repr) {
     ks_graph self;
-    KS_ARGS("self:*", &self, kst_graph);
+    KS_ARGS("self:*", &self, ksutilt_Graph);
 
     ksio_StringIO sio = ksio_StringIO_new();
     ksio_add((ksio_BaseIO)sio, "%T(", self);
@@ -329,7 +328,7 @@ static KS_TFUNC(T, len) {
 
 static KS_TFUNC(T, dotfile) {
     ks_graph self;
-    KS_ARGS("self:*", &self, kst_graph);
+    KS_ARGS("self:*", &self, ksutilt_Graph);
 
     ksio_StringIO sio = ksio_StringIO_new();
 
@@ -360,10 +359,10 @@ static KS_TFUNC(T, dotfile) {
 /* Export */
 
 static struct ks_type_s tp;
-ks_type kst_graph = &tp;
+ks_type ksutilt_Graph = &tp;
 
 void _ksi_graph() {
-    _ksinit(kst_graph, kst_object, T_NAME, sizeof(struct ks_graph_s), -1, "Graphs are collections of nodes and edges. Edges connect various nodes, and thus can represent relationships between nodes. Edges are directional, which means they have a 'from' and 'to' node (which may be the same node)\n\n    Bidirectional graphs may be emulated with two edges for each connection\n\n    SEE: https://en.wikipedia.org/wiki/Graph_(abstract_data_type)", KS_IKV(
+    _ksinit(ksutilt_Graph, kst_object, T_NAME, sizeof(struct ks_graph_s), -1, "Graphs are collections of nodes and edges. Edges connect various nodes, and thus can represent relationships between nodes. Edges are directional, which means they have a 'from' and 'to' node (which may be the same node)\n\n    Bidirectional graphs may be emulated with two edges for each connection\n\n    SEE: https://en.wikipedia.org/wiki/Graph_(abstract_data_type)", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, nodes=none, edges=none)", "")},
         {"__repr",                 ksf_wrap(T_repr_, T_NAME ".__repr(self)", "")},
@@ -379,6 +378,6 @@ void _ksi_graph() {
         {"_dotfile",               ksf_wrap(T_dotfile_, T_NAME "._dotfile(self)", "Generate a Graphviz dotfile source\n\n    SEE: https://graphviz.org/")},
     ));
 
-    kst_graph->i__hash = NULL;
+    ksutilt_Graph->i__hash = NULL;
 
 }

@@ -80,6 +80,7 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  *         | E1 '+=' E0
  *         | E1 '-=' E0
  *         | E1 '*=' E0
+ *         | E1 '@=' E0
  *         | E1 '/=' E0
  *         | E1 '//=' E0
  *         | E1 '%=' E0
@@ -128,6 +129,7 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  *         | E11
  * 
  * E11     : E11 '*' E12
+ *         | E11 '@' E12
  *         | E11 '/' E12
  *         | E11 '//' E12
  *         | E11 '%' E12
@@ -930,6 +932,7 @@ else if (TOK.kind == KS_TOK_SUB) k = KS_AST_BOP_SUB;
 )
 RULE_BOP_LA(E11, E12,
 /**/ if (TOK.kind == KS_TOK_MUL) k = KS_AST_BOP_MUL;
+else if (TOK.kind == KS_TOK_AT) k = KS_AST_BOP_MATMUL;
 else if (TOK.kind == KS_TOK_DIV) k = KS_AST_BOP_DIV;
 else if (TOK.kind == KS_TOK_FLOORDIV) k = KS_AST_BOP_FLOORDIV;
 else if (TOK.kind == KS_TOK_MOD) k = KS_AST_BOP_MOD;

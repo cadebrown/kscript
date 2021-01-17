@@ -28,6 +28,7 @@
 T_BOP("+", add, i__add)
 T_BOP("-", sub, i__sub)
 T_BOP("*", mul, i__mul)
+T_BOP("@", matmul, i__matmul)
 T_BOP("/", div, i__div)
 T_BOP("//", floordiv, i__floordiv)
 T_BOP("%", mod, i__mod)

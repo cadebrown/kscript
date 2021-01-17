@@ -151,7 +151,6 @@
 #include <math.h>
 
 
-
 /* Platform-specific headers (detected) */
 #ifdef KS_HAVE_UNISTD_H
   #include <unistd.h>
@@ -160,8 +159,6 @@
 #ifdef KS_HAVE_DLFCN_H
   #include <dlfcn.h>
 #endif
-
-
 
 
 #if 0
@@ -235,6 +232,7 @@
 
 #include <ks/io.h>
 #include <ks/os.h>
+#include <ks/util.h>
 
 
 /** Globals **/
@@ -308,7 +306,6 @@ KS_API_DATA ks_type
     kst_set,
     kst_dict,
     kst_names,
-    kst_graph,
     kst_map,
     kst_filter,
     kst_enumerate,
@@ -1219,18 +1216,6 @@ KS_API ks_list ks_dict_calc_buckets(ks_dict self);
 KS_API ks_names ks_names_new(ks_dict of, bool copy);
 
 
-/* Add a node to a graph
- */
-KS_API bool ks_graph_add_node(ks_graph self, kso val);
-
-/* Add an edge to a graph
- */
-KS_API bool ks_graph_add_edge(ks_graph self, ks_cint from, ks_cint to, kso val);
-
-/* Clear a graph
- */
-KS_API void ks_graph_clear(ks_graph self);
-
 /* Return the logger for a given name
  */
 KS_API ks_logger ks_logger_get(ks_str name);
@@ -1383,6 +1368,7 @@ KS_API kso ks_cit_next(ks_cit* cit);
 KS_API kso ks_bop_add(kso L, kso R);
 KS_API kso ks_bop_sub(kso L, kso R);
 KS_API kso ks_bop_mul(kso L, kso R);
+KS_API kso ks_bop_matmul(kso L, kso R);
 KS_API kso ks_bop_div(kso L, kso R);
 KS_API kso ks_bop_floordiv(kso L, kso R);
 KS_API kso ks_bop_mod(kso L, kso R);

@@ -137,6 +137,7 @@ enum {
     KS_TOK_AADD, /* += */
     KS_TOK_ASUB, /* -= */
     KS_TOK_AMUL, /* *= */
+    KS_TOK_AMATMUL, /* @= */
     KS_TOK_ADIV, /* /= */
     KS_TOK_AFLOORDIV, /* //= */
     KS_TOK_AMOD, /* %= */
@@ -150,6 +151,7 @@ enum {
 
     KS_TOK_IN, /* in */
     KS_TOK_AS, /* as */
+    KS_TOK_AT, /* @ */
 
     KS_TOK_EEQ, /* === */
     KS_TOK_EQ,  /* == */
@@ -349,6 +351,7 @@ enum {
     KS_AST_BOP_AADD, /* x+=y */
     KS_AST_BOP_ASUB, /* x-=y */
     KS_AST_BOP_AMUL, /* x*=y */
+    KS_AST_BOP_AMATMUL, /* x@=y */
     KS_AST_BOP_ADIV, /* x/=y */
     KS_AST_BOP_AFLOORDIV, /* x//=y */
     KS_AST_BOP_AMOD, /* x%=y */
@@ -384,7 +387,8 @@ enum {
     KS_AST_BOP_ADD, /* x+y */
     KS_AST_BOP_SUB, /* x-y */
 
-    KS_AST_BOP_MUL, /* x(y */
+    KS_AST_BOP_MUL, /* x*y */
+    KS_AST_BOP_MATMUL, /* x@y */
     KS_AST_BOP_DIV, /* x/y */
     KS_AST_BOP_FLOORDIV, /* x//y */
     KS_AST_BOP_MOD, /* x%y */
@@ -781,6 +785,7 @@ enum {
     _KSB_BOP_AADD,
     _KSB_BOP_ASUB,
     _KSB_BOP_AMUL,
+    _KSB_BOP_AMATMUL,
     _KSB_BOP_ADIV,
     _KSB_BOP_AFLOORDIV,
     _KSB_BOP_AMOD,
@@ -812,6 +817,7 @@ enum {
     KSB_BOP_SUB,
 
     KSB_BOP_MUL,
+    KSB_BOP_MATMUL,
     KSB_BOP_DIV,
     KSB_BOP_FLOORDIV,
     KSB_BOP_MOD,

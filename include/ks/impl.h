@@ -100,7 +100,7 @@ void _ksi_nx_view();
 ks_module _ksi_nx_la();
 ks_module _ksi_nx_fft();
 
-
+ks_module _ksi_util();
 
 void _ksi_nk_Context();
 void _ksi_nk_Image();

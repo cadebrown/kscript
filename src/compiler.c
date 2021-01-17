@@ -1147,6 +1147,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         if (k == KS_AST_BOP_AADD) vk = KS_AST_BOP_ADD;
         else if (k == KS_AST_BOP_ASUB) vk = KS_AST_BOP_SUB;
         else if (k == KS_AST_BOP_AMUL) vk = KS_AST_BOP_MUL;
+        else if (k == KS_AST_BOP_AMATMUL) vk = KS_AST_BOP_MATMUL;
         else if (k == KS_AST_BOP_ADIV) vk = KS_AST_BOP_DIV;
         else if (k == KS_AST_BOP_AFLOORDIV) vk = KS_AST_BOP_FLOORDIV;
         else if (k == KS_AST_BOP_AMOD) vk = KS_AST_BOP_MOD;
@@ -1232,8 +1233,6 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
         ks_free(fjs_f);
         ks_free(fjs_l);
-
-
 
     } else if (KS_AST_BOP__FIRST <= k && k <= KS_AST_BOP__LAST) {
         assert(NSUB == 2 && "binary operator requires 2 children");

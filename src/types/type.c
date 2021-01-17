@@ -210,7 +210,7 @@ static KS_TFUNC(T, graph) {
     ks_type self;
     KS_ARGS("self:*", &self, kst_type);
 
-    ks_graph res = (ks_graph)kso_call((kso)kst_graph, 0, NULL);
+    ks_graph res = (ks_graph)kso_call((kso)ksutilt_Graph, 0, NULL);
     if (!res) return NULL;
 
     /* Generate dependency graph from type hierarchy */

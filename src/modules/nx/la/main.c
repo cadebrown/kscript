@@ -21,8 +21,20 @@ static KS_TFUNC(M, matmul) {
         return NULL;
     }
 
+    if (vX.rank < 2) {
+        KS_THROW(kst_SizeError, "Matrix is expected to be at least 2-D");
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
     if (!nx_get(y, NULL, &vY, &rY)) {
         KS_NDECREF(rX);
+        return NULL;
+    }
+    if (vY.rank < 2) {
+        KS_THROW(kst_SizeError, "Matrix is expected to be at least 2-D");
+        KS_NDECREF(rX);
+        KS_NDECREF(rY);
         return NULL;
     }
 
@@ -41,6 +53,9 @@ static KS_TFUNC(M, matmul) {
             KS_NDECREF(rY);
             return NULL;
         }
+
+        shape.shape[shape.rank - 2] = vX.shape[shape.rank - 2];
+        shape.shape[shape.rank - 1] = vY.shape[shape.rank - 1];
 
         r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
         if (!r) {
@@ -118,6 +133,54 @@ static KS_TFUNC(M, matpow) {
     return r;
 }
 
+
+
+static KS_TFUNC(M, perm) {
+    kso p, r = KSO_NONE;
+    KS_ARGS("p ?r", &p, &r);
+
+    nx_t vP, vR;
+    kso rP, rR;
+
+    if (!nx_get(p, NULL, &vP, &rP)) {
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output */
+        nx_dtype dtype = nxd_bl;
+
+        nx_t shape = nx_with_newaxis(vP, vP.rank - 1);
+        shape.shape[vP.rank - 1] = shape.shape[vP.rank];
+        r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+        if (!r) {
+            KS_NDECREF(rP);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(r);
+
+    }
+
+    if (!nx_get(r, NULL, &vR, &rR)) {
+        KS_NDECREF(rP);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_onehot(vP, vR)) {
+        KS_NDECREF(rP);
+        KS_NDECREF(rR);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rP);
+    KS_NDECREF(rR);
+    return r;
+}
+
+
 static KS_TFUNC(M, diag) {
     kso x, r = KSO_NONE;
     KS_ARGS("x ?r", &x, &r);
@@ -163,6 +226,82 @@ static KS_TFUNC(M, diag) {
     return r;
 }
 
+
+static KS_TFUNC(M, factLU) {
+    kso x, l = KSO_NONE, u = KSO_NONE, p = KSO_NONE;
+    KS_ARGS("x ?l ?u ?p", &x, &l, &u, &p);
+
+    nx_t vX, vL, vU, vP;
+    kso rX, rL, rU, rP;
+
+    if (!nx_get(x, NULL, &vX, &rX)) {
+        return NULL;
+    }
+
+    if (vX.rank < 2) {
+        KS_THROW(kst_SizeError, "Matrix is expected to be at least 2-D");
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (l == KSO_NONE) {
+        nx_dtype dtype = vX.dtype;
+
+        l = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
+        u = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
+
+        nx_t psh = vX;
+        psh.rank = vX.rank - 1;
+        p = (kso)nx_array_newc(nxt_array, NULL, nxd_s32, psh.rank, psh.shape, NULL);
+
+    } else {
+        KS_INCREF(l);
+        KS_INCREF(u);
+        KS_INCREF(p);
+    }
+
+    if (!nx_get(l, NULL, &vL, &rL)) {
+        KS_NDECREF(rX);
+        KS_DECREF(l);
+        KS_DECREF(u);
+        return NULL;
+    }
+
+    if (!nx_get(u, NULL, &vU, &rU)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rL);
+        KS_DECREF(l);
+        KS_DECREF(u);
+        return NULL;
+    }
+   if (!nx_get(p, NULL, &vP, &rP)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rL);
+        KS_DECREF(l);
+        KS_DECREF(u);
+        KS_DECREF(p);
+        return NULL;
+    }
+    if (!nxla_factLU(vX, vL, vU, vP)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rL);
+        KS_NDECREF(rU);
+        KS_NDECREF(rP);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rL);
+    KS_NDECREF(rU);
+    KS_NDECREF(rP);
+    return (kso)ks_tuple_newn(3, (kso[]) {
+        l,
+        u,
+        p
+    });
+}
+
+
 /* Export */
 
 ks_module _ksi_nx_la() {
@@ -171,9 +310,12 @@ ks_module _ksi_nx_la() {
 
         /* Functions */
         {"diag",                   ksf_wrap(M_diag_, M_NAME ".diag(x, r=none)", "Creates a matrix with 'x' as the diagonal")},
+        {"perm",                   ksf_wrap(M_perm_, M_NAME ".perm(p, r=none)", "Creates a permutation matrix with 'p' as the row changes")},
 
         {"matmul",                 ksf_wrap(M_matmul_, M_NAME ".matmul(x, y, r=none)", "Computes matrix multiplication")},
         {"matpow",                 ksf_wrap(M_matpow_, M_NAME ".matpow(x, n, r=none)", "Computes matrix power")},
+
+        {"factLU",                 ksf_wrap(M_factLU_, M_NAME ".factLU(x, l=none, r=none)", "Computes LU factorization")},
 
     ));
 

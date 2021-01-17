@@ -161,6 +161,7 @@ ks_module ks_import(ks_str name) {
 
     BIMOD(io)
     BIMOD(os)
+    BIMOD(util)
     BIMOD(m)
     BIMOD(getarg)
     BIMOD(time)

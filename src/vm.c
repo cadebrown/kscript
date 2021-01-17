@@ -757,6 +757,7 @@ kso _ks_exec(ks_code bc, ks_type _in) {
         T_BOP(KSB_BOP_ADD, add)
         T_BOP(KSB_BOP_SUB, sub)
         T_BOP(KSB_BOP_MUL, mul)
+        T_BOP(KSB_BOP_MATMUL, matmul)
         T_BOP(KSB_BOP_DIV, div)
         T_BOP(KSB_BOP_FLOORDIV, floordiv)
         T_BOP(KSB_BOP_MOD, mod)

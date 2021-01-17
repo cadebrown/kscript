@@ -431,6 +431,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
         CASEU_OP(KS_TOK_SQIG, "~", 1)
         CASEU_OP(KS_TOK_QUESQUES, "??", 2)
         CASEU_OP(KS_TOK_QUES, "?", 1)
+        CASEU_OP(KS_TOK_AT, "@", 1)
 
         else {
             /* unrecognized unicode character, report as an error */

@@ -187,7 +187,7 @@ _KS_DO_SPEC(_KSACT)
         {"tuple",                  (kso)kst_tuple},
         {"set",                    (kso)kst_set},
         {"dict",                   (kso)kst_dict},
-        {"graph",                  (kso)kst_graph},
+        //{"graph",                  (kso)ksutilt_Graph},
 
         {"map",                    (kso)kst_map},
         {"filter",                 (kso)kst_filter},
