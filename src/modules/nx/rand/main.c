@@ -5,6 +5,7 @@
  */
 #include <ks/impl.h>
 #include <ks/nx.h>
+#include <ks/time.h>
 
 #define M_NAME "nx.rand"
 

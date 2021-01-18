@@ -72,13 +72,15 @@ See the `winbuild` dir for VisualStudio solutions/projects
 
 ## On Emscripten
 
-kscript supports building for [emscripten](https://emscripten.org/), which allows kscript to be executed in the browser (or anywhere else where WASM can be ran). To compile it, ensure you've installed emscripten, and run:
+kscript supports building for [emscripten](https://emscripten.org/), which allows kscript to be executed in the browser (or anywhere else where WASM can be ran). Currently, it is not recommended to build with threading support, as different browsers have differing support. To compile it, ensure you've installed emscripten, and run:
 
 ```shell
-$ CC=emcc CFLAGS="-O3 -Wno-ignored-attributes" LDFLAGS='-O3 -sWASM=1 -sMODULARIZE=1 -sEXPORT_NAME="libks" -sERROR_ON_UNDEFINED_SYMBOLS=0 -sEXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\",\"stringToUTF8\",\"UTF8ToString\"]' PLATFORM="web" ./configure
+$ CC=emcc CFLAGS="-O3 -Wno-ignored-attributes" LDFLAGS='-O3 -sWASM=1 -sMODULARIZE=1 -sEXPORT_NAME="libks" -sERROR_ON_UNDEFINED_SYMBOLS=0 -sEXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\",\"stringToUTF8\",\"UTF8ToString\"]' PLATFORM="web" ./configure --with-pthreads off
 $ make -j16 lib/libks.js
 ```
 
 (note: Some shells may escape the content differently)
 
 That should create the main library (`lib/libks.js`) which contains the relevant code, and can be loaded via `libks().then( ... )` function. See `src/web` for information on using it in the browser.
+
+For threaded code, see: [https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer/Planned_changes](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer/Planned_changes)
