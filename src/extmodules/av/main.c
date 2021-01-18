@@ -200,7 +200,7 @@ kso ksav_imread(kso src) {
         return NULL;
     }
 
-    nx_array rr = nx_array_newc(nxt_array, nxd_uchar, 3, (ks_size_t[]){ y, x, c }, (ks_ssize_t[]){ x * c, c, 1 }, d);
+    nx_array rr = nx_array_newc(nxt_array, d, nxd_u8, 3, (ks_size_t[]){ y, x, c }, (ks_ssize_t[]){ x * c, c, 1 });
     STBI_FREE(d);
     return (kso)rr;
 

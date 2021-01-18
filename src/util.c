@@ -75,5 +75,42 @@ ks_hash_t ks_hash_bytes(ks_ssize_t len_b, const unsigned char* data) {
 }
 
 
+/* Utilities for emscripten/other projects */
 
+void _ksem_incref_(kso obj) {
+    KS_INCREF(obj);
+}
+
+void _ksem_decref_(kso obj) {
+    KS_DECREF(obj);
+}
+
+char* _ksem_str_c_(kso obj) {
+    ks_str res = ks_fmt("%S", obj);
+    if (!res) return NULL;
+
+    char* rr = ks_malloc(res->len_b + 1);
+    memcpy(rr, res->data, res->len_b + 1);
+
+    KS_DECREF(res);
+    return rr;
+}
+
+char* _ksem_repr_c_(kso obj) {
+    ks_str res = ks_fmt("%R", obj);
+    if (!res) return NULL;
+
+    char* rr = ks_malloc(res->len_b + 1);
+    memcpy(rr, res->data, res->len_b + 1);
+
+    KS_DECREF(res);
+    return rr;
+}
+
+ks_cint _ksem_refs_c_(kso obj) {
+    return obj->refs;
+}
+ks_type _ksem_type_c_(kso obj) {
+    return obj->type;
+}
 

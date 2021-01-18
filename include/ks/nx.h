@@ -459,7 +459,6 @@ typedef struct nx_view_s {
 
 }* nx_view;
 
-
 /* Function signature for broadcasting/function application to inputs
  *
  * This function will be called with the number of inputs ('N'), and the array descriptors for 
@@ -477,7 +476,6 @@ typedef int (*nxf_elem)(int N, nx_t* args, int len, void* extra);
 typedef int (*nxf_Nd)(int N, nx_t* args, void* extra);
 
 
-
 /* Utility macros */
 
 /* Tests wheter '_dtype' is a builtin numeric type (i.e. is 'int', 'float', or 'complex' kind) */
@@ -488,11 +486,24 @@ typedef int (*nxf_Nd)(int N, nx_t* args, void* extra);
 
 /* Create an array descriptor (does not create a reference to 'dtype')
  */
-KS_API nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_ssize_t* shape, ks_ssize_t* strides);
+KS_API nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t* strides);
 
 /* Create an array descriptor with a new axis inserted
  */
 KS_API nx_t nx_with_newaxis(nx_t from, int axis);
+
+/* Create an array descriptor with the given axes removed
+ *
+ */
+KS_API nx_t nx_without_axes(nx_t self, int naxes, int* axes);
+
+/* Create an array descriptor with extra axes inserted, where 'axes' reference
+ *   the axes **in the new array**
+ * 
+ * For example, nx_with_axes(shape=(5, 10), axes=(1, 2)) gives a shape of (5, 1, 1, 10)
+ */
+KS_API nx_t nx_with_axes(nx_t self, int naxes, int* axes);
+
 
 /* Calculate a broadcast shape, returning a shape-only array descriptor
  *
@@ -527,6 +538,13 @@ KS_API nx_dtype nx_cast2(nx_dtype X, nx_dtype Y);
  *   broadcast result. All other fields are uninitialized
  */
 KS_API nx_t nx_getshape(kso obj);
+
+/* Calculate a list of of axes from an object, and set the number in
+ *   '*naxes', and set the values in '*axes' (which should be allocated
+ *   to hold at least NX_MAXRANK elements)
+ */
+KS_API bool nx_getaxes(nx_t self, kso obj, int* naxes, int* axes);
+
 
 /* Computes 'data + strides[:] * idxs[:]'
  *
@@ -580,9 +598,6 @@ KS_API int nx_apply_elem(nxf_elem func, int N, nx_t* args, void* extra);
 KS_API int nx_apply_Nd(nxf_Nd func, int N, nx_t* args, int M, void* extra);
 
 
-
-
-
 /** Creation Routines **/
 
 /* Create a new dense array from 'data', or initialized to zeros if 'data == NULL'. The new array
@@ -601,7 +616,6 @@ KS_API nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, 
  */
 KS_API nx_array nx_array_newo(ks_type tp, kso objh, nx_dtype dtype);
 
-
 /* Create a new view object from a value and reference
  *
  */
@@ -613,11 +627,30 @@ KS_API nx_view nx_view_newo(ks_type tp, nx_t val, kso ref);
  */
 KS_API bool nx_zero(nx_t R);
 
-
-/* Fill R[X[i]] = 1
+/* R[X[i] % R.dim] = 1, 0 otherwise
+ * 
+ * X[...]
+ * R[..., N]
  */
 KS_API bool nx_onehot(nx_t X, nx_t R);
 
+/* R[:] = sum(X)
+ *
+ * The axes being summed are implicit
+ * 
+ */
+KS_API bool nx_sum(nx_t X, nx_t R, int naxes, int* axes);
+
+/*** Arithmetic Operations ***/
+
+/* R = fmin(X, Y) */
+KS_API bool nx_fmin(nx_t X, nx_t Y, nx_t R);
+
+/* R = fmax(X, Y) */
+KS_API bool nx_fmax(nx_t X, nx_t Y, nx_t R);
+
+/* R = clip(X, min=Y, max=Z) */
+KS_API bool nx_clip(nx_t X, nx_t Y, nx_t Z, nx_t R);
 
 /* Compute 'R = X', but type casted to 'R's type. Both must be numeric */
 KS_API bool nx_cast(nx_t X, nx_t R);
@@ -632,28 +665,18 @@ KS_API bool nx_cast(nx_t X, nx_t R);
  */
 KS_API bool nx_fpcast(nx_t X, nx_t R);
 
-/*** Math Operations ***/
-
 /* R = -X */
 KS_API bool nx_neg(nx_t X, nx_t R);
 
 /* R = abs(X) 
+ *
  * This kernel is special: If you give it a complex -> real abs, you must provide
  *   the arguments in the correct type
  */
 KS_API bool nx_abs(nx_t X, nx_t R);
 
-/* R = ~X  (conjugation) */
+/* R = ~X (conjugation) */
 KS_API bool nx_conj(nx_t X, nx_t R);
-
-/* R = fmin(X, Y) */
-KS_API bool nx_fmin(nx_t X, nx_t Y, nx_t R);
-/* R = fmax(X, Y) */
-KS_API bool nx_fmax(nx_t X, nx_t Y, nx_t R);
-
-
-/* R = clip(X, min=Y, max=Z) */
-KS_API bool nx_clip(nx_t X, nx_t Y, nx_t Z, nx_t R);
 
 /* R = X + Y */
 KS_API bool nx_add(nx_t X, nx_t Y, nx_t R);
@@ -785,20 +808,35 @@ KS_API bool nxrand_normal(nxrand_State self, nx_t R, nx_t u, nx_t o);
 /** Submodule: 'nx.la' (linear algebra) **/
 
 /* Create matrices with 'X' as the diagonal (expands a dimension)
+ *
+ * X[..., N]
+ * R[..., N, N] 
  */
 KS_API bool nxla_diag(nx_t X, nx_t R);
 
-/* Calculates Frobenius norm of 'R' and stores it in 'X'
+/* Calculates Frobenius norm (sometimes called Euclidean norm) of 'R' and stores it in 'X'
  *
- * Therefore, R should be of rank X.rank + 2
+ * To calculate for vectors, call with 'nx_newaxis(X, X.rank - 1)'
  * 
+ * 
+ * X[..., M, N]
+ * R[...]
  */
 KS_API bool nxla_norm_fro(nx_t X, nx_t R);
 
-/* R = X @ Y */
+/* R = X @ Y, matrix multiplication
+ *
+ * X[..., M, N]
+ * Y[..., N, K]
+ * R[..., M, K]
+ */
 KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
 
-/* R = X ** n (matrix power) */
+/* R = X ** n, matrix power for square matrices
+ *
+ * X[..., N, N]
+ * R[..., N, N]
+ */
 KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
 
 /* Factor 'X := nx.la.perm(P) @ L @ U', with 'L' being lower triangular
@@ -806,13 +844,11 @@ KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
  *   used for a permutation matrix
  * 
  * X's shape should be [..., N, N]
- * P's shape should be [..., 1, N]
+ * P's shape should be [..., N]
  * L's shape should be [..., N, N]
  * U's shape should be [..., N, N]
- * 
  */
 KS_API bool nxla_factPLU(nx_t X, nx_t P, nx_t L, nx_t U);
-
 
 
 

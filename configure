@@ -40,7 +40,9 @@ WITH_opengl="auto"
 WITH_x="auto"
 
 #CHECKTO="/dev/null"
-: ${CHECKTO:="/dev/null"}
+#: ${CHECKTO:="/dev/null"}
+: ${CHECKTO:=".tmp/log.txt"}
+mkdir -p .tmp
 
 # -- Commandline --
 
@@ -129,7 +131,7 @@ uname_="$(uname -s)"
 if [ "x$PLATFORM" = 'xauto' ]; then
     case "${Vuname}" in
         Linux*)     PLATFORM=linux;;
-        Darwin*)    PLATFORM=mac;;
+        darwin*)    PLATFORM=darwin;;
         CYGWIN*)    PLATFORM=cygwin;;
         MINGW*)     PLATFORM=mingw;;
         *)          PLATFORM="unknown-$uname_"
@@ -137,34 +139,36 @@ if [ "x$PLATFORM" = 'xauto' ]; then
 fi
 
 if [ "x$PATHSEP" = 'xauto' ]; then
-    case "${Vuname}" in
-        CYGWIN*)    PATHSEP="/";;
-        MINGW*)     PATHSEP="\\";;
+    case "$PLATFORM" in
+        mingw*)     PATHSEP="\\";;
         *)          PATHSEP="/"
     esac
 fi
 
 if [ "x$EXTSHARED" = 'xauto' ]; then
-    case "${Vuname}" in
-        Darwin*)    EXTSHARED=".dylib";;
-        CYGWIN*)    EXTSHARED=".dll";;
-        MINGW*)     EXTSHARED=".dll";;
+    case "$PLATFORM" in
+        darwin*)    EXTSHARED=".dylib";;
+        cygwin*)    EXTSHARED=".dll";;
+        mingw*)     EXTSHARED=".dll";;
+        web*)       EXTSHARED=".js";;
         *)          EXTSHARED=".so"
     esac
 fi
 
 if [ "x$EXTSTATIC" = 'xauto' ]; then
-    case "${Vuname}" in
-        CYGWIN*)    EXTSTATIC=".lib";;
-        MINGW*)     EXTSTATIC=".lib";;
+    case "$PLATFORM" in
+        cygwin*)    EXTSTATIC=".lib";;
+        mingw*)     EXTSTATIC=".lib";;
+        web*)       EXTSHARED=".js";;
         *)          EXTSTATIC=".a"
     esac
 fi
 
 if [ "x$EXTBINARY" = 'xauto' ]; then
-    case "${Vuname}" in
-        CYGWIN*)    EXTBINARY=".exe";;
-        MINGW*)     EXTBINARY=".exe";;
+    case "$PLATFORM" in
+        cygwin*)    EXTBINARY=".exe";;
+        mingw*)     EXTBINARY=".exe";;
+        web*)       EXTSHARED=".js";;
         *)          EXTBINARY=""
     esac
 fi
@@ -183,7 +187,11 @@ HAVES=""
 
 # temporary files
 _check_c="./configure-check.c"
-_check_o="./configure-check.o"
+if [ "x$EXTBINARY" = 'xjs' ]; then
+  _check_o="./configure-check.js"
+else
+  _check_o="./configure-check.o"
+fi
 
 echo ""
 echo " -- Headers -- "
@@ -201,7 +209,8 @@ int main(int argc, char** argv) {
 }
 " > $_check_c
 
-    $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO && $_check_o
+    echo $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o >> $CHECKTO
+    $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -274,8 +283,8 @@ check_clib() {
         printf "Searching for '%s' ...\n" "$1"
 
         # compile and run it
-        echo "$5" > $_check_c
-        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 2>> $CHECKTO -o $_check_o
+        echo $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4  -o $_check_o >> $CHECKTO
+        $CC $CFLAGS $3 $DEFS $_check_c $LDFLAGS $4 -o $_check_o 2>> $CHECKTO
         if [ $? -eq 0 ]; then
             echo "  :: Succeeded"
 
@@ -425,7 +434,8 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
+    echo $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o >> $CHECKTO
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -485,6 +495,7 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
+    echo $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o >> $CHECKTO
     $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
@@ -561,7 +572,8 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o
+    echo $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o >> $CHECKTO
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -759,7 +771,8 @@ int main(int argc, char** argv) {
     return 0;
 }
 " > $_check_c
-    $CC $CFLAGS $DEFS $_check_c $LDFLAGS 2>> $CHECKTO -o $_check_o && $_check_o
+    echo $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o >> $CHECKTO
+    $CC $CFLAGS $DEFS $_check_c $LDFLAGS -o $_check_o 2>> $CHECKTO
     if [ $? -eq 0 ]; then
         printf "Succeeded\n"
         HAVES="$HAVES$1 "
@@ -910,6 +923,7 @@ echo "" >> $T
 echo "VERS             := 0.2.2" >> $T
 echo "" >> $T
 echo "# -*- Paths -*-" >> $T
+echo "CC               := $CC" >> $T
 echo "CFLAGS           := $CFLAGS" >> $T
 echo "LDFLAGS          := $LDFLAGS" >> $T
 echo "" >> $T
@@ -926,7 +940,7 @@ echo "# -*- Sources, Files, Targets -*-" >> $T
 echo "libks_C          := \$(wildcard src/*.c) \$(wildcard src/types/*.c) \$(wildcard src/ext/*.c) \$(wildcard src/ucd/*.c) \$(call rwildcard,src/modules,*.c)" >> $T
 echo "libks_O          := \$(patsubst %.c,.tmp/%.o,\$(libks_C))" >> $T
 echo "libks_SHARED     := lib/libks$EXTSHARED" >> $T
-echo "libks_STATIC     := lib/libks$EXTSTATIC" >> $T
+echo "libks_STATIC     := lib/libks-static$EXTSTATIC" >> $T
 echo "" >> $T
 echo "ks_C             := \$(wildcard src/ks/*.c)" >> $T
 echo "ks_O             := \$(patsubst %.c,.tmp/%.o,\$(ks_C))" >> $T

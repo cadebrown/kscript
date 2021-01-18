@@ -244,7 +244,7 @@ ks_ssize_t ks_lex(ks_str fname, ks_str src, ks_tok** toksp) {
             if (c == 'e' || c == 'E') {
                 is_flt = true;
                 ADV();
-                if (c == '+' || '-') ADV();
+                if (c == '+' || c == '-') ADV();
                 while (pos < sz && is_digit(c, 10)) {
                     ADV();
                 }

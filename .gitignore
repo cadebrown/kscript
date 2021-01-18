@@ -15,6 +15,9 @@
 *.la
 *.dll
 
+*.js
+*.wasm
+
 
 # -*- GENERATED -*-
 

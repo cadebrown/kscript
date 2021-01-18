@@ -308,6 +308,38 @@ static KS_TFUNC(T, getelem) {
 
     return (kso)nx_view_newo(nxt_view, res, (kso)self);
 }
+static KS_TFUNC(T, setelem) {
+    nx_array self;
+    int nargs;
+    kso* args;
+    KS_ARGS("self:* *args", &self, nxt_array, &nargs, &args);
+    
+    if (nargs < 1) {
+        KS_THROW(kst_ArgError, "Setting elements requires at least one argument");
+        return NULL;
+    }
+
+    nx_t val;
+    kso vref;
+    if (!nx_get(args[nargs - 1], NULL, &val, &vref)) {
+        return NULL;
+    }
+
+    nx_t res = nx_getelem(self->val, nargs - 1, args);
+    if (res.rank < 0) {
+        KS_NDECREF(vref);
+        return NULL;
+    }
+
+    if (!nx_cast(val, res)) {
+        KS_NDECREF(vref);
+        return NULL;
+    }
+
+    KS_NDECREF(vref);
+
+    return (kso)nx_view_newo(nxt_view, res, (kso)self);
+}
 
 
 static KS_TFUNC(T, add) {
@@ -716,6 +748,7 @@ void _ksi_nx_array() {
 
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
         {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *keys)", "")},
+        {"__setelem",              ksf_wrap(T_setelem_, T_NAME ".__setelem(self, *keys, val)", "")},
 
         {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
         {"__sub",                  ksf_wrap(T_sub_, T_NAME ".__sub(L, R)", "")},

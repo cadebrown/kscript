@@ -10,7 +10,7 @@
 
 /* C-API */
 
-nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_ssize_t* shape, ks_ssize_t* strides) {
+nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t* strides) {
     nx_t self;
 
     self.data = data;
@@ -51,6 +51,68 @@ nx_t nx_with_newaxis(nx_t from, int axis) {
 
     res.shape[axis] = 1;
     res.strides[axis] = 0;
+
+    return res;
+}
+
+nx_t nx_without_axes(nx_t self, int naxes, int* axes) {
+    nx_t res = self;
+
+    /* Check for quick reductions to a scalar */
+    if (naxes >= self.rank) {
+        res.rank = 0;
+        return res;
+    }
+
+    res.rank = self.rank - naxes;
+
+    /* Now, remove axes */
+    int i, j, rp = 0;
+    for (i = 0; i < self.rank; ++i) {
+        bool skip = false;
+        for (j = 0; j < naxes; ++j) {
+            if (axes[j] == i) {
+                skip = true;
+                break;
+            }
+        }
+        if (skip) {
+        } else {
+            res.shape[rp] = self.shape[i];
+            res.strides[rp] = self.strides[i];
+            rp++;
+        }
+    }
+    //assert(rp == res.rank);
+
+    return res;
+}
+
+nx_t nx_with_axes(nx_t self, int naxes, int* axes) {
+    nx_t res = self;
+    res.rank = 0;
+
+    int i, j, p = 0;
+    for (i = 0; i < self.rank + naxes; ++i) {
+        bool usethis = false;
+        /* TODO: sort method for axes? */
+        for (j = 0; j < naxes; ++j) {
+            if (axes[j] == i) {
+                usethis = true;
+                break;
+            }
+        }
+        if (usethis) {
+            res.shape[res.rank] = 1;
+            res.strides[res.rank] = 0;
+            res.rank++;
+        } else {
+            res.shape[res.rank] = self.shape[p];
+            res.strides[res.rank] = self.strides[p];
+            res.rank++;
+            p++;
+        }
+    }
 
     return res;
 }
@@ -107,6 +169,7 @@ nx_t nx_make_bcast(int N, nx_t* args) {
                             if (j > 0) ksio_add(sio, ", ");
                             ksio_add(sio, "%u", (ks_uint)args[i].shape[j]);
                         }
+                        if (j == 1) ksio_add(sio, ",");
                         ksio_add(sio, ")");
                     }
 
@@ -146,7 +209,7 @@ nx_t nx_getelem(nx_t self, int nargs, kso* args) {
             if (v < 0) {
                 v = (v % self.shape[p] + self.shape[p]) % self.shape[p];
             } else if (v >= self.shape[p]) {
-                KS_THROW(kst_IndexError, "Index #i out of range", i);
+                KS_THROW(kst_IndexError, "Index #%i out of range (value: %i)", i, (int)v);
                 res.rank = -1;
                 return res;
             }
@@ -174,12 +237,14 @@ nx_t nx_getelem(nx_t self, int nargs, kso* args) {
             }
             had_dotdotdot = true;
 
-            int nmid = self.rank - nargs;
+            int nmid = self.rank - nargs + 1;
             if (nmid < 0) {
                 KS_THROW(kst_IndexError, "Too many indices!");
                 res.rank = -1;
                 return res;
             }
+
+            /* Fill in middles */
 
             int j;
             for (j = 0; j < nmid; ++j) {
@@ -301,47 +366,68 @@ nx_t nx_getshape(kso obj) {
     }   
 }
 
-ks_size_t* nx_getsize(kso obj, int* num) {
-    if (kso_issub(obj->type, kst_none)) {
-        /* Scalar size */
-        *num = 0;
-        return (ks_size_t*)ks_malloc(1);
+
+KS_API bool nx_getaxes(nx_t self, kso obj, int* naxes, int* axes) {
+    int i, j;
+    if (obj == KSO_NONE) {
+        *naxes = self.rank;
+        for (i = 0; i < *naxes; ++i) {
+            axes[i] = i;
+        }
+        return true;
     } else if (kso_is_int(obj)) {
-        /* 1D size */
-        ks_cint x;
-        if (!kso_get_ci(obj, &x)) {
-            return NULL;
+        ks_cint v;
+        if (!kso_get_ci(obj, &v)) return false;
+        *naxes = 1;
+        if (v > self.rank) {
+            KS_THROW(kst_IndexError, "Invalid axis: %i is out of range", v);
+            return false;
         }
-        ks_size_t* res = ks_zmalloc(sizeof(*res), 1);
-        *num = 1;
-        res[0] = x;
+        v = (v % self.rank + self.rank) % self.rank;
+        axes[0] = v;
 
-        return res;
-    } else {
-        /* Assume iterable */
-        ks_list l = ks_list_newi(obj);
-        if (!l) return NULL;
+        return true;
+    } else if (kso_is_iterable(obj)) {
+        ks_tuple li = ks_tuple_newi(obj);
+        if (!li) return false;
 
-        ks_size_t* res = ks_zmalloc(sizeof(*res), l->len);
-        *num = l->len;
+        if (li->len > self.rank) {
+            KS_DECREF(li);
+            KS_THROW(kst_SizeError, "Iterable of axes contained too many (had %i, expected a max of %i)", (int)li->len, (int)self.rank);
+            return false;
+        }
 
-        int i;
-        for (i = 0; i < l->len; ++i) {
-            kso ob = l->elems[i];
-            ks_cint x;
-            if (!kso_get_ci(ob, &x)) {
-                ks_free(res);
-                KS_DECREF(l);
-                return NULL;
+        *naxes = li->len;
+        for (i = 0; i < *naxes; ++i) {
+            ks_cint v;
+            if (!kso_get_ci(obj, &v)) {
+                KS_DECREF(li);
+                return false;
             }
-
-            res[i] = x;
+            if (v > self.rank) {
+                KS_THROW(kst_IndexError, "Invalid axis: %i is out of range", v);
+                KS_DECREF(li);
+                return false;
+            }
+            v = (v % self.rank + self.rank) % self.rank;
+            for (j = 0; j < i; ++j) {
+                if (axes[j] == v) {
+                    KS_THROW(kst_IndexError, "Invalid axis: %i specified multiple times", v);
+                    KS_DECREF(li);
+                    return false;
+                }
+            }
+            axes[i] = v;
         }
-        KS_DECREF(l);
 
-        return res;
+        KS_DECREF(li);
+        return true;
+    } else {
+        KS_THROW(kst_TypeError, "Invalid object describing which axes to use, expected 'none', an integer, or an iterable but got '%T' object", obj);
+        return false;
     }
 }
+
 
 bool nx_getcast(nx_t X, nx_dtype dtype, nx_t* R, void** tofree) {
     if (X.dtype == dtype) {
@@ -567,6 +653,68 @@ static KS_TFUNC(M, onehot) {
     KS_NDECREF(rR);
     return r;
 }
+
+
+static KS_TFUNC(M, sum) {
+    kso x, oaxes = KSO_NONE, r = KSO_NONE;
+    KS_ARGS("x ?axes ?r", &x, &oaxes, &r);
+
+    nx_t vX, vR;
+    kso rX, rR;
+
+    if (!nx_get(x, NULL, &vX, &rX)) {
+        return NULL;
+    }
+
+    if (vX.rank < 1) {
+        KS_THROW(kst_SizeError, "Expected argument to be at least 1-D");
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    int naxes;
+    int axes[NX_MAXRANK];
+    if (!nx_getaxes(vX, oaxes, &naxes, axes)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output */
+        nx_dtype dtype = vX.dtype;
+        /* Complex arguments should create real ones for abs */
+
+        nx_t shape = nx_without_axes(vX, naxes, axes);
+        
+        //shape.rank = 0;
+
+        r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+        if (!r) {
+            KS_NDECREF(rX);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nx_get(r, NULL, &vR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_sum(vX, vR, naxes, axes)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+    return r;
+}
+
 
 
 static KS_TFUNC(M, neg) {
@@ -2120,8 +2268,10 @@ ks_module _ksi_nx() {
         /* Functions */
 
         {"zeros",                  ksf_wrap(M_zeros_, M_NAME ".zeros(shape=none, dtype=nx.double)", "Create an array of zeros")},
-
         {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to\n\n    Indices in 'x' are taken modulo 'newdim'")},
+
+        {"sum",                    ksf_wrap(M_sum_, M_NAME ".sum(x, axes=none, r=none)", "Sum elements")},
+
         {"neg",                    ksf_wrap(M_neg_, M_NAME ".neg(x, r=none)", "Computes elementwise negation")},
         {"abs",                    ksf_wrap(M_abs_, M_NAME ".abs(x, r=none)", "Computes elementwise absolute value")},
         {"conj",                   ksf_wrap(M_conj_, M_NAME ".conj(x, r=none)", "Computes elementwise conjugation")},

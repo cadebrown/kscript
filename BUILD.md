@@ -68,16 +68,17 @@ And then `make` and so on to built it normally
 
 ## On Windows
 
+See the `winbuild` dir for VisualStudio solutions/projects
 
 ## On Emscripten
 
 kscript supports building for [emscripten](https://emscripten.org/), which allows kscript to be executed in the browser (or anywhere else where WASM can be ran). To compile it, ensure you've installed emscripten, and run:
 
-```bash
-CC="emcc" CFLAGS="-O3 -Wno-ignored-attributes" LDFLAGS="-O3 -sWASM=1 -sMODULARIZE=1 -sEXPORT_NAME=\"'loadKS'\" -sEXTRA_EXPORTED_RUNTIME_METHODS='[\"cwrap\", \"stringToUTF8\", \"UTF8ToString\"]'" ./configure --shared-ext .js --binary-ext .js --colors off
-make -j16 lib/libks.js
+```shell
+$ CC=emcc CFLAGS="-O3 -Wno-ignored-attributes" LDFLAGS='-O3 -sWASM=1 -sMODULARIZE=1 -sEXPORT_NAME="libks" -sERROR_ON_UNDEFINED_SYMBOLS=0 -sEXTRA_EXPORTED_RUNTIME_METHODS=[\"cwrap\",\"stringToUTF8\",\"UTF8ToString\"]' PLATFORM="web" ./configure
+$ make -j16 lib/libks.js
 ```
 
-That should create a JavaScript file (`.js`) containing the compiled code, and can be included as with other emscripten projects, via the `loadKS().then( ... )` function
+(note: Some shells may escape the content differently)
 
-
+That should create the main library (`lib/libks.js`) which contains the relevant code, and can be loaded via `libks().then( ... )` function. See `src/web` for information on using it in the browser.

@@ -278,3 +278,13 @@ _KS_DO_SPEC(_KSACT)
 bool ks_has_init() {
     return has_init;
 }
+
+#define _GENVS(maj, min, pat) "kscript v" #maj "." #min "." #pat
+
+const char* ks_get_verstr() {
+    static char verstr[256] = { 0 };
+    if (!verstr[0]) {
+        snprintf(verstr, sizeof(verstr) - 1, "kscript v%i.%i.%i (%s), compiled at %s %s", KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH, KS_PLATFORM, __DATE__, __TIME__);
+    }
+    return verstr;
+}

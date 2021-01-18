@@ -70,6 +70,8 @@ static KS_FUNC(print) {
     if (!toprint) return NULL;
     ksio_addbuf(out, toprint->len_b, toprint->data);
     KS_DECREF(toprint);
+    
+    fflush(stdout);
     /*
     int i;
     for (i = 0; i < n_args; ++i) {

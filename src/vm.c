@@ -363,6 +363,7 @@ kso _ks_exec(ks_code bc, ks_type _in) {
 
             ks_list_push(stk, args[arg - 1]);
             DECREF_ARGS(arg);
+
         VMD_OP_END
 
         VMD_OPA(KSB_CALL)

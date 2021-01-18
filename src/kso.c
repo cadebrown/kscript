@@ -669,7 +669,10 @@ bool kso_setelems(int n_keys, kso* keys) {
         return ks_dict_set((ks_dict)ob, keys[1], keys[2]);
 
     } else if (ob->type->i__setelem) {
-        return kso_call(ob->type->i__setelem, n_keys, keys);
+        kso rr = kso_call(ob->type->i__setelem, n_keys, keys);
+        if (!rr) return false;
+        KS_DECREF(rr);
+        return true;
     }
 
     KS_THROW(kst_TypeError, "'%T' object did not support element indexing assignment", ob);
@@ -898,6 +901,50 @@ kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame clos
     return res;
 }
 
+kso kso_eval(ks_str src, ks_str fname, ks_dict locals) {
+    /* Turn the input code into a list of tokens */
+    ks_tok* toks = NULL;
+    ks_ssize_t n_toks = ks_lex(fname, src, &toks);
+    if (n_toks < 0) {
+        ks_free(toks);
+        return NULL;
+    }
+
+    /* Parse the tokens into an AST */
+    ks_ast prog = ks_parse_prog(fname, src, n_toks, toks);
+    ks_free(toks);
+    if (!prog) {
+        return NULL;
+    }
+
+    while (prog->kind == KS_AST_BLOCK && prog->args->len == 1) {
+        ks_ast ch = (ks_ast)prog->args->elems[0];
+        KS_INCREF(ch);
+        KS_DECREF(prog);
+        prog = ch;
+    }
+
+    /* Check if we should print */
+    bool do_print = false;
+    if (ks_ast_is_expr(prog->kind)) {
+        do_print = true;
+        prog = ks_ast_newn(KS_AST_RET, 1, &prog, NULL, prog->tok);
+    }
+
+    /* Compile the AST into a bytecode object which can be executed */
+    ks_code code = ks_compile(fname, src, prog, NULL);
+    KS_DECREF(prog);
+    if (!code) {
+        return NULL;
+    }
+
+    /* Execute the program, which should return the value */
+    kso res = kso_call_ext((kso)code, 0, NULL, locals, NULL);
+    KS_DECREF(code);
+    if (!res) return NULL;
+
+    return res;
+}
 
 kso kso_call(kso func, int nargs, kso* args) {
     return kso_call_ext(func, nargs, args, NULL, NULL);

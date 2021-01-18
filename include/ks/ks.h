@@ -188,7 +188,7 @@
  * Adds support for compiling for the 'web' platform
  *
  */
-#ifdef KS_IN_EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
  #include <emscripten.h>
 #endif
 
@@ -536,6 +536,10 @@ KS_API bool ks_init();
 /* Return true if kscript has been fully initialized
  */
 KS_API bool ks_has_init();
+
+/* Get a static version string describing the kscript implementation
+ */
+KS_API const char* ks_get_verstr();
 
 /* Print a formatted string to 'stdout'
  * See 'ks_fmt()' for format strings
@@ -1265,6 +1269,10 @@ KS_API kso kso_call(kso func, int nargs, kso* args);
  */
 KS_API kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame closure);
 
+/* Evaluate a string with a given source name, returning the result
+ */
+KS_API kso kso_eval(ks_str src, ks_str fname, ks_dict locals);
+
 
 /* Create an iterable from 'ob'
  */
@@ -1408,6 +1416,14 @@ KS_API kso _kso_new(ks_type tp);
 KS_API void _kso_del(kso ob);
 KS_API kso _ks_newref(kso ob);
 KS_API void _kso_free(kso obj, const char* file, const char* func, int line);
+
+/* For emscripten */
+KS_API void _ksem_incref_(kso obj);
+KS_API void _ksem_decref_(kso obj);
+KS_API char* _ksem_str_c_(kso obj);
+KS_API char* _ksem_repr_c_(kso obj);
+KS_API ks_cint _ksem_refs_c_(kso obj);
+KS_API ks_type _ksem_type_c_(kso obj);
 
 
 /* Parse 'args' into a list of addresses, with optionally specifying types. Use the 'KS_ARGS' macros
