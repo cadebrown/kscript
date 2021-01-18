@@ -233,8 +233,8 @@ https://blog.carbonfive.com/2015/01/07/vintage-terminal-effect-in-css3/
 
     <!-- Or, use the provided sources that are precompiled here: -->
     <!--
-    <script src="https://kscript.org/dist/web/v0.0.1/libks.js"></script>
-    <script src="https://kscript.org/dist/web/v0.0.1/ks.js"></script>
+    <script src="https://kscript.org/dist/v0.0.1/web/libks.js"></script>
+    <script src="https://kscript.org/dist/v0.0.1/web/ks.js"></script>
     -->
 
     
@@ -256,13 +256,17 @@ locals = null;
 // Creates a terminal with a callback for some text
 $('#term').terminal(function(cmd, term) {
     // Initialize with empty locals
-    if (locals == null) locals = ks._dict_new(0, 0);
-
-    // TODO: override 'print()'
-    ks.print = function(text) {
-        console.log("IM HEREEEE");
-        term.echo("HEYYYOO");
+    if (locals == null) {
+      locals = ks._dict_new(0, 0);
+      ks._write_stdout.push(function (text) {
+        term.echo(text)
+      })
+      ks._write_stderr.push(function (text) {
+        term.echo(text)
+      })
     }
+
+    var ios = ks._iohash();
 
     // Perform the evaluation, and run a check which will catch and print any
     //   errors
@@ -271,7 +275,9 @@ $('#term').terminal(function(cmd, term) {
 
     if (res) {
         // Print result to terminal
-        term.echo(res.toRepr());
+        if (ks._iohash() == ios) {
+          term.echo(res.toRepr());
+        }
     } else {
         // Alert the user that there was an error
         term.echo("[[b;red;]ERROR] (see console)");

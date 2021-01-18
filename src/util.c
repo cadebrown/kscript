@@ -114,3 +114,6 @@ ks_type _ksem_type_c_(kso obj) {
     return obj->type;
 }
 
+ks_cint _ksem_iohash_c_() {
+    return ksos_stdout->sz_w + ksos_stderr->sz_w;
+}

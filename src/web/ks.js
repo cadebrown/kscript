@@ -15,8 +15,8 @@
  * kscript hosts versions online, so you can have (for example):
  * 
  * ```html
- * <script src="https://kscript.org/dist/web/v0.0.1/libks.js"></script>
- * <script src="https://kscript.org/dist/web/v0.0.1/ks.js"></script>
+ * <script src="https://kscript.org/dist/v0.0.1/web/libks.js"></script>
+ * <script src="https://kscript.org/dist/v0.0.1/web/ks.js"></script>
  * ```
  * 
  * Once these are included, 
@@ -43,10 +43,17 @@
  * @author: Cade Brown <cade@kscript.org>
  */
 
-
 var ks = null;
 libks().then(function (MOD) {
     ks = MOD;
+
+    ks._write_stdout.push(function (text) {
+        console.log("stdout:", text)
+    })
+
+    ks._write_stderr.push(function (text) {
+        console.log("stderr:", text)
+    })
 
     /* Enums/Constants */
 
@@ -263,6 +270,7 @@ libks().then(function (MOD) {
     ks._decref = ks.cwrap('_ksem_decref_', void_t, [obj_t]);
     ks._refs = ks.cwrap('_ksem_refs_c_', int_t, [obj_t]);
     ks._type = ks.cwrap('_ksem_type_c_', obj_t, [obj_t]);
+    ks._iohash = ks.cwrap('_ksem_iohash_c_', int_t, []);
     //ks._get_ptr_size = ks.cwrap('ks_get_ptr_size', int_t, []);
 
     ks._str_c_ = ks.cwrap('_ksem_str_c_', ptr_t, [obj_t]);

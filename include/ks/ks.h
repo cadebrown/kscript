@@ -1424,7 +1424,7 @@ KS_API char* _ksem_str_c_(kso obj);
 KS_API char* _ksem_repr_c_(kso obj);
 KS_API ks_cint _ksem_refs_c_(kso obj);
 KS_API ks_type _ksem_type_c_(kso obj);
-
+KS_API ks_cint _ksem_iohash_c_();
 
 /* Parse 'args' into a list of addresses, with optionally specifying types. Use the 'KS_ARGS' macros
  */
