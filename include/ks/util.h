@@ -24,6 +24,74 @@
 
 /** Types **/
 
+
+/* util.Bitset - efficient implementation of a set of integers
+ *
+ */
+typedef struct ks_bitset_s {
+    KSO_BASE
+
+    /* bit-set of integers */
+    mpz_t val;
+
+}* ks_bitset;
+
+
+
+/* util.Bitset.__iter - efficient implementation of a set of integers
+ *
+ */
+typedef struct ks_bitset_iter_s {
+    KSO_BASE
+
+    /* bitset being iterated */
+    ks_bitset of;
+
+    /* position being searched */
+    ks_cint pos;
+
+}* ks_bitset_iter;
+
+/* Structure representing a node in a queue
+ *
+ */
+struct ks_queue_item {
+
+    /* Pointers to the next and previous items in the queue, or NULL if they don't exist */
+    struct ks_queue_item *next, *prev;
+
+    /* Object value (a reference is held to this) */
+    kso val;
+
+};
+
+/* util.Queue - double-ended queue implementation
+ *
+ * Internally, a doubly-linked-list is used
+ */
+typedef struct ks_queue_s {
+    KSO_BASE
+
+    /* First and last item in the queue */
+    struct ks_queue_item *first, *last;
+
+}* ks_queue;
+
+/* util.Queue.__iter - iterator type
+ *
+ */
+typedef struct ks_queue_iter_s {
+    KSO_BASE
+
+    /* Queue being iterated over */
+    ks_queue of;
+
+    /* Current position in the queue */
+    struct ks_queue_item *cur;
+
+}* ks_queue_iter;
+
+
 /* Represents a single (directed) edge within a dense graph
  *
  * The index of the 'from' node is implicit in which node the edge is stored in
@@ -90,6 +158,40 @@ typedef struct ks_graph_s {
 /** Functions **/
 
 
+/* Create a new 'util.Bitset' object, empty
+ */
+KS_API ks_bitset ks_bitset_new(ks_type tp);
+
+/* Add an element to the bitset
+ */
+KS_API bool ks_bitset_add(ks_bitset self, ks_cint elem);
+
+/* Remove an element from the bitset
+ */
+KS_API bool ks_bitset_del(ks_bitset self, ks_cint elem);
+
+/* Tells whether a bitset has an element
+ */
+KS_API bool ks_bitset_has(ks_bitset self, ks_cint elem);
+
+
+/* Create a new 'util.Queue' object, with empty
+ */
+KS_API ks_queue ks_queue_new(ks_type tp);
+
+/* Push a new object on to the back of a queue
+ */
+KS_API bool ks_queue_push(ks_queue self, kso obj);
+
+/* Pop from the front of the queue
+ */
+KS_API kso ks_queue_pop(ks_queue self);
+
+/* Tell whether a queue is empty
+ */
+KS_API bool ks_queue_empty(ks_queue self);
+
+
 /* Add a node to a graph
  */
 KS_API bool ks_graph_add_node(ks_graph self, kso val);
@@ -104,10 +206,14 @@ KS_API void ks_graph_clear(ks_graph self);
 
 
 
+
 /* Types */
 KS_API_DATA ks_type
     ksutilt_Graph,
-    ksutilt_Queue
+    kst_queue,
+    kst_queue_iter,
+    kst_bitset,
+    kst_bitset_iter
 ;
 
 #endif /* KSIO_H__ */
