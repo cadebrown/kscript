@@ -511,8 +511,11 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
 /* Internal method */
 bool my_getstr(ksio_BaseIO bio, nx_t X, int dep) {
 
+    /* truncation threshold */
+    int trunc_thresh = 64;
+
     /* truncation size for max length of a single vector */
-    int trunc_sz = 20;
+    int trunc_sz = 8;
 
     if (X.rank == 0) {
         return my_getstr_addelem(bio, X.dtype, X.data);
@@ -520,13 +523,32 @@ bool my_getstr(ksio_BaseIO bio, nx_t X, int dep) {
     } else if (X.rank == 1) {
         /* 1d, output a list-like structure */
         ksio_add(bio, "[");
-
         ks_size_t i;
-        for (i = 0; i < X.shape[0]; ++i) {
-            if (i > 0) ksio_add(bio, ", ");
-            if (!my_getstr_addelem(bio, X.dtype, (void*)((ks_uint)X.data + X.strides[0] * i))) return false;
+
+        if (X.shape[0] <= trunc_thresh) {
+            for (i = 0; i < X.shape[0]; ++i) {
+                if (i > 0) ksio_add(bio, ", ");
+                if (!my_getstr_addelem(bio, X.dtype, (void*)((ks_uint)X.data + X.strides[0] * i))) return false;
+            }
+        } else {
+            /* Truncate elements */
+            int nb = trunc_sz / 2;
+            for (i = 0; i < nb; ++i) {
+                if (i > 0) ksio_add(bio, ", ");
+                if (!my_getstr_addelem(bio, X.dtype, (void*)((ks_uint)X.data + X.strides[0] * i))) return false;
+            }
+
+            ksio_add(bio, ", ...");
+
+            for (i = X.shape[0] - nb; i < X.shape[0]; ++i) {
+                if (i > 0) ksio_add(bio, ", ");
+                if (!my_getstr_addelem(bio, X.dtype, (void*)((ks_uint)X.data + X.strides[0] * i))) return false;
+            }
+
         }
+
         return ksio_add(bio, "]");
+
     } else {
         /* Use recursion */
 
@@ -534,10 +556,30 @@ bool my_getstr(ksio_BaseIO bio, nx_t X, int dep) {
         /* loop over outer dimension, adding each inner dimension*/
         ks_size_t i;
         nx_t inner = nx_make(X.data, X.dtype, X.rank-1, X.shape+1, X.strides+1);
-        for (i = 0; i < X.shape[0]; ++i, inner.data = (void*)((ks_uint)inner.data + X.strides[0])) {
-            if (i > 0) ksio_add(bio, ",\n%.*c", dep+1, ' ');
 
-            if (!my_getstr(bio, inner, dep+1)) return false;
+        if (X.shape[0] <= trunc_thresh) {
+            for (i = 0; i < X.shape[0]; ++i) {
+                if (i > 0) ksio_add(bio, ",\n%.*c", dep+1, ' ');
+                inner.data = (void*)(((ks_uint)X.data) + X.strides[0] * i);
+                if (!my_getstr(bio, inner, dep+1)) return false;
+            }
+
+        } else {
+            /* Truncate elements */
+            int nb = trunc_thresh / 2;
+            for (i = 0; i < nb; ++i) {
+                if (i > 0) ksio_add(bio, ",\n%.*c", dep+1, ' ');
+                inner.data = (void*)(((ks_uint)X.data) + X.strides[0] * i);
+                if (!my_getstr(bio, inner, dep+1)) return false;
+            }
+
+            ksio_add(bio, ",\n%.*c...", dep+1, ' ');
+
+            for (i = X.shape[0] - nb; i < X.shape[0]; ++i) {
+                if (i > 0) ksio_add(bio, ",\n%.*c", dep+1, ' ');
+                inner.data = (void*)(((ks_uint)X.data) + X.strides[0] * i);
+                if (!my_getstr(bio, inner, dep+1)) return false;
+            }
         }
 
         return ksio_add(bio, "]");
