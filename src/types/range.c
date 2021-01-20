@@ -11,6 +11,12 @@
 /* C-API */
 
 ks_range ks_range_new(ks_type tp, ks_int start, ks_int end, ks_int step) {
+
+    if (ks_int_cmp_c(step, 0) == 0) {
+        KS_THROW(kst_Error, "Cannot create range with step==0");
+        return NULL;
+    }
+
     ks_range self = KSO_NEW(ks_range, tp);
 
     KS_INCREF(start);
