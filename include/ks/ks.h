@@ -469,10 +469,10 @@ struct ks_eikv {
 #define KS_THROW_ATTR(_obj, _attr) KS_THROW(kst_AttrError, "'%T' object had no attribute %R", _obj, _attr)
 
 /* Generic index error */
-#define KS_THROW_INDEX(_obj, _idx) KS_THROW(kst_KeyError, "Index out of range")
+#define KS_THROW_INDEX(_obj, _idx) KS_THROW(kst_IndexError, "Index out of range")
 
 /* Throws a type conversion error */
-#define KS_THROW_CONV(_from_type, _to_type) KS_THROW(kst_Error, "Could not convert '%s' object to '%s'", (_from_type)->i__name->data, (_to_type)->i__name->data)
+#define KS_THROW_CONV(_from_type, _to_type) KS_THROW(kst_TypeError, "Could not convert '%s' object to '%s'", (_from_type)->i__name->data, (_to_type)->i__name->data)
 
 /* Missing method (typically a '__' method) */
 #define KS_THROW_METH(_obj, _meth) KS_THROW(kst_TypeError, "'%T' object had no '%s' method", _obj, _meth)

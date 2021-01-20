@@ -89,9 +89,9 @@ bool _ks_argsv(int kk, int nargs, kso* args, const char* fmt, va_list ap) {
 
                     if (!kso_issub(cargin->type, req)) {
                         if (kk == 0) {
-                            KS_THROW(kst_Error, "Expected argument '%.*s' to be of type %R, but was of type '%T'", an_c, an, req->i__fullname, cargin);
+                            KS_THROW(kst_ArgError, "Expected argument '%.*s' to be of type %R, but was of type '%T'", an_c, an, req->i__fullname, cargin);
                         } else {
-                            KS_THROW(kst_Error, "Expected value '%.*s' to be of type %R, but was of type '%T' (in value string '%s')", an_c, an, req->i__fullname, cargin, o_fmt);
+                            KS_THROW(kst_ArgError, "Expected value '%.*s' to be of type %R, but was of type '%T' (in value string '%s')", an_c, an, req->i__fullname, cargin, o_fmt);
                         }
                         res = false;
                         break;
@@ -145,7 +145,7 @@ bool _ks_argsv(int kk, int nargs, kso* args, const char* fmt, va_list ap) {
     }
 
     if (res && cai != nargs) {
-        KS_THROW(kst_Error, "Given extra arguments, only expected %i, but given %i", cai, nargs);
+        KS_THROW(kst_ArgError, "Given extra arguments, only expected %i, but given %i", cai, nargs);
         res = false;
     }
     /* Success/Fail */

@@ -315,7 +315,7 @@ static KS_TFUNC(T, setattr) {
         if (!wh) return NULL;
 
         if (wh->len != 2) {
-            KS_THROW(kst_SizeError, "Expected iterable of length for 'size', but got one of length %u", wh->len);
+            KS_THROW(kst_SizeError, "Expected iterable of length 2 for 'size', but got one of length %u", wh->len);
             KS_DECREF(wh);
             return NULL;
         }

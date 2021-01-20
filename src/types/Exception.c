@@ -1,5 +1,8 @@
 /* types/Exception.c - 'Exception' type (and subtypes)
  *
+ * 
+ * TODO: OSError template enum: https://stackoverflow.com/questions/19885360/how-can-i-print-the-symbolic-name-of-an-errno-in-c
+ * 
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
@@ -86,10 +89,10 @@ ks_type kst_Exception = &tp;
     _macro(NameError, Error) \
     _macro(AttrError, Error) \
     _macro(KeyError, Error) \
-    _macro(IndexError, Error) \
+    _macro(IndexError, KeyError) \
     _macro(ValError, Error) \
     _macro(AssertError, Error) \
-    _macro(MathError, Error) \
+    _macro(MathError, ValError) \
     _macro(OverflowError, Error) \
     _macro(ArgError, Error) \
     _macro(SizeError, Error) \
