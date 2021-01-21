@@ -143,7 +143,7 @@ static KS_TFUNC(T, new) {
     if (objs == KSO_NONE) {
 
     } else {
-        ks_dict elems = (ks_dict)kso_call(kst_dict, 1, &objs);
+        ks_dict elems = (ks_dict)kso_call((kso)kst_dict, 1, &objs);
         if (!elems) {
             KS_DECREF(self);
             return NULL;
@@ -204,7 +204,7 @@ static KS_TFUNC(T, str) {
     }
     ksio_add(sio, "})");
 
-    return ksio_StringIO_getf(sio);
+    return (kso)ksio_StringIO_getf(sio);
 }
 
 static KS_TFUNC(T, bool) {

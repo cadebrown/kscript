@@ -111,7 +111,7 @@ static KS_TFUNC(T, init) {
     } else {
 
         ks_str t = ks_str_new(-1, "__graph");
-        kso gc = kso_getattr(nodes->type, t);
+        kso gc = ks_type_get(nodes->type, t);
         KS_DECREF(t);
         if (gc) {
 
