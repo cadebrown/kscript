@@ -52,7 +52,7 @@ typedef struct ks_bitset_iter_s {
 
 }* ks_bitset_iter;
 
-/* Structure representing a node in a queue
+/* Structure representing a node in a queue (i.e. a node in a doubly linked list)
  *
  */
 struct ks_queue_item {
@@ -67,7 +67,7 @@ struct ks_queue_item {
 
 /* util.Queue - double-ended queue implementation
  *
- * Internally, a doubly-linked-list is used
+ * Internally, a doubly-linked-list is used, and pointers to the first and last element are held
  */
 typedef struct ks_queue_s {
     KSO_BASE
@@ -86,10 +86,54 @@ typedef struct ks_queue_iter_s {
     /* Queue being iterated over */
     ks_queue of;
 
-    /* Current position in the queue */
+    /* Current position in the queue (or NULL if empty) */
     struct ks_queue_item *cur;
 
 }* ks_queue_iter;
+
+
+/* Single node within a binary search tree
+ *
+ */
+struct ks_bst_item {
+
+    /* Pointers to elements less than (left) and more than (right)  */
+    struct ks_bst_item *left, *right;
+
+    /* Key and val at this node */
+    kso key, val;
+
+};
+
+/* util.BST - Binary Search Tree structure
+ *
+ */
+typedef struct ks_bst_s {
+    KSO_BASE
+
+    /* Root node */
+    struct ks_bst_item* root;
+
+}* ks_bst;
+
+
+/* util.BST.__iter - Binary Search Tree iterator
+ *
+ */
+typedef struct ks_bst_iter_s {
+    KSO_BASE
+
+    /* Binary search tree being iterated */
+    ks_bst of;
+
+    /* Current position */
+    struct ks_bst_item* cur;
+
+    /* Current stack of nodes */
+    int nstk;
+    struct ks_bst_item** stk;
+
+}* ks_bst_iter;
 
 
 /* Represents a single (directed) edge within a dense graph
@@ -136,7 +180,7 @@ struct ks_graph_node {
 
 };
 
-/* 'util.Graph' - dense, directed graph representing a list of nodes and lists of connections (edges) between them
+/* 'util.Graph' - directed graph type representing nodes and connections between them
  *
  * Internally implemented with sorted adjacency lists per node. So, every node holds a list of connections outwards,
  *   but not inwards.
@@ -146,11 +190,8 @@ struct ks_graph_node {
 typedef struct ks_graph_s {
     KSO_BASE
 
-    /* number of nodes within the graph */
-    ks_size_t n_nodes;
-
-    /* array of nodes, where the index is their ID */
-    struct ks_graph_node* nodes;
+    /* Main dictionary */
+    ks_dict nodes;
 
 }* ks_graph;
 
@@ -158,7 +199,7 @@ typedef struct ks_graph_s {
 /** Functions **/
 
 
-/* Create a new 'util.Bitset' object, empty
+/* Create a new (empty) 'util.Bitset' object
  */
 KS_API ks_bitset ks_bitset_new(ks_type tp);
 
@@ -175,7 +216,7 @@ KS_API bool ks_bitset_del(ks_bitset self, ks_cint elem);
 KS_API bool ks_bitset_has(ks_bitset self, ks_cint elem);
 
 
-/* Create a new 'util.Queue' object, with empty
+/* Create a new (empty) 'util.Queue' object
  */
 KS_API ks_queue ks_queue_new(ks_type tp);
 
@@ -192,13 +233,40 @@ KS_API kso ks_queue_pop(ks_queue self);
 KS_API bool ks_queue_empty(ks_queue self);
 
 
-/* Add a node to a graph
+/* Create a new (empty) 'util.BST' object
  */
-KS_API bool ks_graph_add_node(ks_graph self, kso val);
+KS_API ks_bst ks_bst_new(ks_type tp);
 
-/* Add an edge to a graph
+/* Add an element to the binary search tree
  */
-KS_API bool ks_graph_add_edge(ks_graph self, ks_cint from, ks_cint to, kso val);
+KS_API bool ks_bst_set(ks_bst self, kso key, kso val);
+
+/* Get an element to the binary search tree
+ */
+KS_API kso ks_bst_get(ks_bst self, kso key);
+
+
+/* Create a new (empty) 'util.Graph' type
+ */
+KS_API ks_graph ks_graph_new(ks_type tp);
+
+/* Adds a dictionary of nodes to the graph
+ */
+KS_API bool ks_graph_add_nodes(ks_graph self, ks_dict nodes);
+
+/* Add a node to a graph, which must be hashable
+ *
+ * If 'allow_dup' is given, the a duplicate node is allowed, and the node is
+ *   cleared
+ */
+KS_API bool ks_graph_add_node(ks_graph self, kso node, bool allow_dup);
+
+/* Adds an edge from 'nodeA' to 'nodeB', with a '.val' of 'edge_val'
+ *
+ * If 'allow_dup' is given, then a duplicate edge is allowed, and the edge is
+ *   cleared
+ */
+KS_API bool ks_graph_add_edge(ks_graph self, kso nodeA, kso nodeB, kso edge_val, bool allow_dup);
 
 /* Clear a graph
  */
@@ -209,11 +277,13 @@ KS_API void ks_graph_clear(ks_graph self);
 
 /* Types */
 KS_API_DATA ks_type
-    ksutilt_Graph,
+    kst_graph,
     kst_queue,
     kst_queue_iter,
     kst_bitset,
-    kst_bitset_iter
+    kst_bitset_iter,
+    kst_bst,
+    kst_bst_iter
 ;
 
 #endif /* KSIO_H__ */

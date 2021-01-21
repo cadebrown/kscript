@@ -112,7 +112,6 @@ _KS_DO_SPEC(_KSACT)
     
     _ksi_set();
     _ksi_dict();
-    _ksi_graph();
     _ksi_list();
     _ksi_tuple();
     _ksi_module();

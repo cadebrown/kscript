@@ -129,6 +129,14 @@ static KS_TFUNC(T, len) {
     return (kso)ks_int_new(mpz_popcount(self->val));
 }
 
+static KS_TFUNC(T, contains) {
+    ks_bitset self;
+    ks_cint val;
+    KS_ARGS("self:* val:cint", &self, kst_bitset, &val);
+
+    return KSO_BOOL(ks_bitset_has(self, val));
+}
+
 static KS_TFUNC(T, add) {
     ks_bitset self;
     int nargs;
@@ -238,6 +246,7 @@ void _ksi_bitset() {
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__integral",             ksf_wrap(T_int_, T_NAME ".__integral(self)", "")},
         {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
+        {"__contains",             ksf_wrap(T_contains_, T_NAME ".__contains(self)", "")},
         {"__iter",                 KS_NEWREF(kst_bitset_iter)},
 
         {"add",                    ksf_wrap(T_add_, T_NAME ".add(self, *args)", "Adds all arguments to the bitset")},

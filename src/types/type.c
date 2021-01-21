@@ -192,51 +192,49 @@ static KS_TFUNC(T, getelem) {
 }
 
 
-static int buildgraph(ks_type self, ks_graph res, int* ct) {
-    ks_graph_add_node(res, (kso)self);
-    int me = (*ct)++;
+static bool buildgraph(ks_type self, ks_graph res) {
+    if (!ks_graph_add_node(res, (kso)self, false)) {
+        return false;
+    }
     int i;
     for (i = 0; i < self->n_subs; ++i) {
-        int c = buildgraph(self->subs[i], res, ct);
-        if (c < 0) return -1;
+        if (!buildgraph(self->subs[i], res)) return false;
 
-        ks_graph_add_edge(res, me, c, KSO_NONE);
+        if (!ks_graph_add_edge(res, (kso)self, (kso)self->subs[i], KSO_NONE, false)) {
+            return false;
+        }
     }
 
-    return me;
+    return true;
 }
 
 static KS_TFUNC(T, graph) {
     ks_type self;
     KS_ARGS("self:*", &self, kst_type);
 
-    ks_graph res = (ks_graph)kso_call((kso)ksutilt_Graph, 0, NULL);
+    ks_graph res = ks_graph_new(kst_graph);
     if (!res) return NULL;
 
     /* Generate dependency graph from type hierarchy */
-    int ct = 0;
 
-    if (buildgraph(self, res, &ct) < 0) {
+    if (!buildgraph(self, res)) {
         KS_DECREF(res);
         return NULL;
     }
 
     /* Build a path up to object */
-    int iti = 0;
-    ks_type it = self;
+    ks_type it = self, lit;
     do {
+        lit = it;
         it = it->i__base;
-        int me = ct++;
 
-        ks_graph_add_node(res, (kso)it);
-        ks_graph_add_edge(res, me, iti, KSO_NONE);
+        ks_graph_add_node(res, (kso)it, false);
+        ks_graph_add_edge(res, (kso)it, (kso)lit, KSO_NONE, false);
 
-        iti = me;
     }  while (it != kst_object);
 
     return (kso)res;
 }
-
 
 
 /* Export */

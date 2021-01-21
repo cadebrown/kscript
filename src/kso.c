@@ -73,6 +73,63 @@ bool kso_truthy(kso ob, bool* out) {
     return true;
 }
 
+bool kso_cmp(kso L, kso R, int* out) {
+    if (kso_isinst(L, kst_str) && kso_isinst(R, kst_str)) {
+        *out = ks_str_cmp((ks_str)L, (ks_str)R);
+        return true;
+    } else if (kso_isinst(L, kst_int) && kso_isinst(R, kst_int) && L->type->i__cmp == kst_int->i__cmp) {
+        *out = mpz_cmp(((ks_int)L)->val, ((ks_int)R)->val);
+        return true;
+    } else if (L->type->i__cmp == kst_object->i__cmp) {
+        ks_uint aL = (ks_uint)L, aR = (ks_uint)R;
+        *out = aL == aR ? 0 : (aL < aR ? -1 : +1);
+        return true;
+    } else if (L->type->i__cmp || R->type->i__cmp) {
+        kso r = KSO_UNDEFINED;
+        if (L->type->i__cmp) {
+            r = kso_call(L->type->i__cmp, 2, (kso[]){ L, R });
+            if (!r) return NULL;
+        }
+
+        if (r == KSO_UNDEFINED) {
+            if (R->type->i__cmp) {
+                r = kso_call(R->type->i__cmp, 2, (kso[]){ L, R });
+                if (!r) return NULL;
+
+                if (r == KSO_UNDEFINED) {
+
+                } else {
+                    ks_cint vv;
+                    if (!kso_get_ci(r, &vv)) {
+                        KS_DECREF(r);
+                        *out = vv < 0 ? -1 : (vv > 0 ? 1 : 0);
+                        return true;
+                    }
+
+                    *out = vv;
+                    return true;
+                }
+            }
+
+        } else {
+            ks_cint vv;
+            if (!kso_get_ci(r, &vv)) {
+                KS_DECREF(r);
+                        *out = vv < 0 ? -1 : (vv > 0 ? 1 : 0);
+                return true;
+            }
+
+            *out = vv;
+            return true;
+        }
+    }
+
+    ks_uint aL = (ks_uint)L, aR = (ks_uint)R;
+    *out = aL == aR ? 0 : (aL < aR ? -1 : +1);
+    return true;
+}
+
+
 bool kso_eq(kso L, kso R, bool* out) {
     if (kso_isinst(L, kst_str) && kso_isinst(R, kst_str)) {
         *out = L == R || ks_str_eq((ks_str)L, (ks_str)R);

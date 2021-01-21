@@ -215,6 +215,32 @@ static bool s_resize(ks_dict self, ks_size_t new_len_buckets) {
 
 /* C-API */
 
+ks_dict ks_dict_newt(ks_type tp, struct ks_ikv* ikv) {
+    ks_dict self = ks_zmalloc(1, sizeof(*self));
+    KS_INCREF(kst_dict);
+    self->type = tp;
+    self->refs = 1;
+
+    self->len_buckets = self->len_ents = self->len_real = 0;
+    self->_max_len_buckets_b = self->_max_len_ents = 0;
+
+    self->ents = NULL;
+    self->buckets_s8 = NULL;
+
+    /* Initialize elements */
+    if (ikv) {
+        struct ks_ikv* p = ikv;
+        while (p->key) {
+            ks_str k = ks_str_new(-1, p->key);
+            ks_dict_set_h(self, (kso)k, k->v_hash, p->val);
+            KS_DECREF(k);
+            p++;
+        }
+    }
+
+    return self;
+}
+
 ks_dict ks_dict_new(struct ks_ikv* ikv) {
     ks_dict self = ks_zmalloc(1, sizeof(*self));
     KS_INCREF(kst_dict);
@@ -548,6 +574,62 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    kso objs = KSO_NONE;
+    KS_ARGS("tp:* ?objs", &tp, kst_type, &objs);
+
+    if (objs == KSO_NONE) {
+        return (kso)ks_dict_newt(tp, NULL);
+    } else if (kso_issub(objs->type, kst_dict)) {
+        ks_dict rr = (ks_dict)objs;
+        ks_dict r = ks_dict_newt(tp, NULL);
+        ks_cint i;
+        for (i = 0; i < rr->len_ents; ++i) {
+            if (rr->ents[i].key) {
+                if (!ks_dict_set_h(r, rr->ents[i].key, rr->ents[i].hash, rr->ents[i].val)) {
+                    KS_DECREF(r);
+                    return NULL;
+                }
+            }
+        }
+        return (kso)r;
+    } else if (objs->type->i__dict) {
+        ks_dict rr = (ks_dict)kso_call(objs->type->i__dict, 1, &objs);
+        if (!rr) {
+            return NULL;
+        }
+        if (!kso_issub(rr->type, kst_dict)) {
+            KS_THROW(kst_TypeError, "'%T.__dict' returned non-dict object of type %T", rr);
+            KS_DECREF(rr);
+            return NULL;
+        }
+        if (kso_issub(rr->type, tp)) {
+            return (kso)rr;
+        } else {
+            ks_dict r = ks_dict_newt(tp, NULL);
+            ks_cint i;
+            for (i = 0; i < rr->len_ents; ++i) {
+                if (rr->ents[i].key) {
+                    if (!ks_dict_set_h(r, rr->ents[i].key, rr->ents[i].hash, rr->ents[i].val)) {
+                        KS_DECREF(r);
+                        KS_DECREF(rr);
+                        return NULL;
+                    }
+                }
+            }
+            KS_DECREF(rr);
+            return (kso)r;
+        }
+    }
+
+
+    KS_THROW_CONV(objs->type, tp);
+    return NULL;
+}
+
+
 static KS_TFUNC(T, bool) {
     ks_dict self;
     KS_ARGS("self:*", &self, kst_dict);
@@ -620,6 +702,7 @@ void _ksi_dict() {
 
     _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, "Dictionaries, sometimes called associative arrays, are mappings between keys and values. The keys and values may be any objects, the only requirement is that keys are hashable. And, for keys which hash equally and compare equally, there is only one key stored\n\n    Entries are ordered by first insertion of the key, which is reset upon deletion\n\n    SEE: https://en.wikipedia.org/wiki/Associative_array", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
+        {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, objs)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},
         {"__contains",             ksf_wrap(T_contains_, T_NAME ".__contains(self, key)", "")},

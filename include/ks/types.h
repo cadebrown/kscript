@@ -860,8 +860,8 @@ struct ks_type_s {
     /* A+B, A-B, A*B, A@B, A/B, A//B, A%B, A**B */
     kso i__add, i__sub, i__mul, i__matmul, i__div, i__floordiv, i__mod, i__pow;
 
-    /* A==B, A!=B, A<B, A<=B, A>B, A>=B */
-    kso i__eq, i__ne, i__lt, i__le, i__gt, i__ge;
+    /* A<=>B, A==B, A!=B, A<B, A<=B, A>B, A>=B */
+    kso i__cmp, i__eq, i__ne, i__lt, i__le, i__gt, i__ge;
     
     /* A<<B, A>>B, A|B, A^B, A&B */
     kso i__lsh, i__rsh, i__binior, i__binxor, i__binand;
@@ -919,6 +919,7 @@ struct ks_type_s {
     m(__floordiv) \
     m(__mod) \
     m(__pow) \
+    m(__cmp) \
     m(__eq) \
     m(__ne) \
     m(__lt) \

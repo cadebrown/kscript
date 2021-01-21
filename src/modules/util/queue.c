@@ -119,7 +119,22 @@ static KS_TFUNC(T, str) {
     ks_queue self;
     KS_ARGS("self:*", &self, kst_queue);
 
-    return (kso)ks_fmt("%O", self);
+    if (!self->first) return (kso)ks_fmt("%T()", self);
+
+    ksio_StringIO sio = ksio_StringIO_new();
+
+    ksio_add(sio, "%T([", self);
+
+    struct ks_queue_item *it = self->first;
+    while (it) {
+        if (it != self->first) ksio_add(sio, ", ");
+        ksio_add(sio, "%R", it->val);
+        it = it->next;
+    }
+
+    ksio_add(sio, "])");
+
+    return (kso)ksio_StringIO_getf(sio);
 }
 
 static KS_TFUNC(T, bool) {

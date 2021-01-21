@@ -722,6 +722,10 @@ KS_API bool kso_get_cc(kso ob, ks_ccomplex* val);
  */
 KS_API bool kso_truthy(kso obj, bool* out);
 
+/* Computes comparison sign (-1, 0, or +1) and stores in '*out'
+ */
+KS_API bool kso_cmp(kso L, kso R, int* out);
+
 /* Calculate whether 'L == R'
  */
 KS_API bool kso_eq(kso L, kso R, bool* out);

@@ -68,9 +68,9 @@ bool _ks_argsv(int kk, int nargs, kso* args, const char* fmt, va_list ap) {
             if (cai >= nargs) {
                 if (is_opt) break;
                 if (kk == 0) {
-                    KS_THROW(kst_Error, "Missing arguments, only given %i", nargs);
+                    KS_THROW(kst_ArgError, "Missing arguments, only given %i", nargs);
                 } else {
-                    KS_THROW(kst_Error, "Missing values for value string '%s'", o_fmt);
+                    KS_THROW(kst_ArgError, "Missing values for value string '%s'", o_fmt);
                 }
                 res = false;
                 break;

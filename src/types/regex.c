@@ -776,26 +776,36 @@ static KS_TFUNC(T, graph) {
     ks_regex self;
     KS_ARGS("self:*", &self, kst_regex);
 
-    ks_graph res = (ks_graph)kso_call((kso)ksutilt_Graph, 0, NULL);
+    ks_graph res = ks_graph_new(kst_graph);
     if (!res) return NULL;
-    assert(kso_issub(res->type, ksutilt_Graph));
 
     ks_cint i, j;
     for (i = 0; i < self->n_states; ++i) {
         ks_str s = ks_fmt("s%i", (int)i);
-        ks_graph_add_node(res, (kso)s);
+        ks_graph_add_node(res, (kso)s, false);
         KS_DECREF(s);
     }
 
     /* Generate edge transitions */
     for (i = 0; i < self->n_states; ++i) {
+        ks_int ii = ks_int_new(ii);
         int u = self->states[i].to0, v = self->states[i].to1;
         if (self->states[i].kind == KS_REGEX_NFA_EPS) {
-            if (u >= 0) ks_graph_add_edge(res, i, u, KSO_NONE);
-            if (v >= 0) ks_graph_add_edge(res, i, v, KSO_NONE);
+            if (u >= 0) {
+                ks_int uu = ks_int_new(u);
+                ks_graph_add_edge(res, ii, uu, KSO_NONE, false);
+                KS_DECREF(uu);
+            }
+            if (v >= 0) {
+                ks_int vv = ks_int_new(v);
+                ks_graph_add_edge(res, ii, vv, KSO_NONE, false);
+                KS_DECREF(vv);
+            }
         } else if (self->states[i].kind == KS_REGEX_NFA_UCP) {
             ks_str c = ks_str_chr(self->states[i].ucp);
-            ks_graph_add_edge(res, i, u, (kso)c);
+            ks_int uu = ks_int_new(u);
+            ks_graph_add_edge(res, ii, uu, (kso)c, false);
+            KS_DECREF(uu);
             KS_DECREF(c);
         } else if (self->states[i].kind == KS_REGEX_NFA_ANY || self->states[i].kind == KS_REGEX_NFA_NOT) {
             ks_set r = ks_set_new(0, NULL);
@@ -811,13 +821,18 @@ static KS_TFUNC(T, graph) {
             if (self->states[i].kind == KS_REGEX_NFA_NOT) {
                 ks_str ts = ks_str_new(-1, "!");
                 ks_tuple tr = ks_tuple_new(2, (kso[]){ (kso)ts, (kso)r  });
-                ks_graph_add_edge(res, i, u, (kso)tr);
+                ks_int uu = ks_int_new(u);
+                ks_graph_add_edge(res, ii, uu, (kso)tr, false);
+                KS_DECREF(uu);
                 KS_DECREF(tr);
             } else {
-                ks_graph_add_edge(res, i, u, (kso)r);
+                ks_int uu = ks_int_new(u);
+                ks_graph_add_edge(res, ii, uu, (kso)r, false);
+                KS_DECREF(uu);
             }
             KS_DECREF(r);
         }
+        KS_DECREF(ii);
     }
 
     return (kso)res;
