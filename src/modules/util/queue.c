@@ -57,7 +57,7 @@ kso ks_queue_pop(ks_queue self) {
     }
 
     self->first = it->next;
-    self->first->prev = NULL;
+    if (self->first) self->first->prev = NULL;
 
     kso rr = it->val;
     ks_free(it);

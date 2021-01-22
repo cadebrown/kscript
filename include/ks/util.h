@@ -136,54 +136,13 @@ typedef struct ks_bst_iter_s {
 }* ks_bst_iter;
 
 
-/* Represents a single (directed) edge within a dense graph
- *
- * The index of the 'from' node is implicit in which node the edge is stored in
- * 
- */
-struct ks_graph_edge {
-
-    /* Index of the node which this edge points towards
-     */
-    ks_size_t to;
-
-    /* Value stored on the edge (default: none) 
-     * A reference is held to this
-     */
-    kso val;
-
-};
-
-/* Represents a single node within a dense graph
- * 
- * The index which this node refers to is implicit in its location within the 'nodes' array
- * 
- */
-struct ks_graph_node {
-
-    /* Number of outgoing edges */
-    ks_size_t n_edges;
-
-    /* Array of edges outwards, sorted by 'to' index 
-     *
-     * This should always be kept sorted, preferably by insertion sort, or if a batch operation is
-     *   given, perhaps adding them all and using timsort/mergesort variant to quickly sort them.
-     * For example, you could sort just the edges being added, then merge that with the existing list
-     *   to give closer to O(N log(N)) time for N insertions (instead of O(N^2))
-     */
-    struct ks_graph_edge* edges;
-
-    /* Value stored on the node (default: none) 
-     * A reference is held to this
-     */
-    kso val;
-
-};
-
 /* 'util.Graph' - directed graph type representing nodes and connections between them
  *
- * Internally implemented with sorted adjacency lists per node. So, every node holds a list of connections outwards,
- *   but not inwards.
+ * Internally implemented as a dict-of-dicts, where the primary dictionary ('nodes') has
+ *   nodes as keys, and 'nodes[key]' gives a dictionary describing the neighbors of 'key'
+ *   within the graph. Then, 'nodes[key][to]' returns the edge value for 'key -> to'
+ * 
+ * TODO: have an inverse neighbors dictionary?
  * 
  * Memory: O(|V|+|E|)
  */
@@ -194,6 +153,42 @@ typedef struct ks_graph_s {
     ks_dict nodes;
 
 }* ks_graph;
+
+
+/* util.Graph.bfs - Breadth-First-Search (BFS) iterator
+ *
+ */
+typedef struct ks_graph_bfs_s {
+    KSO_BASE
+
+    /* Object being iterated */
+    ks_graph of;
+
+    /* Set of visited nodes */
+    ks_set visited;
+
+    /* Queue of nodes being visited */
+    ks_queue queue;
+
+}* ks_graph_bfs;
+
+
+/* util.Graph.dfs - Depth-First-Search (DFS) iterator
+ *
+ */
+typedef struct ks_graph_dfs_s {
+    KSO_BASE
+
+    /* Object being iterated */
+    ks_graph of;
+
+    /* Set of visited nodes */
+    ks_set visited;
+
+    /* Stack of nodes being visited */
+    ks_list stk;
+
+}* ks_graph_dfs;
 
 
 /** Functions **/
@@ -268,6 +263,15 @@ KS_API bool ks_graph_add_node(ks_graph self, kso node, bool allow_dup);
  */
 KS_API bool ks_graph_add_edge(ks_graph self, kso nodeA, kso nodeB, kso edge_val, bool allow_dup);
 
+/* Calculate whether a graph has a given node
+ */
+KS_API bool ks_graph_has_node(ks_graph self, kso node, bool* out);
+
+/* Calculate whether a graph has a given edge
+ */
+KS_API bool ks_graph_has_edge(ks_graph self, kso nodeA, kso nodeB, bool* out);
+
+
 /* Clear a graph
  */
 KS_API void ks_graph_clear(ks_graph self);
@@ -278,6 +282,8 @@ KS_API void ks_graph_clear(ks_graph self);
 /* Types */
 KS_API_DATA ks_type
     kst_graph,
+    kst_graph_bfs,
+    kst_graph_dfs,
     kst_queue,
     kst_queue_iter,
     kst_bitset,
