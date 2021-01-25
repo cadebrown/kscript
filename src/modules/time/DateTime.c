@@ -286,6 +286,13 @@ static KS_TFUNC(T, getattr) {
     KS_THROW_ATTR(self, attr);
     return NULL;
 }
+static KS_TFUNC(T, float) {
+    kstime_DateTime self;
+    KS_ARGS("self:*", &self, kstimet_DateTime);
+
+    return (kso)ks_float_new(kstime_DateTime_tse(self));
+}
+
 
 
 
@@ -295,11 +302,12 @@ static struct ks_type_s tp;
 ks_type kstimet_DateTime = &tp;
 
 void _ksi_time_DateTime() {
-    _ksinit(kstimet_DateTime, kst_object, T_NAME, sizeof(struct kstime_DateTime_s), -1, "Structure describing a point in time", KS_IKV(
+    _ksinit(kstimet_DateTime, kst_number, T_NAME, sizeof(struct kstime_DateTime_s), -1, "Structure describing a point in time", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none, tz=none)", "")},
         {"__repr",               ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__float",              ksf_wrap(T_float_, T_NAME ".__float(self)", "")},
         {"__getattr",            ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
 
     ));

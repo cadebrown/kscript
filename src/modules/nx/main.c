@@ -120,6 +120,87 @@ nx_t nx_with_axes(nx_t self, int naxes, int* axes) {
     return res;
 }
 
+nx_t nx_switch_axes(nx_t self, int a, int b) {
+    assert(a >= 0 && a < self.rank);
+    assert(b >= 0 && b < self.rank);
+    if (a == b) return self;
+
+    nx_t res = self;
+
+    ks_size_t tu = res.shape[a];
+    ks_ssize_t tv = res.strides[a];
+
+    res.shape[a] = res.shape[b];
+    res.strides[a] = res.strides[b];
+
+    res.shape[b] = tu;
+    res.strides[b] = tv;
+
+    return res;
+}
+
+
+nx_t nx_axes_at_end(nx_t self, int naxes, int* axes) {
+    assert(naxes <= self.rank);
+    nx_t res = self;
+    
+    int i, j, p = 0;
+    for (i = 0; i < self.rank; ++i) {
+        bool skip = false;
+        for (j = 0; j < naxes; ++j) {
+            if (i == axes[j]) {
+                skip = true;
+                break;
+            }
+        }
+        if (!skip) {
+            res.shape[p] = self.shape[i];
+            res.strides[p] = self.strides[i];
+            p++;
+        }
+    }
+
+    for (i = 0; i < naxes; ++i) {
+        res.shape[p] = self.shape[axes[i]];
+        res.strides[p] = self.strides[axes[i]];
+        p++;
+    }
+    assert(p == res.rank);
+
+    return res;
+}
+
+nx_t nx_axes_from_end(nx_t self, int naxes, int* axes) {
+    assert(naxes <= self.rank);
+    nx_t res = self;
+    
+    int i, j, p = 0, q = self.rank - naxes;
+    for (i = 0; i < self.rank; ++i) {
+        bool skip = false;
+        for (j = 0; j < naxes; ++j) {
+            if (i == axes[j]) {
+                skip = true;
+                break;
+            }
+        }
+
+        if (skip) {
+            /* Take from end */
+            res.shape[i] = self.shape[q];
+            res.strides[i] = self.strides[q];
+            q++;
+        } else {
+            res.shape[i] = self.shape[p];
+            res.strides[i] = self.strides[p];
+            p++;
+        }
+    }
+
+    assert(q == res.rank);
+
+    return res;
+}
+
 
 nx_t nx_make_bcast(int N, nx_t* args) {
     assert(N > 0);
@@ -418,7 +499,7 @@ KS_API bool nx_as_axes(nx_t self, kso obj, int* naxes, int* axes) {
         ks_cint v;
         if (!kso_get_ci(obj, &v)) return false;
         *naxes = 1;
-        if (v > self.rank) {
+        if (v >= self.rank) {
             KS_THROW(kst_IndexError, "Invalid axis: %i is out of range", v);
             return false;
         }
@@ -439,11 +520,11 @@ KS_API bool nx_as_axes(nx_t self, kso obj, int* naxes, int* axes) {
         *naxes = li->len;
         for (i = 0; i < *naxes; ++i) {
             ks_cint v;
-            if (!kso_get_ci(obj, &v)) {
+            if (!kso_get_ci(li->elems[i], &v)) {
                 KS_DECREF(li);
                 return false;
             }
-            if (v > self.rank) {
+            if (v >= self.rank) {
                 KS_THROW(kst_IndexError, "Invalid axis: %i is out of range", v);
                 KS_DECREF(li);
                 return false;
@@ -679,7 +760,7 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
     #define LOOP(TYPE) do { \
         nx_##TYPE v = *(nx_##TYPE*)ptr; \
         my_getstr_addelem(bio, nx_##TYPE##rdtype, &v.re); \
-        if (v.im >= 0) { ksio_add(bio, "+"); } \
+        if (v.im >= 0 || v.im != v.im || v.im == nx_##TYPE##rINF) { ksio_add(bio, "+"); } \
         my_getstr_addelem(bio, nx_##TYPE##rdtype, &v.im); \
         ksio_add(bio, "i"); \
     } while (0);

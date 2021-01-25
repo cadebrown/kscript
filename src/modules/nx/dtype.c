@@ -19,6 +19,7 @@ static nx_dtype make_int(const char* name, const char* namecode, int sz) {
     res->namecode = ks_str_new(-1, namecode);
     res->kind = NX_DTYPE_INT;
     res->size = sz;
+    KS_INCREF(res);
 
     return res;
 }
@@ -30,6 +31,7 @@ static nx_dtype make_float(const char* name, const char* namecode, int sz) {
     res->namecode = ks_str_new(-1, namecode);
     res->kind = NX_DTYPE_FLOAT;
     res->size = sz;
+    KS_INCREF(res);
 
     return res;
 }
@@ -41,6 +43,7 @@ static nx_dtype make_complex(const char* name, const char* namecode, int sz) {
     res->namecode = ks_str_new(-1, namecode);
     res->kind = NX_DTYPE_COMPLEX;
     res->size = sz;
+    KS_INCREF(res);
 
     return res;
 }

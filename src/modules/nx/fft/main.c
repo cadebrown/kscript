@@ -62,6 +62,7 @@ static KS_TFUNC(M, fft) {
         KS_DECREF(r);
         return NULL;
     }
+
     nx_dtype odt = nx_complextype(vX.dtype);
     if (!odt) {
         KS_DECREF(rX);
@@ -69,7 +70,9 @@ static KS_TFUNC(M, fft) {
         KS_DECREF(r);
         return NULL;
     }
-    nxfft_plan plan = nxfft_make(odt, vX.rank, vX.shape, false);
+
+    vX = nx_axes_at_end(vX, naxes, axes);
+    nxfft_plan plan = nxfft_make(odt, naxes, vX.shape + vX.rank - naxes, false);
     if (!plan) {
         KS_NDECREF(rX);
         KS_NDECREF(rR);
@@ -77,6 +80,7 @@ static KS_TFUNC(M, fft) {
         return NULL;
     }
 
+    vR = nx_axes_at_end(vR, naxes, axes);
     if (!nxfft_exec(vX, vR, plan)) {
         KS_NDECREF(rX);
         KS_NDECREF(rR);
@@ -123,9 +127,9 @@ static KS_TFUNC(M, ifft) {
             KS_DECREF(rX);
             return NULL;
         }
-
-        nx_t shape = vX;
         
+        nx_t shape = vX;
+
         r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
         if (!r) {
             KS_NDECREF(rX);
@@ -140,6 +144,7 @@ static KS_TFUNC(M, ifft) {
         KS_DECREF(r);
         return NULL;
     }
+
     nx_dtype odt = nx_complextype(vX.dtype);
     if (!odt) {
         KS_DECREF(rX);
@@ -147,14 +152,17 @@ static KS_TFUNC(M, ifft) {
         KS_DECREF(r);
         return NULL;
     }
-    nxfft_plan plan = nxfft_make(odt, vX.rank, vX.shape, true);
+
+    vX = nx_axes_at_end(vX, naxes, axes);
+    nxfft_plan plan = nxfft_make(odt, naxes, vX.shape + vX.rank - naxes, true);
     if (!plan) {
         KS_NDECREF(rX);
         KS_NDECREF(rR);
         KS_DECREF(r);
         return NULL;
     }
-
+    
+    vR = nx_axes_at_end(vR, naxes, axes);
     if (!nxfft_exec(vX, vR, plan)) {
         KS_NDECREF(rX);
         KS_NDECREF(rR);

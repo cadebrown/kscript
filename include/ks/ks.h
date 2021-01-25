@@ -1322,6 +1322,19 @@ KS_API bool kso_inrepr(kso obj);
  */
 KS_API void kso_outrepr();
 
+/* Specific sort types
+ */
+KS_API bool ks_sort_merge(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
+KS_API bool ks_sort_insertion(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
+
+
+/* Sorts 'elems' in place according to 'keys' (may be '==elems'), according to 'cmpfunc'
+ *
+ */
+KS_API bool ks_sort(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
+
+
+
 
 /** C Iterator API  **/
 

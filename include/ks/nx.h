@@ -622,6 +622,18 @@ KS_API nx_t nx_without_axes(nx_t self, int naxes, int* axes);
  */
 KS_API nx_t nx_with_axes(nx_t self, int naxes, int* axes);
 
+/* Create an array descriptor with axes 'a' and 'b' switched
+ */
+KS_API nx_t nx_switch_axes(nx_t self, int a, int b);
+
+/* Create an array descriptor with 'axes' put at the end
+ */
+KS_API nx_t nx_axes_at_end(nx_t self, int naxes, int* axes);
+
+/* Create an array descriptor with 'axes' taken from the end (inverse of 'nx_axes_at_end')
+ */
+KS_API nx_t nx_axes_from_end(nx_t self, int naxes, int* axes);
+
 
 /* Calculate a broadcast shape, returning a shape-only array descriptor
  *

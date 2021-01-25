@@ -408,6 +408,17 @@ static KS_TFUNC(T, index) {
     return NULL;
 }
 
+static KS_TFUNC(T, sort) {
+    ks_list self;
+    KS_ARGS("self:*", &self, kst_list);
+
+    if (!ks_sort(self->len, self->elems, self->elems, NULL)) {
+        return NULL;
+    }
+
+    return KSO_NONE;
+}
+
 /** Iterator **/
 
 static KS_TFUNC(TI, free) {
@@ -465,6 +476,9 @@ void _ksi_list() {
         {"push",                 ksf_wrap(T_push_, T_NAME ".push(self, *args)", "Pushes any number of arguments on to the end of the list")},
         {"pop",                  ksf_wrap(T_pop_, T_NAME ".pop(self, num=1)", "Pops the given number of arguments off of the end of the list")},
         {"index",                ksf_wrap(T_index_, T_NAME ".index(self, elem)", "Calculates the index of an element")},
+
+        {"sort",                 ksf_wrap(T_sort_, T_NAME ".sort(self)", "Sorts, in place, the list")},
+
     ));
 
     kst_list->i__hash = NULL;

@@ -163,23 +163,51 @@ static nxfft_plan make_1D_BFLY(nx_dtype dtype, ks_size_t N, bool is_inv) {
 }
 
 
+static nxfft_plan make_ND_DEFAULT(nx_dtype dtype, int rank, ks_size_t* shape, bool is_inv) {
+    nxfft_plan self = KSO_NEW(nxfft_plan, nxfftt_plan);
+
+    int i;
+    self->rank = rank;
+    for (i = 0; i < rank; ++i) {
+        self->shape[i] = shape[i];
+    }
+
+    self->is_inv = is_inv;
+
+    self->kind = NXFFT_ND_DEFAULT;
+
+    self->kND_DEFAULT.plans = ks_malloc(sizeof(*self->kND_DEFAULT.plans) * rank);
+    for (i = 0; i < rank; ++i) {
+        self->kND_DEFAULT.plans[i] = NULL;
+    }
+    for (i = 0; i < rank; ++i) {
+        self->kND_DEFAULT.plans[i] = nxfft_make(dtype, 1, &shape[i], is_inv);
+        if (!self->kND_DEFAULT.plans[i]) {
+            KS_DECREF(self);
+            return NULL;
+        }
+    }
+
+    return self;
+}
+
+
 nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
-    assert(rank == 1);
     if (dtype->kind != NX_DTYPE_COMPLEX) {
         KS_THROW(kst_TypeError, "FFT only defined for complex types");
         return NULL;
     }
 
     //return make_1D_DENSE(dtype, dims[0], is_inv);
-    return make_1D_BFLY(dtype, dims[0], is_inv);
+    //return make_1D_BFLY(dtype, dims[0], is_inv);
 
     if (rank == 1 && (dims[0] & (dims[0] - 1)) == 0) {
         return make_1D_BFLY(dtype, dims[0], is_inv);
     } else if (rank == 1) {
         return make_1D_BLUE(dtype, dims[0], is_inv);
+    } else {
+        return make_ND_DEFAULT(dtype, rank, dims, is_inv);
     }
-
-    //return make_1D_DENSE(dtype, dims[0], is_inv);
 }
 
 

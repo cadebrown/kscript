@@ -335,8 +335,6 @@ static KS_TFUNC(T, setelem) {
         return NULL;
     }
 
-    KS_NDECREF(vref);
-
     return (kso)nx_view_newo(nxt_view, res, (kso)self);
 }
 
