@@ -29,7 +29,6 @@ static KS_TFUNC(T, free) {
     nx_view self;
     KS_ARGS("self:*", &self, nxt_view);
 
-    KS_DECREF(self->val.dtype);
     KS_NDECREF(self->ref);
 
     KSO_DEL(self);

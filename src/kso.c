@@ -668,17 +668,32 @@ kso kso_getelems(int n_keys, kso* keys) {
         }
         ks_tuple lob = (ks_tuple)ob;
 
-        ks_cint idx;
-        if (!kso_get_ci(keys[1], &idx)) {
-            return NULL;
-        }
-        if (idx < 0) idx += lob->len;
-        if (idx < 0 || idx >= lob->len) {
-            KS_THROW_INDEX(ob, keys[1]);
-            return NULL;
-        }
+        if (kso_issub(keys[1]->type, kst_slice)) {
+            ks_cint first, last, delta;
+            if (!ks_slice_get_citer((ks_slice)keys[1], lob->len, &first, &last, &delta)) {
+                return NULL;
+            }
+            ks_list res = ks_list_new(0, NULL);
+            ks_cint i;
+            for (i = first; i != last; i += delta) {
+                ks_list_push(res, lob->elems[i]);
+            }
+            ks_tuple rr = ks_tuple_new(res->len, res->elems);
+            KS_DECREF(res);
+            return (kso)rr;
+        } else {
+            ks_cint idx;
+            if (!kso_get_ci(keys[1], &idx)) {
+                return NULL;
+            }
+            if (idx < 0) idx += lob->len;
+            if (idx < 0 || idx >= lob->len) {
+                KS_THROW_INDEX(ob, keys[1]);
+                return NULL;
+            }
 
-        return KS_NEWREF(lob->elems[idx]);
+            return KS_NEWREF(lob->elems[idx]);
+        }
     } else if (kso_issub(ob->type, kst_dict) && ob->type->i__getelem == kst_dict->i__getelem) {
         if (n_keys != 2) {
             KS_THROW(kst_ArgError, "Expected 2 arguments to element indexing operation");

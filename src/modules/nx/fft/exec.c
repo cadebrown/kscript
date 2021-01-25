@@ -179,11 +179,63 @@ NXT_PASTE_C(LOOPC);
     return 0; \
 }
 
-
 NXT_PASTE_C(LOOPC);
 #undef LOOPC
 
 
+/* FFTW3 wrapper */
+#ifdef KS_HAVE_fftw3
+static int kern_FFTW3(int NUM, nx_t* args, void* extra) {
+    assert(NUM == 2);
+    nx_t X = args[0], R = args[1];
+    nxfft_plan p = ((struct extra_data*)extra)->plan;
+
+    if (!nx_cast(X, p->kND_FFTW3.tmp)) {
+        return -1;
+    }
+
+    if (false) {}
+#ifdef KS_HAVE_fftw3f
+    else if (p->kND_FFTW3.planf) {
+        fftwf_execute(p->kND_FFTW3.planf);
+    }
+#endif
+#ifdef KS_HAVE_fftw3l
+    else if (p->kND_FFTW3.planl) {
+        fftwl_execute(p->kND_FFTW3.planl);
+    }
+#endif
+#ifdef KS_HAVE_fftw3q
+    else if (p->kND_FFTW3.planq) {
+        fftwq_execute(p->kND_FFTW3.planq);
+    }
+#endif
+    else {
+        fftw_execute(p->kND_FFTW3.plan);
+    }
+
+    if (p->is_inv) {
+        /* Scale and divide */
+        nx_s64 coef = 1;
+        int i;
+        for (i = 0; i < p->rank; ++i) {
+            coef *= p->shape[i];
+        }
+
+        if (!nx_div(p->kND_FFTW3.tmp, nx_make((nx_s64[]){ coef }, nxd_s64, 0, NULL, NULL), R)) {
+            return -1;
+        }
+    } else {
+        /* Don't scale */
+        if (!nx_cast(p->kND_FFTW3.tmp, R)) {
+            return -1;
+        }
+    }
+
+    return 0;
+}
+
+#endif
 
 bool nxfft_exec(nx_t X, nx_t R, nxfft_plan plan) {
     if (R.dtype->kind != NX_DTYPE_COMPLEX) {
@@ -245,6 +297,13 @@ bool nxfft_exec(nx_t X, nx_t R, nxfft_plan plan) {
         }
 
         return true;
+
+    } else if (plan->kind == NXFFT_ND_FFTW3) {
+#ifdef KS_HAVE_fftw3
+        bool res = !nx_apply_Nd(kern_FFTW3, 2, (nx_t[]){ X, R }, plan->rank, &ed);
+        return res;
+#endif
+
     }
 
 

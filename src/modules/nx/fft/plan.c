@@ -200,6 +200,126 @@ static nxfft_plan make_ND_DEFAULT(nx_dtype dtype, int rank, ks_size_t* shape, bo
     return self;
 }
 
+#ifdef KS_HAVE_fftw3
+
+static nxfft_plan make_ND_FFTW3(nx_dtype dtype, int rank, ks_size_t* shape, bool is_inv) {
+    nxfft_plan self = KSO_NEW(nxfft_plan, nxfftt_plan);
+
+    int i;
+    int fsz[NX_MAXRANK];
+    self->rank = rank;
+
+    nx_dtype idt = nxd_cD;
+
+#ifdef KS_HAVE_fftw3f
+    if (dtype == nxd_cF) {
+        idt = nxd_cF;
+    }
+#elif defined(KS_HAVE_fftw3q)
+    if (dtype == nxd_cQ) {
+        idt = nxd_cQ;
+    }
+#elif defined(KS_HAVE_fftw3l)
+    if (dtype == nxd_cL) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    } else if (dtype == nxd_cQ) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    }
+#endif
+
+    //ks_size_t tsz = dtype->size;
+    ks_size_t tsz = idt->size;
+    for (i = 0; i < rank; ++i) {
+        self->shape[i] = shape[i];
+        fsz[i] = shape[i];
+        tsz *= shape[i];
+    }
+
+    self->is_inv = is_inv;
+
+    self->kind = NXFFT_ND_FFTW3;
+    self->kND_FFTW3.plan = NULL;
+
+    self->kND_FFTW3.tmp.data = NULL;
+
+    self->kND_FFTW3.tmp = nx_make(
+        ks_malloc(tsz),
+        idt,
+        rank,
+        shape,
+        NULL
+    );
+
+    if (idt == nxd_cF) {
+#ifdef KS_HAVE_fftw3f
+        self->kND_FFTW3.planf = fftwf_plan_many_dft(rank, fsz, 1,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            is_inv ? FFTW_FORWARD : FFTW_BACKWARD,
+            FFTW_ESTIMATE
+        );
+
+        if (!self->kND_FFTW3.planf) {
+            KS_DECREF(self);
+            KS_THROW(kst_Error, "FFTW3 failed to create plan");
+            return NULL;
+        }
+#else
+        assert(false);
+#endif
+
+    } else if (idt == nxd_cD) {
+        self->kND_FFTW3.plan = fftw_plan_many_dft(rank, fsz, 1,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            is_inv ? FFTW_FORWARD : FFTW_BACKWARD,
+            FFTW_ESTIMATE
+        );
+
+        if (!self->kND_FFTW3.plan) {
+            KS_DECREF(self);
+            KS_THROW(kst_Error, "FFTW3 failed to create plan");
+            return NULL;
+        }
+    } else if (idt == nxd_cL) {
+#ifdef KS_HAVE_fftw3l
+        self->kND_FFTW3.planl = fftwl_plan_many_dft(rank, fsz, 1,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            is_inv ? FFTW_FORWARD : FFTW_BACKWARD,
+            FFTW_ESTIMATE
+        );
+        if (!self->kND_FFTW3.planl) {
+            KS_DECREF(self);
+            KS_THROW(kst_Error, "FFTW3 failed to create plan");
+            return NULL;
+        }
+
+#else
+        assert(false);
+#endif
+    } else if (idt == nxd_cQ) {
+#ifdef KS_HAVE_fftw3q
+        self->kND_FFTW3.planq = fftwq_plan_many_dft(rank, fsz, 1,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            self->kND_FFTW3.tmp.data, NULL, 1, 0,
+            is_inv ? FFTW_FORWARD : FFTW_BACKWARD,
+            FFTW_ESTIMATE
+        );
+        if (!self->kND_FFTW3.planq) {
+            KS_DECREF(self);
+            KS_THROW(kst_Error, "FFTW3 failed to create plan");
+            return NULL;
+        }
+#else
+        assert(false);
+#endif
+    }
+
+    return self;
+}
+
+#endif
 
 nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
     if (dtype->kind != NX_DTYPE_COMPLEX) {
@@ -209,6 +329,32 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
 
     //return make_1D_DENSE(dtype, dims[0], is_inv);
     //return make_1D_BFLY(dtype, dims[0], is_inv);
+#ifdef KS_HAVE_fftw3f
+    if (dtype == nxd_cF) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    }
+#endif
+
+#ifdef KS_HAVE_fftw3
+    if (dtype == nxd_cD) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    } else if (dtype == nxd_cF) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    }
+#endif
+
+#ifdef KS_HAVE_fftw3q
+    if (dtype == nxd_cQ) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    }
+#endif
+#ifdef KS_HAVE_fftw3l
+    if (dtype == nxd_cL) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    } else if (dtype == nxd_cQ) {
+        return make_ND_FFTW3(dtype, rank, dims, is_inv);
+    }
+#endif
 
     if (rank == 1 && (dims[0] & (dims[0] - 1)) == 0) {
         return make_1D_BFLY(dtype, dims[0], is_inv);
@@ -242,6 +388,12 @@ static KS_TFUNC(T, free) {
             KS_NDECREF(self->kND_DEFAULT.plans[i]);
         }
         ks_free(self->kND_DEFAULT.plans);
+    } else if (self->kind == NXFFT_ND_FFTW3) {
+#ifdef KS_HAVE_fftw3
+        fftw_destroy_plan(self->kND_FFTW3.plan);
+        ks_free(self->kND_FFTW3.tmp.data);
+#endif
+
     }
 
     KSO_DEL(self);

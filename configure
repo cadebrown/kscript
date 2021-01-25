@@ -354,6 +354,32 @@ int main(int argc, char** argv) {
 }
 "
 
+check_clib fftw3f "$WITH_fftw3" "" "-lfftw3f" "
+#include <fftw3.h>
+
+int main(int argc, char** argv) {
+    fftwf_exec(NULL);
+    return 0;
+}
+"
+
+check_clib fftw3l "$WITH_fftw3" "" "-lfftw3l" "
+#include <fftw3.h>
+
+int main(int argc, char** argv) {
+    fftwl_exec(NULL);
+    return 0;
+}
+"
+
+check_clib fftw3q "$WITH_fftw3" "" "-lfftw3q" "
+#include <fftw3.h>
+
+int main(int argc, char** argv) {
+    fftwq_exec(NULL);
+    return 0;
+}
+"
 check_clib gmp "$WITH_gmp" "" "-lgmp" "
 #include <gmp.h>
 

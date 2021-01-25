@@ -34,7 +34,7 @@ ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
                 img.data,
                 img.dtype,
                 3,
-                (ks_size_t[]) { img.shape[0], img.shape[1], 1 },
+                (ks_size_t[]) { img.shape[0], img.shape[1], 3 },
                 (ks_ssize_t[]) { img.strides[0], img.strides[1], 0 }
             ),
             nx_make(
@@ -42,7 +42,7 @@ ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
                 dt,
                 3,
                 (ks_size_t[]){ h, w, 3 },
-                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size }
+                (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, dt->size }
             )
         )) {
             ks_free(data);
@@ -52,7 +52,7 @@ ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
         /* Set alpha channel */
         if (!nx_fpcast(
             nx_make(
-                (nx_F[]){ 1 },
+                (nx_F[]){ 1.0f },
                 nxd_F,
                 0,
                 NULL,
@@ -96,7 +96,7 @@ ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
                 data,
                 dt,
                 3,
-                (ks_size_t[]){ h, w, d },
+                (ks_size_t[]){ h, w, (d == 1 ? 3 : d) },
                 (ks_ssize_t[]){ 4 * w * dt->size, 4 * dt->size, 1 * dt->size }
             )
         )) {

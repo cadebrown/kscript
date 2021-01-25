@@ -1181,7 +1181,7 @@ struct nxfft_plan_s {
 
         } kND_DEFAULT;
 
-#ifdef KS_HAVE_FFTW3
+#ifdef KS_HAVE_fftw3
 
         /* ND plan using FFTW3
          *
@@ -1190,6 +1190,18 @@ struct nxfft_plan_s {
 
             /* FFTW plan */
             fftw_plan plan;
+
+  #ifdef KS_HAVE_fftw3f
+            fftwf_plan planf;
+  #endif
+  #ifdef KS_HAVE_fftw3l
+            fftwl_plan planl;
+  #endif
+  #ifdef KS_HAVE_fftw3q
+            fftwq_plan planq;
+  #endif
+            /* Temporary storage */
+            nx_t tmp;
 
         } kND_FFTW3;
 

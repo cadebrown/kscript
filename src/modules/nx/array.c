@@ -307,6 +307,7 @@ static KS_TFUNC(T, getelem) {
 
     return (kso)nx_view_newo(nxt_view, res, (kso)self);
 }
+
 static KS_TFUNC(T, setelem) {
     nx_array self;
     int nargs;
