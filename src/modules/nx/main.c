@@ -1021,6 +1021,128 @@ static KS_TFUNC(M, sum) {
 
 
 
+static KS_TFUNC(M, min) {
+    kso x, oaxes = KSO_NONE, r = KSO_NONE;
+    KS_ARGS("x ?axes ?r", &x, &oaxes, &r);
+
+    nx_t vX, vR;
+    kso rX, rR;
+
+    if (!nx_get(x, NULL, &vX, &rX)) {
+        return NULL;
+    }
+
+    if (vX.rank < 1) {
+        KS_THROW(kst_SizeError, "Expected argument to be at least 1-D");
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    int naxes;
+    int axes[NX_MAXRANK];
+    if (!nx_as_axes(vX, oaxes, &naxes, axes)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output */
+        nx_dtype dtype = vX.dtype;
+        /* Complex arguments should create real ones for abs */
+
+        nx_t shape = nx_without_axes(vX, naxes, axes);
+        
+        //shape.rank = 0;
+
+        r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+        if (!r) {
+            KS_NDECREF(rX);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nx_get(r, NULL, &vR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_min(vX, vR, naxes, axes)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+    return r;
+}
+
+static KS_TFUNC(M, max) {
+    kso x, oaxes = KSO_NONE, r = KSO_NONE;
+    KS_ARGS("x ?axes ?r", &x, &oaxes, &r);
+
+    nx_t vX, vR;
+    kso rX, rR;
+
+    if (!nx_get(x, NULL, &vX, &rX)) {
+        return NULL;
+    }
+
+    if (vX.rank < 1) {
+        KS_THROW(kst_SizeError, "Expected argument to be at least 1-D");
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    int naxes;
+    int axes[NX_MAXRANK];
+    if (!nx_as_axes(vX, oaxes, &naxes, axes)) {
+        KS_NDECREF(rX);
+        return NULL;
+    }
+
+    if (r == KSO_NONE) {
+        /* Generate output */
+        nx_dtype dtype = vX.dtype;
+        /* Complex arguments should create real ones for abs */
+
+        nx_t shape = nx_without_axes(vX, naxes, axes);
+        
+        //shape.rank = 0;
+
+        r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
+        if (!r) {
+            KS_NDECREF(rX);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(r);
+    }
+
+    if (!nx_get(r, NULL, &vR, &rR)) {
+        KS_NDECREF(rX);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    if (!nx_max(vX, vR, naxes, axes)) {
+        KS_NDECREF(rX);
+        KS_NDECREF(rR);
+        KS_DECREF(r);
+        return NULL;
+    }
+
+    KS_NDECREF(rX);
+    KS_NDECREF(rR);
+    return r;
+}
+
+
+
 static KS_TFUNC(M, neg) {
     kso x, r = KSO_NONE;
     KS_ARGS("x ?r", &x, &r);
@@ -2577,6 +2699,8 @@ ks_module _ksi_nx() {
         {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to\n\n    Indices in 'x' are taken modulo 'newdim'")},
 
         {"sum",                    ksf_wrap(M_sum_, M_NAME ".sum(x, axes=none, r=none)", "Sum elements")},
+        {"min",                    ksf_wrap(M_min_, M_NAME ".min(x, axes=none, r=none)", "Minimum of elements")},
+        {"max",                    ksf_wrap(M_max_, M_NAME ".max(x, axes=none, r=none)", "Maximum of elements")},
 
         {"neg",                    ksf_wrap(M_neg_, M_NAME ".neg(x, r=none)", "Computes elementwise negation")},
         {"abs",                    ksf_wrap(M_abs_, M_NAME ".abs(x, r=none)", "Computes elementwise absolute value")},

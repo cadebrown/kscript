@@ -23,6 +23,7 @@ static nxfft_plan make_1D_DENSE(nx_dtype dtype, ks_size_t N, bool is_inv) {
 
     self->kind = NXFFT_1D_DENSE;
     self->is_inv = is_inv;
+    self->k1D_DENSE.W.data = NULL;
 
     void* data = ks_malloc(N * N * dtype->size);
     self->k1D_DENSE.W = nx_make(data, dtype, 2, (ks_size_t[]){ N, N }, NULL);
@@ -73,6 +74,10 @@ static nxfft_plan make_1D_BLUE(nx_dtype dtype, ks_size_t N, bool is_inv) {
 
     self->kind = NXFFT_1D_BLUE;
     self->is_inv = is_inv;
+
+    self->k1D_BLUE.Ws.data = NULL;
+    self->k1D_BLUE.tmp.data = NULL;
+    self->k1D_BLUE.planM = NULL;
 
     void* data = ks_malloc(N * dtype->size);
     self->k1D_BLUE.Ws = nx_make(data, dtype, 1, (ks_size_t[]){ N }, NULL);
@@ -135,6 +140,7 @@ static nxfft_plan make_1D_BFLY(nx_dtype dtype, ks_size_t N, bool is_inv) {
     self->is_inv = is_inv;
 
     self->kind = NXFFT_1D_BFLY;
+    self->k1D_BFLY.W.data = NULL;
 
     /* Twiddle table */
     void* data = ks_malloc(N * dtype->size);
@@ -175,6 +181,9 @@ static nxfft_plan make_ND_DEFAULT(nx_dtype dtype, int rank, ks_size_t* shape, bo
     self->is_inv = is_inv;
 
     self->kind = NXFFT_ND_DEFAULT;
+
+    self->kND_DEFAULT.plans = NULL;
+
 
     self->kND_DEFAULT.plans = ks_malloc(sizeof(*self->kND_DEFAULT.plans) * rank);
     for (i = 0; i < rank; ++i) {
@@ -217,6 +226,23 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
 static KS_TFUNC(T, free) {
     nxfft_plan self;
     KS_ARGS("self:*", &self, nxfftt_plan);
+
+
+    if (self->kind == NXFFT_1D_BFLY) {
+        ks_free(self->k1D_BFLY.W.data);
+    } else if (self->kind == NXFFT_1D_BLUE) {
+        ks_free(self->k1D_BLUE.Ws.data);
+        ks_free(self->k1D_BLUE.tmp.data);
+        KS_NDECREF(self->k1D_BLUE.planM);
+    } else if (self->kind == NXFFT_1D_DENSE) {
+        ks_free(self->k1D_DENSE.W.data);
+    } else if (self->kind == NXFFT_ND_DEFAULT) {
+        int i;
+        for (i = 0; i < self->rank; ++i) {
+            KS_NDECREF(self->kND_DEFAULT.plans[i]);
+        }
+        ks_free(self->kND_DEFAULT.plans);
+    }
 
     KSO_DEL(self);
 

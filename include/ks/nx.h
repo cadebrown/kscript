@@ -778,11 +778,21 @@ KS_API bool nx_zero(nx_t R);
 KS_API bool nx_onehot(nx_t X, nx_t R);
 
 /* R[:] = sum(X)
- *
- * The axes being summed are implicit
  * 
  */
 KS_API bool nx_sum(nx_t X, nx_t R, int naxes, int* axes);
+
+/* R[:] = min(X)
+ *
+ */
+KS_API bool nx_min(nx_t X, nx_t R, int naxes, int* axes);
+
+/* R[:] = max(X)
+ *
+ */
+KS_API bool nx_max(nx_t X, nx_t R, int naxes, int* axes);
+
+
 
 /*** Arithmetic Operations ***/
 
