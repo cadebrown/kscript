@@ -4,58 +4,84 @@
  *   math. It deals (typically) with a tensor (C-type: 'nx_t') that has a given data type ('nx_dtype', 
  *   which may be a C-style type, or 'object' for generic operations), as well as dimensions and strides.
  * 
- * Submodules:
- * 
- *   nx.rand: Random number generation
- *   nx.la: Linear algebra routines
- *   nx.fft: Fast Fourier Transform (FFT) routines
- *   nx.cv: Computer vision routines (includes image processing)
- *   nx.ch: Computer hearing routines (includes audio processing)
- * 
- * 
- * Scalars can be represented with a rank of 0, which still holds 1 element
+ * Scalars can be represented with a rank of 0, which still holds one element
  *
  * Operations are applied by vectorization -- which is to say per each element independently, with results not affecting
  *   each other. So, adding vectors adds them elementwise, not appending them to the end. These are called scalar-vectorized
  *   operations. Some operations take more than single elements (they take a 1D sub-vector, called a 'pencil' or 'vector'). These
  *   will work per-pencil/per-vector, and can still be parallelized per pencil/vectory (for example, a 2D tensor would have 1D of parallelization,
- *   but 1D values being processed together). There can also be functions for any dimensional slice of data, but these are rarer.
+ *   but 1D values being processed together). There can also be functions for any dimensional slice of data, but these are rarer (a notable
+ *   example is matrix multiplication).
  * 
- * scalar-vectorized:
- *   * add, sub, mul (arithmetics)
+ * Broadcasting is a term that describes how tensors of different shapes are processed together in a kernel. Obviously, tensors
+ *   of the same shape can be processed together, but broadcasting allows tensors of different sizes to be processed together, by
+ *   duplicating and repeating values. Broadcasting has the following steps:
  * 
- * 1D-vectorized:
- *   * sort
+ *   * All inputs are expanded to the largest rank of any input, expanding the shape to the left with '1's. For example, (2, 3, 4) and (3, 4) are
+ *     expanded to (2, 3, 4) and (1, 3, 4)
+ *   * Each dimension is checked, and if each input has either '1' or one additional number (let's call 'x'), they broadcast together. Inputs with a '1' in that dimension
+ *     are repeated to 'x' times. For example, given shapres of (2, 3, 4) and (1, 3, 4), the '0' dimensions are all either 1 or 2, so the '1' are duplicated, so that
+ *     two copies of the (1, 3, 4) tensor are applied with the two slices of the (2, 3, 4) tensor.
+ * 
+ * Signatures of operations may look like: (..., N), (..., N) -> (..., N). The '...' stand for 'any broadcastable dimensions', and each output can be viewed
+ *   as a stack of (N,)-shaped vectors
+ * 
+ * 0D to 0D (element-wise):
+ *   * add (...,) -> (...,)
+ *   * sub (...,) -> (...,)
+ *   * mul (...,) -> (...,)
+ * 
+ * 1D to 0D (1D reduction):
+ *   * min (..., N) -> (...)
+ * 
+ * 1D to 1D (vector-wise):
+ *   * sort (..., N) -> (..., N)
  *
- * 2D-vectorized:
- *   * matrix multiplication
+ * 2D to 0D (2D reduction)
+ *   * matnorm_* (..., M, N) -> (...)
  * 
- * ND-vectorized:
- *   * generalized FFTs, NTTs, etc.
+ * 2D to 2D (matrix-wise):
+ *   * matmul (..., M, N), (..., N, K) -> (..., M, K) 
+ *
+ * ND to ND
+ *   * fft (..., *XYZ) -> (..., *XYZ)
  * 
- * 
- * There also exist operations which have different input and output spaces. All of the above functions have the same input
- *   dimension as output dimension. Take, for example, reductions. These will (typically) reduce the number of dimensions.
- * 
- * 1D -> scalar operations:
- *   * min, max, fold
- * 
- * 2D -> scalar operations:
- *   * matrix norm
- * 
- * ND -> scalar operations:
- *   * sum
- * 
- * ND -> (N-1)D:
- *   * 1D -> scalar operations applied on all-but-one axis (i.e. they are (N-1)D vectorized, but applied over an axis)
- * 
+ * ND to 0D:
+ *   * sum (..., *XYZ) -> (...,)
+
  * These transforms can sometimes be applied multiple times, or for different axes. For example, 'sum' operation can take 1 or more
  *   axis and is equivalent to reducing on each axis. You can sum over all axes to have a single scalar element, or all but one
- *   to vectorize (N-1)D summations.
+ *   to reduce (N-1)D summations.
  * 
  * Unlike other standard modules, the prefixes for datatypes/functions/variables do not have 'ks' prefixing them,
  *   only 'nx'.
  * 
+ * 
+ * --- Standard Types ---
+ * 
+ * Provided in NumeriX are some standard datatypes, which are signed and unsigned integers of size 8, 16, 32, and 64 bits.
+ *   For example, 'nx_s8' is a signed 8 bit int, and 'nx_u8' is an unsigned 8 bit int
+ * 
+ * There is also a boolean type, which is 'nx_bl'
+ * 
+ * There are builtin float types: half, float, double, long double, float128. These may or may not be present on a given
+ *   architecture. When they aren't available they will be the closest type possible. These are the types:
+ *   * nx_H: Half precision (__float16, __fp16)
+ *   * nx_F: Single precision (float)
+ *   * nx_D: Double precision (double)
+ *   * nx_L: Longer double precision (extended) (long double)
+ *   * nx_Q: Quad precision (__float128)
+ * 
+ * Also, for floating point types, macros are defined in 'nxm.h' for common operations. For example:
+ *   'nx_Lfmin()' gives an 'fmin()' like function that will work with that type. This is done so that generating
+ *   type-generic kernels can use 'TYPE' + 'fmin'. For example, in the C preprocessor, if 'TYPE' is 'nx_L', you can write:
+ *   'TYPE##fmin(a, b)', and it will generate appropriate function calls for each type. Also see 'nxt.h' for template generation
+ * 
+ * Submodules:
+ * 
+ *   nx.rand: Random number generation
+ *   nx.la: Linear algebra routines
+ *   nx.fft: Fast Fourier Transform (FFT) routines
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -109,6 +135,16 @@ typedef  uint64_t  nx_u64;
 
 #define nx_blv(_val) ((_val) ? 1 : 0)
 
+#define nx_bldtype nxd_bl
+#define nx_s8dtype nxd_s8
+#define nx_u8dtype nxd_u8
+#define nx_s16dtype nxd_s16
+#define nx_u16dtype nxd_u16
+#define nx_s32dtype nxd_s32
+#define nx_u32dtype nxd_u32
+#define nx_s64dtype nxd_s64
+#define nx_u64dtype nxd_u64
+
 #define nx_blMIN  (0)
 #define nx_s8MIN  (-128)
 #define nx_u8MIN  (0)
@@ -142,77 +178,124 @@ typedef  uint64_t  nx_u64;
 #else
   typedef float nx_H;
 #endif
+#define nx_Hval(_val) _val##f
+#define nx_Hvale(_val) nx_Hval(_val)
+#define nx_Hdtype nxd_H
 
 /* 'float' (F) type - wrapper around C 'float'
  *
  */
 typedef float       nx_F;
+#define nx_Fval(_val) _val##f
+#define nx_Fvale(_val) nx_Fval(_val) 
+#define nx_Fdtype nxd_F
 
 /* 'double' (D) type - wrapper around C 'double'
  *
  */
 typedef double      nx_D;
+#define nx_Dval(_val) _val
+#define nx_Dvale(_val) nx_Dval(_val) 
+#define nx_Ddtype nxd_D
 
 /* 'long double' (L) type - wrapper around C 'long double'
  *
  */
 typedef long double nx_L;
+#define nx_Lval(_val) _val##l
+#define nx_Lvale(_val) nx_Lval(_val) 
+#define nx_Ldtype nxd_L
 
-/* 'fp128' (E) type - 128 bit floating point value
+/* 'fp128' (Q) type - 128 bit floating point value
  *
- * NOTE: This is not the 'long double' type in C
+ * NOTE: This is not the 'long double' type in C, but a 128 bit floating point type
  */
 #if defined(KS_HAVE__Float128)
-  typedef _Float128 nx_E;
-  #define nx_Eval(_val) _val##q
+  typedef _Float128 nx_Q;
+  #define nx_Qval(_val) _val##q
+  #define nx_Qvale(_val) nx_Qval(_val) 
 #elif defined(KS_HAVE___float128)
-  typedef __float128 nx_E;
-  #define nx_Eval(_val) _val##q
+  typedef __float128 nx_Q;
+  #define nx_Qval(_val) _val##q
+  #define nx_Qvale(_val) nx_Qval(_val) 
 #else
-  typedef long double nx_E;
-  #define nx_Eval(_val) _val
-#endif
+  typedef long double nx_Q;
+  #define nx_Qval(_val) nx_Lval(_val)
+  #define nx_Qvale(_val) nx_Lvale(_val) 
 
+#endif
+#define nx_Qdtype nxd_Q
+
+#define NX_PI 3.14159265358979323846264338327950288419716939937510
+#define nx_HPI nx_Hvale(NX_PI)
+#define nx_FPI nx_Fvale(NX_PI)
+#define nx_DPI nx_Dvale(NX_PI)
+#define nx_LPI nx_Lvale(NX_PI)
+#define nx_QPI nx_Qvale(NX_PI)
+
+#define NX_E 2.71828182845904523536028747135266249775724709369995
+#define nx_HE nx_Hvale(NX_E)
+#define nx_FE nx_Fvale(NX_E)
+#define nx_DE nx_Dvale(NX_E)
+#define nx_LE nx_Lvale(NX_E)
+#define nx_QE nx_Qvale(NX_E)
+
+/* '+inf' values */
 #define nx_HINF INFINITY
 #define nx_FINF INFINITY
 #define nx_DINF INFINITY
 #define nx_LINF INFINITY
-#define nx_EINF INFINITY
+#define nx_QINF INFINITY
 
-#define nx_HNAN KS_CFLOAT_NAN
-#define nx_FNAN KS_CFLOAT_NAN
-#define nx_DNAN KS_CFLOAT_NAN
-#define nx_LNAN KS_CFLOAT_NAN
-#define nx_ENAN KS_CFLOAT_NAN
+/* 'nan' values */
+#define nx_HNAN NAN
+#define nx_FNAN NAN
+#define nx_DNAN NAN
+#define nx_LNAN NAN
+#define nx_QNAN NAN
 
+/* Digits of accuracy */
+#define nx_HDIG FLT_DIG
+#define nx_FDIG FLT_DIG
+#define nx_DDIG DBL_DIG
+#define nx_LDIG LDBL_DIG
+#ifdef FLT128_DIG
+  #define nx_QDIG FLT128_DIG
+#else
+  #define nx_QDIG 33
+#endif
+
+/* Difference between 1.0 and next largest number */
 #define nx_HEPS FLT_EPSILON
 #define nx_FEPS FLT_EPSILON
 #define nx_DEPS DBL_EPSILON
 #define nx_LEPS LDBL_EPSILON
 #ifdef FLT128_EPSILON
-  #define nx_EEPS FLT128_EPSILON
+  #define nx_QEPS FLT128_EPSILON
 #else
-  #define nx_EEPS nx_Eval(1.92592994438723585305597794258492732e-34)
+  #define nx_QEPS nx_Qval(1.92592994438723585305597794258492732e-34)
 #endif
 
+/* Minimum positive value */
 #define nx_HMIN FLT_MIN
 #define nx_FMIN FLT_MIN
 #define nx_DMIN DBL_MIN
 #define nx_LMIN LDBL_MIN
 #ifdef FLT128_MIN
-  #define nx_EMIN FLT128_MIN
+  #define nx_QMIN FLT128_MIN
 #else
-  #define nx_EMIN nx_Eval(3.36210314311209350626267781732175260e-4932)
+  #define nx_QMIN nx_Qval(3.36210314311209350626267781732175260e-4932)
 #endif
 
+/* Maximum positive finite value */
 #define nx_HMAX FLT_MAX
 #define nx_FMAX FLT_MAX
 #define nx_DMAX DBL_MAX
 #define nx_LMAX LDBL_MAX
 #ifdef FLT128_MAX
-  #define nx_EMAX FLT128_MAX
+  #define nx_QMAX FLT128_MAX
 #else
-  #define nx_EMAX nx_Eval(1.18973149535723176508575932662800702e4932)
+  #define nx_QMAX nx_Qval(1.18973149535723176508575932662800702e4932)
 #endif
 
 
@@ -244,51 +327,84 @@ typedef struct {
     nx_L re, im;
 } nx_cL;
 
-/* 'complex fp128' (cE) - complex 128 bit floating precision
+/* 'complex fp128' (cQ) - complex 128 bit floating precision
  *
  */
 typedef struct {
-    nx_E re, im;
-} nx_cE;
+    nx_Q re, im;
+} nx_cQ;
 
 
 /* Aliases to realtype */
-#define nx_cHr nx_E
+#define nx_cHr nx_H
 #define nx_cFr nx_F
 #define nx_cDr nx_D
 #define nx_cLr nx_L
-#define nx_cEr nx_E
+#define nx_cQr nx_Q
+#define nx_cHrval nx_Hval
+#define nx_cFrval nx_Fval
+#define nx_cDrval nx_Dval
+#define nx_cLrval nx_Lval
+#define nx_cQrval nx_Qval
+#define nx_cHrvale nx_Hvale
+#define nx_cFrvale nx_Fvale
+#define nx_cDrvale nx_Dvale
+#define nx_cLrvale nx_Lvale
+#define nx_cQrvale nx_Qvale
+#define nx_cHrdtype nx_Hdtype
+#define nx_cFrdtype nx_Fdtype
+#define nx_cDrdtype nx_Ddtype
+#define nx_cLrdtype nx_Ldtype
+#define nx_cQrdtype nx_Qdtype
+
+#define nx_cHrPI nx_HPI
+#define nx_cFrPI nx_FPI
+#define nx_cDrPI nx_DPI
+#define nx_cLrPI nx_LPI
+#define nx_cQrPI nx_QPI
+
+#define nx_cHrE nx_HE
+#define nx_cFrE nx_FE
+#define nx_cDrE nx_DE
+#define nx_cLrE nx_LE
+#define nx_cQrE nx_QE
 
 #define nx_cHrINF nx_HINF
 #define nx_cFrINF nx_FINF
 #define nx_cDrINF nx_DINF
 #define nx_cLrINF nx_LINF
-#define nx_cErINF nx_EINF
+#define nx_cQrINF nx_QINF
 
 #define nx_cHrNAN nx_HNAN 
 #define nx_cFrNAN nx_FNAN 
 #define nx_cDrNAN nx_DNAN 
 #define nx_cLrNAN nx_LNAN 
-#define nx_cErNAN nx_ENAN 
+#define nx_cQrNAN nx_QNAN 
 
 #define nx_cHrMIN nx_HMIN
 #define nx_cFrMIN nx_FMIN
 #define nx_cDrMIN nx_DMIN
 #define nx_cLrMIN nx_LMIN
-#define nx_cErMIN nx_EMIN
+#define nx_cQrMIN nx_QMIN
 
 #define nx_cHrMAX nx_HMAX
 #define nx_cFrMAX nx_FMAX
 #define nx_cDrMAX nx_DMAX
 #define nx_cLrMAX nx_LMAX
-#define nx_cErMAX nx_EMAX
+#define nx_cQrMAX nx_QMAX
 
 #define nx_cHrEPS nx_HEPS
 #define nx_cFrEPS nx_FEPS
 #define nx_cDrEPS nx_DEPS
 #define nx_cLrEPS nx_LEPS
-#define nx_cErEPS nx_EEPS
+#define nx_cQrEPS nx_QEPS
 
+
+/* Alias types */
+
+/* Index data type */
+#define nx_idx nx_s64
+#define nxd_idx nxd_s64
 
 
 /** Types **/
@@ -343,6 +459,9 @@ struct nx_dtype_struct_member {
 
 struct nx_dtype_s {
     KSO_BASE
+
+    /* Attribute dictionary */
+    ks_dict attr;
 
     /* Name of the type */
     ks_str name;
@@ -484,7 +603,7 @@ typedef int (*nxf_Nd)(int N, nx_t* args, void* extra);
 
 /* Functions */
 
-/* Create an array descriptor (does not create a reference to 'dtype')
+/* Create an array descriptor (does not create a reference to 'dtype' or allocate any data)
  */
 KS_API nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t* strides);
 
@@ -493,7 +612,6 @@ KS_API nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_s
 KS_API nx_t nx_with_newaxis(nx_t from, int axis);
 
 /* Create an array descriptor with the given axes removed
- *
  */
 KS_API nx_t nx_without_axes(nx_t self, int naxes, int* axes);
 
@@ -520,12 +638,31 @@ KS_API nx_t nx_make_bcast(int N, nx_t* args);
  */
 KS_API nx_t nx_getelem(nx_t self, int nargs, kso* args);
 
+/* Computes 'data + strides[:] * idxs[:]'
+ *
+ */
+KS_API void* nx_szdot(void* data, int rank, ks_ssize_t* strides, ks_size_t* idxs);
+
+/* Get the size of the product of the shape
+ */
+KS_API ks_size_t nx_szprod(int rank, ks_size_t* shape);
+
 /* Calculate the result of a numeric operation on two types, 'X' and 'Y'
  *
  * A new reference is not returned, so don't dereference the result! Only works
  *   for numeric types
  */
 KS_API nx_dtype nx_cast2(nx_dtype X, nx_dtype Y);
+
+/* Return the complex numeric type associated with 'dtype'
+ *
+ * For integers, returns complex double
+ */
+KS_API nx_dtype nx_complextype(nx_dtype dtype);
+
+/* Get low-level string represnting 'x'
+ */
+KS_API ks_str nx_getbs(nx_t x);
 
 /* Calculate a shape, returning a shape-only array descriptor
  *
@@ -537,23 +674,15 @@ KS_API nx_dtype nx_cast2(nx_dtype X, nx_dtype Y);
  *   or signal it. Otherwise, the result contains 'rank' and 'dims' initialized to the size of the
  *   broadcast result. All other fields are uninitialized
  */
-KS_API nx_t nx_getshape(kso obj);
+KS_API nx_t nx_as_shape(kso obj);
 
 /* Calculate a list of of axes from an object, and set the number in
  *   '*naxes', and set the values in '*axes' (which should be allocated
  *   to hold at least NX_MAXRANK elements)
  */
-KS_API bool nx_getaxes(nx_t self, kso obj, int* naxes, int* axes);
+KS_API bool nx_as_axes(nx_t self, kso obj, int* naxes, int* axes);
 
 
-/* Computes 'data + strides[:] * idxs[:]'
- *
- */
-KS_API void* nx_szdot(void* data, int rank, ks_ssize_t* strides, ks_size_t* idxs);
-
-/* Get the size of the product of the shape
- */
-KS_API ks_size_t nx_szprod(int rank, ks_size_t* shape);
 
 /* Cast 'X' to a given data type ('dtype') (keeping as-is if it can), and store in '*R'
  * 
@@ -561,6 +690,7 @@ KS_API ks_size_t nx_szprod(int rank, ks_size_t* shape);
  *   with '*R'. It may be set to NULL if no extra data allocation was needed
  */
 KS_API bool nx_getcast(nx_t X, nx_dtype dtype, nx_t* R, void** tofree);
+
 
 /* Convert an object into an array descriptor of a given datatype (or NULL to calculate
  *   a default)
@@ -596,6 +726,7 @@ KS_API int nx_apply_elem(nxf_elem func, int N, nx_t* args, void* extra);
  *   encountered by calling 'func()'
  */
 KS_API int nx_apply_Nd(nxf_Nd func, int N, nx_t* args, int M, void* extra);
+
 
 
 /** Creation Routines **/
@@ -818,7 +949,6 @@ KS_API bool nxla_diag(nx_t X, nx_t R);
  *
  * To calculate for vectors, call with 'nx_newaxis(X, X.rank - 1)'
  * 
- * 
  * X[..., M, N]
  * R[...]
  */
@@ -832,6 +962,14 @@ KS_API bool nxla_norm_fro(nx_t X, nx_t R);
  */
 KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
 
+/* R = X @ Y[..., nx.newaxis], matrix-vector multiplication, treating 'Y' as a column vector
+ *
+ * X[..., M, N]
+ * Y[..., N]
+ * R[..., M]
+ */
+KS_API bool nxla_matmulv(nx_t X, nx_t Y, nx_t R);
+
 /* R = X ** n, matrix power for square matrices
  *
  * X[..., N, N]
@@ -839,16 +977,217 @@ KS_API bool nxla_matmul(nx_t X, nx_t Y, nx_t R);
  */
 KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
 
-/* Factor 'X := nx.la.perm(P) @ L @ U', with 'L' being lower triangular
- *   and 'U' being upper triangular, and 'P' being a vector of integers
- *   used for a permutation matrix
+/* Performs LU factorization. Factors 'X := nx.la.perm(P) @ L @ U', with 'L' being lower triangular
+ *   and 'U' being upper triangular, and 'P' being a vector of integers used for a permutation matrix
  * 
  * X's shape should be [..., N, N]
  * P's shape should be [..., N]
  * L's shape should be [..., N, N]
  * U's shape should be [..., N, N]
  */
-KS_API bool nxla_factPLU(nx_t X, nx_t P, nx_t L, nx_t U);
+KS_API bool nxla_lu(nx_t X, nx_t P, nx_t L, nx_t U);
+
+
+/** Submodule: 'nx.fft' (Fast Fourier Transform) **/
+
+/* FFT Plan kinds (computed X:(*XYZ) from x:(*XYZ)) */
+enum {
+
+    /* Empty/error FFT kind */
+    NXFFT_NONE         = 0,
+
+    /* 1D dense plan, which is a matrix-vector product between the roots of unity
+     *   and the input vector.
+     * 
+     * Only valid when rank==1, but works for any 'N'
+     * 
+     * Time: O(N^2)
+     * Formula: X = W @ x
+     */
+    NXFFT_1D_DENSE     = 1,
+
+    /* 1D Bluestein algorithm via the Chirp-Z transform
+     *
+     * Only valid when rank==1, but works for any 'N'
+     * 
+     * Although this has the same O() of 'NXFFT_1D_BFLY', this algorithm is about
+     *   5x-15x slower than that algorithm.
+     * 
+     * Time: O(N*log(N))
+     * Algorithm: ... see 'nx/fft/plan.c'
+     */
+    NXFFT_1D_BLUE      = 2,
+
+    /* 1D Cooley-Tukey butterfly algorithm
+     *
+     * Only valid when rank==1 and N == 2 ** x
+     * 
+     * This is by far the fastest (custom) plan I've implemented and should be preferred
+     * 
+     * Time: O(N*log(N))
+     * Algorithm: ... see 'nx/fft/plan.c'
+     * 
+     */
+    NXFFT_1D_BFLY      = 3,
+
+    /* ND generic algorithm which recursively uses 1D algorithms over each dimension
+     *
+     */
+    NXFFT_ND_DEFAULT   = 10,
+
+    /* ND FFTW3 wrapper
+     *
+     * Only valid when FFTW3 was compiled with kscript
+     */
+    NXFFT_ND_FFTW3     = 11,
+
+};
+
+
+/* nx.fft.plan - FFT precomputed coefficient
+ *
+ */
+typedef struct nxfft_plan_s* nxfft_plan;
+struct nxfft_plan_s {
+    KSO_BASE
+
+    /* Rank of the transformation */
+    int rank;
+
+    /* Shape of the transformation */
+    ks_size_t shape[NX_MAXRANK];
+
+    /* Kind of transformation (see 'NXFFT_*') */
+    int kind;
+  
+    /* Whether it is an inverse transform */
+    bool is_inv;
+
+    /* Discriminated union based on 'kind' */
+    union {
+
+        /* 1D dense matrix-vector product
+         *
+         * When kind==NXFFT_1D_DENSE
+         */
+        struct {
+
+            /* W:(N, N): Array of roots of unity
+             *
+             * W[j, k] = exp(-2*pi*i*j*k/N)
+             * (or, if inverse, the reciprocal)
+             * 
+             * FFT(x) = W @ x
+             */
+            nx_t W;
+
+        } k1D_DENSE;
+
+        /* 1D Bluestein algorithm via Chirp-Z
+         *
+         * 
+         * When kind==NXFFT_1D_BLUE
+         */
+        struct {
+
+            /* Internal convolution length, satisfies: 
+             * M >= 2*N+1, and M==2**x
+             */
+            ks_size_t M;
+
+            /* FFT for (M,) size
+             *
+             * Internally, Bluestein's algorithm uses a convolutino of length M, so
+             *   we compute that plan as well, and observe that:
+             * CONV(x, y) = IFFT(FFT(x)*FFT(Y))
+             * And:
+             * IFFT(x) = (FFT(x)[0], FFT(x)[1:][::-1]) / N
+             * 
+             * So we can apply the forward plan twice and adjust
+             */
+            nxfft_plan planM;
+
+
+            /* Roots of unity to squared indices power:
+             *
+             * Ws[j] = exp(-pi*i*j**2/N)
+             *   (or, for inverse, the reciprocal)
+             */
+            nx_t Ws;
+
+            /* Temporary buffer, of size 2*M for 'tA' and 'tB'
+             *
+             * Partitioned like: [*tA, *tB]
+             * tA=&tmpbuf[0], tB=&tmpbuf[M]
+             */
+            nx_t tmp;
+
+        } k1D_BLUE;
+
+        /* 1D Cooley-Tukey Butterfly transform
+         *
+         * TODO: perhaps also precompute a lookup table for bit-reversal indices, another O(N) cost,
+         *   but saves O(N*log(N)) operation on each invocation, but also this means it can't be done
+         *   in place
+         * 
+         * When kind==NXFFT_1D_BFLY
+         */
+        struct {
+
+            /* W:(N,): Array of roots of unity
+             *
+             * W[j, k] = exp(-2*pi*i*j*k/N)
+             * (or, if inverse, the reciprocal)
+             * 
+             * FFT(x) = W @ x
+             */
+            nx_t W;
+
+        } k1D_BFLY;
+
+        /* ND Default transform
+         *
+         * Uses 1D transform for each axis
+         * 
+         * 
+         * When kind==NXFFT_ND_DEFAULT
+         */
+        struct {
+
+            /* Plan for each dimension in 'rank' */
+            nxfft_plan* plans;
+
+        } kND_DEFAULT;
+
+#ifdef KS_HAVE_FFTW3
+
+        /* ND plan using FFTW3
+         *
+         */
+        struct {
+
+            /* FFTW plan */
+            fftw_plan plan;
+
+        } kND_FFTW3;
+
+#endif
+
+    };
+
+};
+
+
+/* Create an FFT plan for a given transform size
+ *
+ */
+KS_API nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv);
+
+/* Execute an FFT plan, and compute:
+ * R = FFT(X)
+ */
+KS_API bool nxfft_exec(nx_t X, nx_t R, nxfft_plan plan);
+
 
 
 
@@ -873,7 +1212,10 @@ KS_API_DATA ks_type
     nxt_array,
     nxt_view,
 
-    nxrandt_State
+    nxrandt_State,
+
+    nxfftt_plan
+
 ;
 
 /* C types */
@@ -893,13 +1235,13 @@ KS_API_DATA nx_dtype
     nxd_F,
     nxd_D,
     nxd_L,
-    nxd_E,
+    nxd_Q,
 
     nxd_cH,
     nxd_cF,
     nxd_cD,
     nxd_cL,
-    nxd_cE
+    nxd_cQ
 ;
 
 

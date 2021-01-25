@@ -5,6 +5,7 @@
  */
 #include <ks/impl.h>
 #include <ks/nxt.h>
+#include <ks/nxm.h>
 
 #define M_NAME "nx"
 
@@ -40,6 +41,8 @@ nx_t nx_make(void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t*
 
 nx_t nx_with_newaxis(nx_t from, int axis) {
     assert(from.rank < NX_MAXRANK);
+    assert(axis >= 0);
+    assert(axis <= from.rank);
     nx_t res = nx_make(from.data, from.dtype, from.rank + 1, from.shape, from.strides);
 
     /* Scoot over existing shape/strides */
@@ -289,7 +292,6 @@ ks_size_t nx_szprod(int rank, ks_size_t* shape) {
     return res;
 }
 
-
 nx_dtype nx_cast2(nx_dtype X, nx_dtype Y) {
     if (X->kind == NX_DTYPE_COMPLEX || Y->kind == NX_DTYPE_COMPLEX) {
         if (X->kind == NX_DTYPE_COMPLEX && Y->kind == NX_DTYPE_COMPLEX) {
@@ -319,8 +321,45 @@ nx_dtype nx_cast2(nx_dtype X, nx_dtype Y) {
     KS_THROW(kst_TypeError, "Failed calculate cast of arguments: %R, %R", X, Y);
     return NULL;
 }
+nx_dtype nx_complextype(nx_dtype dtype) {
+    if (dtype == nxd_H) {
+        return nxd_cH;
+    } else if (dtype == nxd_F) {
+        return nxd_cF;
+    } else if (dtype == nxd_D) {
+        return nxd_cD;
+    } else if (dtype == nxd_L) {
+        return nxd_cL;
+    } else if (dtype == nxd_Q) {
+        return nxd_cQ;
+    } else {
+        return nxd_cD;
+    }
 
-nx_t nx_getshape(kso obj) {
+}
+ks_str nx_getbs(nx_t x) {
+    ksio_StringIO sio = ksio_StringIO_new();
+
+    ksio_add(sio, "<nx_t data=%p, dtype=%R, rank=%i, shape=(", x.data, x.dtype, x.rank);
+
+    int i;
+    for (i = 0; i < x.rank; ++i) {
+        if (i > 0) ksio_add(sio, ", ");
+        ksio_add(sio, "%u", x.shape[i]);
+    }
+    if (x.rank < 2) ksio_add(sio, ","); 
+    ksio_add(sio, "), strides=(");
+    for (i = 0; i < x.rank; ++i) {
+        if (i > 0) ksio_add(sio, ", ");
+        ksio_add(sio, "%l", x.strides[i]);
+    }
+    if (x.rank < 2) ksio_add(sio, ","); 
+    ksio_add(sio, ")>"); 
+
+    return ksio_StringIO_getf(sio);
+}
+
+nx_t nx_as_shape(kso obj) {
     nx_t self;
     if (kso_issub(obj->type, kst_none)) {
         /* Scalar */
@@ -367,7 +406,7 @@ nx_t nx_getshape(kso obj) {
 }
 
 
-KS_API bool nx_getaxes(nx_t self, kso obj, int* naxes, int* axes) {
+KS_API bool nx_as_axes(nx_t self, kso obj, int* naxes, int* axes) {
     int i, j;
     if (obj == KSO_NONE) {
         *naxes = self.rank;
@@ -478,29 +517,171 @@ bool nx_get(kso obj, nx_dtype dtype, nx_t* res, kso* ref) {
     }
 }
 
+/* Adds a single character */
+#define ADDC(_c) do { \
+    if (i < sz) { \
+        str[i] = _c; \
+    } \
+    i++; \
+} while (0)
+
+#define ADDS(_s) do { \
+    char* _cp = _s; \
+    while (*_cp) { \
+        ADDC(*_cp); \
+        _cp++; \
+    } \
+} while (0)
+
+
+#define LOOP(TYPE, NAME) static int my_e2str_##NAME(char* str, int sz, TYPE val, bool sci, int prec, int base) { \
+    int i = 0, j, k; /* current position */ \
+    if (val != val) { \
+        /* 'nan' */ \
+        ADDS("nan"); \
+        return i; \
+    } else if (val == TYPE##INF) { \
+        /* 'inf' */ \
+        ADDS("inf"); \
+        return i; \
+    } else if (val == -TYPE##INF) { \
+        /* '-inf' */ \
+        ADDS("-inf"); \
+        return i; \
+    } \
+    /* Now, we are working with a real number */ \
+    bool is_neg = val < 0; \
+    if (is_neg) { \
+        val = -val; \
+        ADDC('-'); \
+    } \
+    /* Handle 0.0 */ \
+    if (val == 0.0) { \
+        ADDS("0.0"); \
+        return i; \
+    } \
+    /* Now, val > 0 */ \
+    /**/ if (base ==  2) ADDS("0b"); \
+    else if (base ==  8) ADDS("0o"); \
+    else if (base == 16) ADDS("0x"); \
+    int sciexp = 0; \
+    /* extract exponent */ \
+    if (sci) { \
+        while (val >= base) { \
+            sciexp++; \
+            val /= base; \
+        } \
+        while (val < 1) { \
+            sciexp--; \
+            val *= base; \
+        } \
+    } \
+    /* Handle actual digits, break into integer and floating point type */ \
+    static const char digc[] = "0123456789ABCDEF"; \
+    if (base == 10) { \
+        char fmt[64]; \
+        int sz_fmt = snprintf(fmt, sizeof(fmt) - 1, "%%.%ilf", prec); \
+		assert(sz_fmt <= sizeof(fmt) - 1); \
+		char vs[256]; \
+		int sz_vs = snprintf(vs, sizeof(vs) - 1, fmt, (double)val); \
+		assert(sz_vs <= sizeof(vs) - 1); \
+		ADDS(vs); \
+    } else { \
+        int i_num = i; \
+        ks_cfloat vi; \
+        /* TODO: use 'modf'? */ \
+        ks_cfloat vf = TYPE##fmod(val, 1); \
+        vi = val - vf; \
+        /* Integral part */ \
+        do { \
+            ks_cfloat digf = TYPE##fmod(vi, base); \
+            int dig = (int)TYPE##floor(digf); \
+            vi = (vi - digf) / base; \
+            ADDC(digc[dig]); \
+        } while (vi > 0.5); \
+        /* Reverse digit order */ \
+        if (i < sz) for (j = i_num, k = i - 1; j < k; ++j, --k) { \
+            char t = str[j]; \
+            str[j] = str[k]; \
+            str[k] = t; \
+        } \
+        ADDC('.'); \
+        /* Shift over, and generate fractional part */ \
+        vf *= base; \
+        /* number of digits */ \
+        int ndl = prec <= 0 ? sz - i : prec; \
+        do { \
+            ks_cfloat digf = TYPE##floor(vf); \
+            int dig = (((int)digf) % base + base) % base; \
+            assert(dig >= 0 && dig < base);  \
+            vf = (vf - digf) * base; \
+            ADDC(digc[dig]); \
+        } while (vf > 1e-9 && ndl-- > 0); \
+    } \
+    /* Now, remove trailing zeros */ \
+    if (i < sz) { \
+        while (i > 2 && str[i - 1] == '0' && str[i - 2] != '.') i--; \
+    } \
+    /* add sciexp */ \
+    if (sci) { \
+        ADDC('e'); \
+        ADDC(sciexp >= 0 ? '+' : '-'); \
+        if (sciexp < 0) sciexp = -sciexp; \
+        j = i; \
+        /* always exponent in base-10 */ \
+        do { \
+            int sdig = sciexp % 10; \
+            ADDC(digc[sdig]); \
+            sciexp /= 10; \
+        } while (sciexp > 0); \
+        /* Reverse digits */ \
+        if (i < sz) for (k = i - 1; j < k; j++, k--) { \
+            char t = str[j]; \
+            str[j] = str[k]; \
+            str[k] = t; \
+        } \
+    } \
+    return i; \
+}
+
+NXT_PASTE_F(LOOP)
+#undef LOOP
+
+#define LOOP(TYPE, NAME) \
+static char my_strfrom_fmt_##NAME[256];
+NXT_PASTE_F(LOOP)
+#undef LOOP
+
+
 /* Adds a single element to the IO object */
 static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
     /*if (dtype == nxd_bl) {
         return ksio_add(bio, "%s", *(nx_bl*)ptr ? "true" : "false");
     }*/
-
+    
+    char tmp[256];
     #define LOOP(TYPE) do { \
-        return ksio_add(bio, "%l", (ks_cint)*(TYPE*)ptr); \
+        return ksio_add(bio, "%l", (ks_cint)*(nx_##TYPE*)ptr); \
     } while (0);
     NXT_FOR_I(dtype, LOOP);
     #undef LOOP
 
     #define LOOP(TYPE) do { \
-        return ksio_add(bio, "%f", (ks_cfloat)*(TYPE*)ptr); \
+        int sz = nx_##TYPE##strfrom(tmp, sizeof(tmp) - 1, my_strfrom_fmt_##TYPE, *(nx_##TYPE*)ptr); \
+        assert(sz < sizeof(tmp) - 1); \
+        while (sz > 3 && tmp[sz - 1] == '0' && tmp[sz - 2] != '.') sz--; \
+        /* int sz = my_e2str_##TYPE(tmp, sizeof(tmp) - 1, *(nx_##TYPE*)ptr, false, nx_##TYPE##DIG - 2, 10); */ \
+        return ksio_addbuf(bio, sz, tmp); \
     } while (0);
     NXT_FOR_F(dtype, LOOP);
     #undef LOOP
     
     #define LOOP(TYPE) do { \
-        TYPE v = *(TYPE*)ptr; \
-        bool isneg = v.im < 0; \
-        if (isneg) v.im = -v.im; \
-        return ksio_add(bio, "%f%s%fi", (ks_cfloat)v.re, isneg ? "-" : "+", (ks_cfloat)v.im); \
+        nx_##TYPE v = *(nx_##TYPE*)ptr; \
+        my_getstr_addelem(bio, nx_##TYPE##rdtype, &v.re); \
+        if (v.im >= 0) { ksio_add(bio, "+"); } \
+        my_getstr_addelem(bio, nx_##TYPE##rdtype, &v.im); \
+        ksio_add(bio, "i"); \
     } while (0);
     NXT_FOR_C(dtype, LOOP);
     #undef LOOP
@@ -596,7 +777,7 @@ bool nx_enc(nx_dtype dtype, kso obj, void* out) {
         if (!kso_get_ci(obj, &val)) return false;
 
         #define LOOP(TYPE) do { \
-            *(TYPE*)out = val; \
+            *(nx_##TYPE*)out = val; \
             return true; \
         } while (0);
         NXT_FOR_I(dtype, LOOP);
@@ -606,7 +787,7 @@ bool nx_enc(nx_dtype dtype, kso obj, void* out) {
         if (!kso_get_cf(obj, &val)) return false;
 
         #define LOOP(TYPE) do { \
-            *(TYPE*)out = val; \
+            *(nx_##TYPE*)out = val; \
             return true; \
         } while (0);
         NXT_FOR_F(dtype, LOOP);
@@ -616,8 +797,8 @@ bool nx_enc(nx_dtype dtype, kso obj, void* out) {
         if (!kso_get_cc(obj, &val)) return false;
 
         #define LOOP(TYPE) do { \
-            ((TYPE*)out)->re = val.re; \
-            ((TYPE*)out)->im = val.im; \
+            ((nx_##TYPE*)out)->re = val.re; \
+            ((nx_##TYPE*)out)->im = val.im; \
             return true; \
         } while (0);
         NXT_FOR_C(dtype, LOOP);
@@ -638,7 +819,7 @@ static KS_TFUNC(M, zeros) {
     nx_dtype dtype = nxd_D;
     KS_ARGS("?shape ?dtype:*", &shape, &dtype, nxt_dtype);
 
-    nx_t ns = nx_getshape(shape);
+    nx_t ns = nx_as_shape(shape);
     if (ns.rank < 0) return NULL;
 
     nx_array res = nx_array_newc(nxt_array, NULL, dtype, ns.rank, ns.shape, NULL);
@@ -665,8 +846,8 @@ static KS_TFUNC(M, onehot) {
     if (r == KSO_NONE) {
         /* Generate output */
         nx_dtype dtype = nxd_bl;
-
         nx_t shape = nx_with_newaxis(vX, vX.rank);
+
         shape.shape[vX.rank] = newdim;
         r = (kso)nx_array_newc(nxt_array, NULL, dtype, shape.rank, shape.shape, NULL);
         if (!r) {
@@ -716,7 +897,7 @@ static KS_TFUNC(M, sum) {
 
     int naxes;
     int axes[NX_MAXRANK];
-    if (!nx_getaxes(vX, oaxes, &naxes, axes)) {
+    if (!nx_as_axes(vX, oaxes, &naxes, axes)) {
         KS_NDECREF(rX);
         return NULL;
     }
@@ -864,8 +1045,8 @@ static KS_TFUNC(M, abs) {
             dtype = nxd_D;
         } else if (dtype == nxd_cL) {
             dtype = nxd_L;
-        } else if (dtype == nxd_cE) {
-            dtype = nxd_E;
+        } else if (dtype == nxd_cQ) {
+            dtype = nxd_Q;
         }
 
         r = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
@@ -2261,8 +2442,8 @@ static KS_TFUNC(M, atanh) {
 /* Export */
 
 ks_module _ksi_nx() {
-    _ksi_nx_dtype();
     _ksi_nx_array();
+    _ksi_nx_dtype();
     _ksi_nx_view();
 
     ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "NumeriX module", KS_IKV(
@@ -2270,6 +2451,7 @@ ks_module _ksi_nx() {
         /* Submodules */
         {"rand",                   (kso)_ksi_nxrand()},
         {"la",                     (kso)_ksi_nx_la()},
+        {"fft",                    (kso)_ksi_nx_fft()},
         
         /* Types */
 
@@ -2294,18 +2476,19 @@ ks_module _ksi_nx() {
         {"F",                      KS_NEWREF(nxd_F)},
         {"D",                      KS_NEWREF(nxd_D)},
         {"L",                      KS_NEWREF(nxd_L)},
-        {"E",                      KS_NEWREF(nxd_E)},
+        {"Q",                      KS_NEWREF(nxd_Q)},
 
         {"cH",                     KS_NEWREF(nxd_cH)},
         {"cF",                     KS_NEWREF(nxd_cF)},
         {"cD",                     KS_NEWREF(nxd_cD)},
         {"cL",                     KS_NEWREF(nxd_cL)},
-        {"cE",                     KS_NEWREF(nxd_cE)},
+        {"cQ",                     KS_NEWREF(nxd_cQ)},
 
         {"half",                   KS_NEWREF(nxd_H)},
         {"float",                  KS_NEWREF(nxd_F)},
         {"double",                 KS_NEWREF(nxd_D)},
-        {"fp128",                  KS_NEWREF(nxd_E)},
+        {"quad",                   KS_NEWREF(nxd_Q)},
+        {"fp128",                  KS_NEWREF(nxd_Q)},
 
         /* Functions */
 
@@ -2359,6 +2542,12 @@ ks_module _ksi_nx() {
         */
 
     ));
+
+    snprintf(my_strfrom_fmt_H, sizeof(my_strfrom_fmt_H) - 1, "%%.%if", nx_HDIG - 2);
+    snprintf(my_strfrom_fmt_F, sizeof(my_strfrom_fmt_F) - 1, "%%.%if", nx_FDIG - 2);
+    snprintf(my_strfrom_fmt_D, sizeof(my_strfrom_fmt_D) - 1, "%%.%if", nx_DDIG - 2);
+    snprintf(my_strfrom_fmt_L, sizeof(my_strfrom_fmt_L) - 1, "%%.%if", nx_LDIG - 2);
+    snprintf(my_strfrom_fmt_Q, sizeof(my_strfrom_fmt_Q) - 1, "%%.%if", nx_QDIG - 2);
 
     return res;
 }

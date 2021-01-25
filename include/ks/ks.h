@@ -122,7 +122,6 @@
 #endif
 
 
-
 /** Headers **/
 
 /* Windows headers */
@@ -130,7 +129,6 @@
   #define WIN32_LEAN_AND_MEAN
   #include <Windows.h>
 #endif
-
 
 
 #include <stdlib.h>

@@ -376,11 +376,11 @@
 #undef RTYPE_MAX
 #undef KN
 
-#define RNAME E
-#define RTYPE nx_E
-#define RTYPE_MIN nx_EMIN
-#define RTYPE_MAX nx_EMAX
-#define KN(_X) kern_##_X##_E
+#define RNAME Q
+#define RTYPE nx_Q
+#define RTYPE_MIN nx_QMIN
+#define RTYPE_MAX nx_QMAX
+#define KN(_X) kern_##_X##_Q
   NXT_PASTE_I(LOOPI)
   NXT_PASTE_F(LOOPF)
   NXT_PASTE_C(LOOPC)
@@ -522,12 +522,12 @@
 #undef RTYPE_MAX
 #undef KN
 
-#define RNAME cE
-#define RTYPE nx_cE
-#define RTYPEr nx_E
-#define RTYPE_MIN nx_cErMIN
-#define RTYPE_MAX nx_cErMAX
-#define KN(_X) kern_##_X##_cE
+#define RNAME cQ
+#define RTYPE nx_cQ
+#define RTYPEr nx_Q
+#define RTYPE_MIN nx_cQrMIN
+#define RTYPE_MAX nx_cQrMAX
+#define KN(_X) kern_##_X##_cQ
   NXT_PASTE_I(LOOPI)
   NXT_PASTE_F(LOOPF)
   NXT_PASTE_C(LOOPC)
@@ -547,7 +547,7 @@ bool nx_fpcast(nx_t X, nx_t R) {
         return !nx_apply_elem(kern_##_X##_##_R, 2, (nx_t[]){ X, R }, NULL); \
     } while (0);
 
-    NXT_PASTE_ALL2(X.dtype, R.dtype, LOOP);
+    NXT_FOR_ALL2(X.dtype, R.dtype, LOOP);
     #undef LOOP
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);

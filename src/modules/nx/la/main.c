@@ -39,8 +39,8 @@ static KS_TFUNC(M, norm) {
             dtype = nxd_D;
         } else if (dtype == nxd_cL) {
             dtype = nxd_L;
-        } else if (dtype == nxd_cE) {
-            dtype = nxd_E;
+        } else if (dtype == nxd_cQ) {
+            dtype = nxd_Q;
         }
 
         r = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank - 2, vX.shape, NULL);
@@ -282,7 +282,7 @@ static KS_TFUNC(M, diag) {
 }
 
 
-static KS_TFUNC(M, factPLU) {
+static KS_TFUNC(M, lu) {
     kso x, p = KSO_NONE, l = KSO_NONE, u = KSO_NONE;
     KS_ARGS("x ?p ?l ?u", &x, &p, &l, &u);
 
@@ -302,7 +302,7 @@ static KS_TFUNC(M, factPLU) {
     if (p == KSO_NONE) {
         nx_t psh = vX;
         psh.rank = vX.rank - 1;
-        p = (kso)nx_array_newc(nxt_array, NULL, nxd_s32, psh.rank, psh.shape, NULL);
+        p = (kso)nx_array_newc(nxt_array, NULL, nxd_idx, psh.rank, psh.shape, NULL);
 
         nx_dtype dtype = vX.dtype;
         l = (kso)nx_array_newc(nxt_array, NULL, dtype, vX.rank, vX.shape, NULL);
@@ -337,7 +337,7 @@ static KS_TFUNC(M, factPLU) {
         return NULL;
     }
 
-    if (!nxla_factPLU(vX, vP, vL, vU)) {
+    if (!nxla_lu(vX, vP, vL, vU)) {
         KS_NDECREF(rX);
         KS_NDECREF(rP);
         KS_NDECREF(rL);
@@ -372,7 +372,7 @@ ks_module _ksi_nx_la() {
         {"matmul",                 ksf_wrap(M_matmul_, M_NAME ".matmul(x, y, r=none)", "Computes matrix multiplication")},
         {"matpow",                 ksf_wrap(M_matpow_, M_NAME ".matpow(x, n, r=none)", "Computes matrix power")},
 
-        {"factPLU",                ksf_wrap(M_factPLU_, M_NAME ".factPLU(x, p=none, l=none, r=none)", "Computes LU factorization with permutation indicies 'p', returns (P, L, U) such that 'x == nx.la.perm(P) @ L @ U")},
+        {"lu",                     ksf_wrap(M_lu_, M_NAME ".lu(x, p=none, l=none, r=none)", "Computes LU factorization with permutation indices, returns (P, L, U) such that 'x == nx.la.perm(P) @ L @ U")},
 
     ));
 

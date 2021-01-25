@@ -99,6 +99,7 @@ void _ksi_nx_array();
 void _ksi_nx_view();
 ks_module _ksi_nx_la();
 ks_module _ksi_nx_fft();
+void _ksi_nx_fft_plan();
 
 ks_module _ksi_util();
 void _ksi_queue();

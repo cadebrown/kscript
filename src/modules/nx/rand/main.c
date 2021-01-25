@@ -36,7 +36,7 @@ static KS_TFUNC(M, randf) {
     kso shape = KSO_NONE;
     KS_ARGS("?shape", &shape);
 
-    nx_t ns = nx_getshape(shape);
+    nx_t ns = nx_as_shape(shape);
     if (ns.rank < 0) return NULL;
 
     nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, ns.rank, ns.shape, NULL);
@@ -63,7 +63,7 @@ static KS_TFUNC(M, normal) {
         KS_NDECREF(uref);
         return NULL;
     }
-    nx_t ns = nx_getshape(shape);
+    nx_t ns = nx_as_shape(shape);
     if (ns.rank < 0) return NULL;
 
     nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, ns.rank, ns.shape, NULL);

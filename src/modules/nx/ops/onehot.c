@@ -8,10 +8,6 @@
 
 #define K_NAME "onehot"
 
-#define IDX_DTYPE nxd_s64
-#define IDX_TYPE nx_s64
-
-
 /* Access Macros */
 #define X_(_i, _j) (pX + rsX * (_i) + csX * (_j))
 #define R_(_i, _j) (pR + rsR * (_i) + csR * (_j))
@@ -20,7 +16,7 @@
     assert(N == 2); \
     nx_t X = args[0], R = args[1]; \
     assert(X.rank == 2 && R.rank == 2); \
-    assert(X.dtype == IDX_DTYPE); \
+    assert(X.dtype == nxd_idx); \
     int Xr = X.shape[0], Xc = X.shape[1]; \
     int Rr = R.shape[0], Rc = R.shape[1]; \
     ks_uint \
@@ -37,7 +33,7 @@
     ; \
     ks_cint i; \
     for (i = 0; i < Xr; ++i) { \
-        IDX_TYPE ii = *(IDX_TYPE*)X_(i, 0) % Rc; \
+        nx_idx ii = *(nx_idx*)X_(i, 0) % Rc; \
         if (ii < 0) ii += Rc; \
         if (ii >= 0 && ii < Rc) { \
             *(TYPE*)R_(i, ii) = 1; \
@@ -50,7 +46,7 @@
     assert(N == 2); \
     nx_t X = args[0], R = args[1]; \
     assert(X.rank == 2 && R.rank == 2); \
-    assert(X.dtype == IDX_DTYPE); \
+    assert(X.dtype == nxd_idx); \
     int Xr = X.shape[0], Xc = X.shape[1]; \
     int Rr = R.shape[0], Rc = R.shape[1]; \
     ks_uint \
@@ -67,7 +63,7 @@
     ; \
     ks_cint i; \
     for (i = 0; i < Xc; ++i) { \
-        IDX_TYPE ii = *(IDX_TYPE*)X_(0, i) % Rc; \
+        nx_idx ii = *(nx_idx*)X_(0, i) % Rc; \
         if (ii < 0) ii += Rc; \
         if (ii >= 0 && ii < Rc) { \
             ((TYPE*)R_(i, ii))->re = 1; \
@@ -94,10 +90,9 @@ bool nx_onehot(nx_t X, nx_t R) {
         return false;
     }
 */
-    nx_dtype idxdt = nxd_s64;
     nx_t cX;
     void *fX = NULL;
-    if (!nx_getcast(X, idxdt, &cX, &fX)) {
+    if (!nx_getcast(X, nxd_idx, &cX, &fX)) {
         return false;
     }
 
@@ -110,7 +105,7 @@ bool nx_onehot(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);

@@ -319,6 +319,21 @@ static KS_TFUNC(T, repr) {
     }
 }
 
+static KS_TFUNC(T, getattr) {
+    ksos_path self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, ksost_path, &attr, kst_str);
+
+    if (ks_str_eq_c(attr, "root", 4)) {
+        return KS_NEWREF(self->root);
+    } else if (ks_str_eq_c(attr, "parts", 5)) {
+        return KS_NEWREF(self->parts);
+    }
+
+    KS_THROW_ATTR(self, attr);
+    return NULL;
+}
+
 static KS_TFUNC(T, eq) {
     kso L, R;
     KS_ARGS("L R", &L, &R);
@@ -434,6 +449,7 @@ void _ksi_os_path() {
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, src='', root=none)", "")},
         {"__repr",                 ksf_wrap(T_repr_, T_NAME ".__repr(self)", "")},
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
 
         {"__eq",                   ksf_wrap(T_eq_, T_NAME ".__eq(L, R)", "")},
         

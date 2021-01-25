@@ -85,7 +85,7 @@ bool nx_sum(nx_t X, nx_t R, int naxes, int* axes) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);

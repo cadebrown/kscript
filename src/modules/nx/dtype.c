@@ -107,19 +107,19 @@ nx_dtype
     nxd_F,
     nxd_D,
     nxd_L,
-    nxd_E,
+    nxd_Q,
 
     nxd_cH,
     nxd_cF,
     nxd_cD,
     nxd_cL,
-    nxd_cE
+    nxd_cQ
 ;
 
 
 void _ksi_nx_dtype() {
     
-    _ksinit(nxt_dtype, kst_object, T_NAME, sizeof(struct nx_dtype_s), -1, "Data type", KS_IKV(
+    _ksinit(nxt_dtype, kst_object, T_NAME, sizeof(struct nx_dtype_s), offsetof(struct nx_dtype_s, attr), "Data type", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         //{"__init__",               kso_func_new(T_init_, T_NAME ".__init__(self, name, version, desc, authors)", "")},
 
@@ -144,11 +144,27 @@ void _ksi_nx_dtype() {
     nxd_F = make_float("float", "F", sizeof(nx_F));
     nxd_D = make_float("double", "D", sizeof(nx_D));
     nxd_L = make_float("longdouble", "L", sizeof(nx_L));
-    nxd_E = make_float("fp128", "E", sizeof(nx_E));
+    nxd_Q = make_float("quad", "Q", sizeof(nx_Q));
 
     nxd_cH = make_complex("complexhalf", "cH", sizeof(nx_cH));
     nxd_cF = make_complex("complexfloat", "cF", sizeof(nx_cF));
     nxd_cD = make_complex("complexdouble", "cD", sizeof(nx_cD));
     nxd_cL = make_complex("complexlongdouble", "cL", sizeof(nx_cL));
-    nxd_cE = make_complex("complexfp128", "cE", sizeof(nx_cE));
+    nxd_cQ = make_complex("complexquad", "cQ", sizeof(nx_cQ));
+
+    #define LOOP(TYPE, NAME) do { \
+        nx_array arv = nx_array_newc(nxt_array, (TYPE[]){ TYPE##MIN }, nxd_##NAME, 0, NULL, NULL); \
+        ks_dict_set_c(nxd_##NAME->attr, "MIN", (kso)arv); \
+        KS_DECREF(arv); \
+        arv = nx_array_newc(nxt_array, (TYPE[]){ TYPE##MAX }, nxd_##NAME, 0, NULL, NULL); \
+        ks_dict_set_c(nxd_##NAME->attr, "MAX", (kso)arv); \
+        KS_DECREF(arv); \
+        arv = nx_array_newc(nxt_array, (TYPE[]){ TYPE##EPS }, nxd_##NAME, 0, NULL, NULL); \
+        ks_dict_set_c(nxd_##NAME->attr, "EPS", (kso)arv); \
+        KS_DECREF(arv); \
+    } while (0);
+
+    NXT_PASTE_F(LOOP)
+    #undef LOOP
+
 }

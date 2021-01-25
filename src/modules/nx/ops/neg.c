@@ -28,7 +28,6 @@
     return 0; \
 }
 
-
 #define LOOPC(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
     assert(N == 2); \
     nx_t X = args[0], R = args[1]; \
@@ -68,7 +67,7 @@ bool nx_neg(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);

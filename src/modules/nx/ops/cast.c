@@ -217,9 +217,9 @@
 #undef RTYPE
 #undef KN
 
-#define RNAME E
-#define RTYPE nx_E
-#define KN(_X) kern_##_X##_E
+#define RNAME Q
+#define RTYPE nx_Q
+#define KN(_X) kern_##_X##_Q
   NXT_PASTE_I(LOOPR)
   NXT_PASTE_F(LOOPR)
   NXT_PASTE_C(LOOPC)
@@ -309,9 +309,9 @@
 #undef RTYPE
 #undef KN
 
-#define RNAME cE
-#define RTYPE nx_cE
-#define KN(_X) kern_##_X##_cE
+#define RNAME cQ
+#define RTYPE nx_cQ
+#define KN(_X) kern_##_X##_cQ
   NXT_PASTE_I(LOOPR)
   NXT_PASTE_F(LOOPR)
   NXT_PASTE_C(LOOPC)
@@ -327,7 +327,7 @@ bool nx_cast(nx_t X, nx_t R) {
         return !nx_apply_elem(kern_##_X##_##_R, 2, (nx_t[]){ X, R }, NULL); \
     } while (0);
 
-    NXT_PASTE_ALL2(X.dtype, R.dtype, LOOP);
+    NXT_FOR_ALL2(X.dtype, R.dtype, LOOP);
     #undef LOOP
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);

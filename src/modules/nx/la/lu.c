@@ -1,4 +1,4 @@
-/* factLU.c - 'factPLU' kernel
+/* lu.c - 'lu' kernel
  *
  * Factors a matrix into a permute/lower/upper matrix, specifically:
  * 
@@ -19,10 +19,7 @@
 #include <ks/impl.h>
 #include <ks/nxt.h>
 
-#define K_NAME "factLU"
-
-#define IDX_DTYPE nxd_s32
-#define IDX_TYPE nx_s32
+#define K_NAME "lu"
 
 /* Access Macros */
 #define L_(_i, _j) (pL + rsL * (_i) + csL * (_j))
@@ -34,7 +31,7 @@
     nx_t P = args[0], L = args[1], U = args[2]; \
     assert(L.rank == 2 && U.rank == 2 && P.rank == 2); \
     assert(L.dtype == U.dtype); \
-    assert(P.dtype == IDX_DTYPE); \
+    assert(P.dtype == nxd_idx); \
     int kN = L.shape[0]; /* This works for NxN factorizations */ \
     ks_uint \
         pL = (ks_uint)L.data, \
@@ -55,14 +52,14 @@
     ks_cint i, j, k; \
     /* Initialize permutation vector */ \
     for (i = 0; i < kN; ++i) { \
-        *(IDX_TYPE*)P_(i) = i; \
+        *(nx_idx*)P_(i) = i; \
     } \
     TYPE tol = 0; \
     for (j = 0; j < kN; ++j) { \
         ks_cint imax = j; \
         TYPE amax = 0; \
         for (i = j; i < kN; ++i) { \
-            TYPE tm = *(TYPE*)L_(*(IDX_TYPE*)P_(i), j); \
+            TYPE tm = *(TYPE*)L_(*(nx_idx*)P_(i), j); \
             if (tm < 0) tm = -tm; \
             if (tm > amax) { \
                 amax = tm; \
@@ -74,13 +71,13 @@
         } \
         if (imax != j) { \
             /* Exchange rows */ \
-            ks_cint ti = *(IDX_TYPE*)P_(j); \
-            *(IDX_TYPE*)P_(j) = *(IDX_TYPE*)P_(imax); \
-            *(IDX_TYPE*)P_(imax) = ti; \
+            ks_cint ti = *(nx_idx*)P_(j); \
+            *(nx_idx*)P_(j) = *(nx_idx*)P_(imax); \
+            *(nx_idx*)P_(imax) = ti; \
         } \
-        ks_cint jj = *(IDX_TYPE*)P_(j); \
+        ks_cint jj = *(nx_idx*)P_(j); \
         for (i = j + 1; i < kN; ++i) { \
-            ks_cint ii = *(IDX_TYPE*)P_(i); \
+            ks_cint ii = *(nx_idx*)P_(i); \
             *(TYPE*)L_(ii, j) /= *(TYPE*)L_(jj, j); \
             for (k = j + 1; k < kN; ++k) { \
                 *(TYPE*)L_(ii, k) -= *(TYPE*)L_(ii, j) * *(TYPE*)L_(jj, k); \
@@ -89,7 +86,7 @@
     } \
     /* Now, undo permutation matrix by setting 'U = P**-1 @ L' */ \
     for (i = 0; i < kN; ++i) { \
-        ks_cint ii = *(IDX_TYPE*)P_(i); \
+        ks_cint ii = *(nx_idx*)P_(i); \
         for (j = 0; j < kN; ++j) { \
             *(TYPE*)U_(i, j) = *(TYPE*)L_(ii, j); \
         } \
@@ -105,14 +102,14 @@
             *(TYPE*)L_(i, j) = 0; \
         } \
     } \
-    IDX_TYPE* tmpP = ks_malloc(sizeof(*tmpP) * kN); \
+    nx_idx* tmpP = ks_malloc(sizeof(*tmpP) * kN); \
     assert(tmpP != NULL); \
     /* Now, invert the permutation matrix onehot encoding */ \
     for (i = 0; i < kN; ++i) { \
-        tmpP[*(IDX_TYPE*)P_(i)] = i; \
+        tmpP[*(nx_idx*)P_(i)] = i; \
     } \
     for (i = 0; i < kN; ++i) { \
-        *(IDX_TYPE*)P_(i) = tmpP[i]; \
+        *(nx_idx*)P_(i) = tmpP[i]; \
     } \
     ks_free(tmpP); \
     return 0; \
@@ -127,9 +124,12 @@ NXT_PASTE_F(LOOPR);
 
 NXT_PASTE_C(LOOPC);
 
-bool nxla_factPLU(nx_t X, nx_t P, nx_t L, nx_t U) {
+bool nxla_lu(nx_t X, nx_t P, nx_t L, nx_t U) {
     assert(L.dtype == U.dtype);
-    assert(P.dtype == IDX_DTYPE);
+    if (P.dtype != nxd_idx) {
+        KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R, %R (%R was given when the index dtype %R was expected)", K_NAME, X.dtype, P.dtype, L.dtype, U.dtype, P.dtype, nxd_idx);
+        return NULL;
+    }
 
     if (!nx_zero(U)) return false;
 
@@ -147,7 +147,7 @@ bool nxla_factPLU(nx_t X, nx_t P, nx_t L, nx_t U) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(L.dtype, LOOP);
+    NXT_FOR_ALL(L.dtype, LOOP);
     #undef LOOP
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R, %R", K_NAME, X.dtype, P.dtype, L.dtype, U.dtype);

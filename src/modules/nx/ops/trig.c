@@ -205,7 +205,7 @@ bool nx_sin(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -264,7 +264,7 @@ bool nx_cos(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -323,7 +323,7 @@ bool nx_tan(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -383,7 +383,7 @@ bool nx_asin(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -442,7 +442,7 @@ bool nx_acos(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -501,7 +501,7 @@ bool nx_atan(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -562,7 +562,7 @@ bool nx_sinh(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -621,7 +621,7 @@ bool nx_cosh(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -680,7 +680,7 @@ bool nx_tanh(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -740,7 +740,7 @@ bool nx_asinh(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -799,7 +799,7 @@ bool nx_acosh(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -858,7 +858,7 @@ bool nx_atanh(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);

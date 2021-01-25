@@ -69,7 +69,7 @@ bool nx_abs(nx_t X, nx_t R) {
             (X.dtype == nxd_cF && R.dtype == nxd_F) ||
             (X.dtype == nxd_cD && R.dtype == nxd_D) ||
             (X.dtype == nxd_cL && R.dtype == nxd_L) ||
-            (X.dtype == nxd_cE && R.dtype == nxd_E)
+            (X.dtype == nxd_cQ && R.dtype == nxd_Q)
         )) {
             KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);
             return false;
@@ -81,7 +81,7 @@ bool nx_abs(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(X.dtype, LOOP);
+    NXT_FOR_ALL(X.dtype, LOOP);
     #undef LOOP
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);

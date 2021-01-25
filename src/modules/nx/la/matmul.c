@@ -100,6 +100,38 @@ NXT_PASTE_F(LOOPR);
 NXT_PASTE_C(LOOPC);
 
 bool nxla_matmul(nx_t X, nx_t Y, nx_t R) {
+    if (X.rank < 2 || Y.rank < 2 || R.rank < 2) {
+        KS_THROW(kst_TypeError, "Unsupported ranks for kernel '%s': All inputs must be of rank 2 or greater (got X.rank=%i,Y.rank=%i,R.rank=%i)", K_NAME, X.rank, Y.rank, R.rank);
+        return false;
+    }
+
+
+    if (X.shape[X.rank - 1] != Y.shape[Y.rank - 2] || X.shape[X.rank - 2] != R.shape[R.rank - 2] || Y.shape[Y.rank - 1] != R.shape[R.rank - 1]) {
+        ksio_StringIO sio = ksio_StringIO_new();
+
+        int i;
+        ksio_add(sio, "Unsupported sizes for kernel '%s': Sizes did not follow pattern X:(..., M, N), Y:(..., N, K) -> R:(..., M, K) (got X.shape=(", K_NAME);
+        for (i = 0; i < X.rank; ++i) {
+            if (i > 0) ksio_add(sio, ", ");
+            ksio_add(sio, "%u", X.shape[i]);
+        }
+        ksio_add(sio, "),Y.shape=(");
+        for (i = 0; i < Y.rank; ++i) {
+            if (i > 0) ksio_add(sio, ", ");
+            ksio_add(sio, "%u", Y.shape[i]);
+        }
+        ksio_add(sio, "),R.shape=(");
+        for (i = 0; i < R.rank; ++i) {
+            if (i > 0) ksio_add(sio, ", ");
+            ksio_add(sio, "%u", R.shape[i]);
+        }
+        ksio_add(sio, ")");
+
+        KS_THROW(kst_TypeError, "%.*s", (int)sio->len_b, sio->data);
+        KS_DECREF(sio);
+        return false;
+    }
+
     nx_t cX, cY;
     void *fX = NULL, *fY = NULL;
     if (!nx_getcast(X, R.dtype, &cX, &fX)) {
@@ -117,7 +149,7 @@ bool nxla_matmul(nx_t X, nx_t Y, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(R.dtype, LOOP);
+    NXT_FOR_ALL(R.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
@@ -125,4 +157,9 @@ bool nxla_matmul(nx_t X, nx_t Y, nx_t R) {
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R", K_NAME, X.dtype, Y.dtype, R.dtype);
     return false;
+}
+
+bool nxla_matmulv(nx_t X, nx_t Y, nx_t R) {
+    /* matrix-vector product */
+    return nxla_matmul(X, nx_with_newaxis(Y, Y.rank), nx_with_newaxis(R, R.rank));
 }

@@ -30,7 +30,6 @@ static int kern_copy(int N, nx_t* args, int len, void* extra) {
     return 0;
 
 }
-#include <ks/time.h>
 
 /* C-API */
 nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, ks_size_t* shape, ks_ssize_t* strides) {
@@ -45,7 +44,6 @@ nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, ks_size
     for (i = 0; i < rank; ++i) {
         self->val.shape[i] = shape[i];
     }
-
     /* Last stride is the element size */
     if (rank > 0) self->val.strides[rank - 1] = dtype->size;
 
@@ -60,7 +58,6 @@ nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, ks_size
     ks_size_t tsz = dtype->size;
     for (i = 0; i < rank; ++i) tsz *= shape[i];
 
-    ks_cfloat st = kstime_time();
 
     self->val.data = ks_malloc(tsz);
     if (!self->val.data) {
@@ -71,7 +68,7 @@ nx_array nx_array_newc(ks_type tp, void* data, nx_dtype dtype, int rank, ks_size
 
     if (data) {
         /* Initialize with memory copying */
-        if (!nx_apply_elem(kern_copy, 2, (nx_t[]) {
+        if (nx_apply_elem(kern_copy, 2, (nx_t[]) {
             nx_make(data, dtype, rank, shape, strides),
             self->val,
         }, NULL)) {
@@ -289,8 +286,10 @@ static KS_TFUNC(T, getattr) {
         return (kso)res;
     } else if (ks_str_eq_c(attr, "rank", 4)) {
         return (kso)ks_int_new(self->val.rank);
-    }else if (ks_str_eq_c(attr, "dtype", 5)) {
+    } else if (ks_str_eq_c(attr, "dtype", 5)) {
         return KS_NEWREF(self->val.dtype);
+    } else if (ks_str_eq_c(attr, "data", 4)) {
+        return (kso)ks_int_newu((ks_uint)self->val.data);
     }
     
     KS_THROW_ATTR(self, attr);

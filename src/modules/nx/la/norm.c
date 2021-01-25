@@ -13,7 +13,9 @@
 #define X_(_i, _j) (pX + rsX * (_i) + csX * (_j))
 
 #define LOOPI(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, void* extra) { \
-    assert(false); \
+    assert(N == 2); \
+    nx_t X = args[0], R = args[1]; \
+    KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype); \
     return 1; \
 } \
 
@@ -89,7 +91,7 @@ bool nxla_norm_fro(nx_t X, nx_t R) {
             (X.dtype == nxd_cF && R.dtype == nxd_F) ||
             (X.dtype == nxd_cD && R.dtype == nxd_D) ||
             (X.dtype == nxd_cL && R.dtype == nxd_L) ||
-            (X.dtype == nxd_cE && R.dtype == nxd_E)
+            (X.dtype == nxd_cQ && R.dtype == nxd_Q)
         )) {
             KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);
             return false;
@@ -111,7 +113,7 @@ bool nxla_norm_fro(nx_t X, nx_t R) {
         return res; \
     } while (0);
 
-    NXT_PASTE_ALL(X.dtype, LOOP);
+    NXT_FOR_ALL(X.dtype, LOOP);
     #undef LOOP
 
     ks_free(fX);
