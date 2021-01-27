@@ -6,7 +6,7 @@
 #include <ks/impl.h>
 #include <ks/m.h>
 #include <ks/nxt.h>
-#include <ks/nxm.h>
+#include <ks/nxi.h>
 
 #define T_NAME "nx.fft.plan"
 
@@ -33,7 +33,7 @@ static nxfft_plan make_1D_DENSE(nx_dtype dtype, ks_size_t N, bool is_inv) {
         for (j = 0; j < N; ++j) { \
             int k; \
             for (k = 0; k < N; ++k) { \
-                TYPE##r theta = (is_inv ? -2.0 : +2.0) * TYPE##rPI * j * k / N; \
+                TYPE##r theta = (is_inv ? -2.0 : +2.0) * TYPE##rv(NX_PI) * j * k / N; \
                 ((TYPE*)(data))[j * N + k].re = TYPE##rcos(theta); \
                 ((TYPE*)(data))[j * N + k].im = TYPE##rsin(theta); \
                 if (is_inv) { \
@@ -87,7 +87,7 @@ static nxfft_plan make_1D_BLUE(nx_dtype dtype, ks_size_t N, bool is_inv) {
         for (j = 0; j < N; ++j) { \
             /* To avoid roundoff errors, perform modulo here */ \
             int j2 = (j * j) % (N * 2); \
-            TYPE##r theta = TYPE##rPI * j2 / N; \
+            TYPE##r theta = TYPE##rv(NX_PI) * j2 / N; \
             ((TYPE*)(data))[j].re = TYPE##rcos(theta); \
             ((TYPE*)(data))[j].im = TYPE##rsin(theta); \
         } \
@@ -150,7 +150,7 @@ static nxfft_plan make_1D_BFLY(nx_dtype dtype, ks_size_t N, bool is_inv) {
         int j; \
         for (j = 0; j < N; ++j) { \
             /* To avoid roundoff errors, perform modulo here */ \
-            TYPE##r theta = -2.0 * TYPE##rPI * j / N; \
+            TYPE##r theta = -2.0 * TYPE##rv(NX_PI) * j / N; \
             ((TYPE*)(data))[j].re = TYPE##rcos(theta); \
             ((TYPE*)(data))[j].im = TYPE##rsin(theta); \
         } \
@@ -212,15 +212,15 @@ static nxfft_plan make_ND_FFTW3(nx_dtype dtype, int rank, ks_size_t* shape, bool
     nx_dtype idt = nxd_cD;
 
 #ifdef KS_HAVE_fftw3f
-    if (dtype == nxd_cF) {
-        idt = nxd_cF;
+    if (dtype == nxd_cS) {
+        idt = nxd_cS;
     }
 #elif defined(KS_HAVE_fftw3q)
     if (dtype == nxd_cQ) {
         idt = nxd_cQ;
     }
 #elif defined(KS_HAVE_fftw3l)
-    if (dtype == nxd_cL) {
+    if (dtype == nxd_cE) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
     } else if (dtype == nxd_cQ) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
@@ -250,7 +250,7 @@ static nxfft_plan make_ND_FFTW3(nx_dtype dtype, int rank, ks_size_t* shape, bool
         NULL
     );
 
-    if (idt == nxd_cF) {
+    if (idt == nxd_cS) {
 #ifdef KS_HAVE_fftw3f
         self->kND_FFTW3.planf = fftwf_plan_many_dft(rank, fsz, 1,
             self->kND_FFTW3.tmp.data, NULL, 1, 0,
@@ -281,7 +281,7 @@ static nxfft_plan make_ND_FFTW3(nx_dtype dtype, int rank, ks_size_t* shape, bool
             KS_THROW(kst_Error, "FFTW3 failed to create plan");
             return NULL;
         }
-    } else if (idt == nxd_cL) {
+    } else if (idt == nxd_cE) {
 #ifdef KS_HAVE_fftw3l
         self->kND_FFTW3.planl = fftwl_plan_many_dft(rank, fsz, 1,
             self->kND_FFTW3.tmp.data, NULL, 1, 0,
@@ -330,7 +330,7 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
     //return make_1D_DENSE(dtype, dims[0], is_inv);
     //return make_1D_BFLY(dtype, dims[0], is_inv);
 #ifdef KS_HAVE_fftw3f
-    if (dtype == nxd_cF) {
+    if (dtype == nxd_cS) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
     }
 #endif
@@ -338,7 +338,7 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
 #ifdef KS_HAVE_fftw3
     if (dtype == nxd_cD) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
-    } else if (dtype == nxd_cF) {
+    } else if (dtype == nxd_cS) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
     }
 #endif
@@ -349,7 +349,7 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
     }
 #endif
 #ifdef KS_HAVE_fftw3l
-    if (dtype == nxd_cL) {
+    if (dtype == nxd_cE) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
     } else if (dtype == nxd_cQ) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
@@ -364,7 +364,6 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
         return make_ND_DEFAULT(dtype, rank, dims, is_inv);
     }
 }
-
 
 
 /* Type Functions */

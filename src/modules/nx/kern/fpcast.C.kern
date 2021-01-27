@@ -1,0 +1,44 @@
+/* fpcast.R.kern
+ *
+ * ARGS:
+ *   X:(...,) Input
+ *   R:(...,) Output
+ * 
+ * Computes 'R = X', casted with fixed point conversions
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+#define RRTYPE NXK_PASTE(RTYPE, r)
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int len, void* extra) {
+    NXK_ARG_1D(0, X);
+    NXK_ARG_1D(1, R);
+
+
+    int sa = (int)sizeof(RTYPE) - (int)sizeof(NXK_TYPE);
+#if !NXK_C && !NXK_F
+    bool sgn = NXK_ATTR(MIN) < 0;
+#endif
+    ks_cint i;
+    for (i = 0; i < len; ++i) {
+        NXK_TYPE x = NXK_GET_1D(X, i);
+#if NXK_C
+        (*(RTYPE*)(pR + sR * i)).re = x.re;
+        (*(RTYPE*)(pR + sR * i)).im = x.im;
+#elif NXK_F
+        (*(RTYPE*)(pR + sR * i)).re = x;
+        (*(RTYPE*)(pR + sR * i)).im = 0;
+#else
+        (*(RTYPE*)(pR + sR * i)).re = sgn ?
+            ((x + (RRTYPE)NXK_ATTR(MAX)) / NXK_ATTR(MAX)) - 1
+            : x / ((RRTYPE)NXK_ATTR(MAX))
+        ;
+        (*(RTYPE*)(pR + sR * i)).im = 0;
+#endif
+
+    }
+
+    return 0;
+}
+

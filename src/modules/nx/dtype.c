@@ -97,6 +97,7 @@ ks_type nxt_dtype = &tp;
 
 nx_dtype
     nxd_bl,
+
     nxd_s8,
     nxd_u8,
     nxd_s16,
@@ -106,19 +107,16 @@ nx_dtype
     nxd_s64,
     nxd_u64,
 
-    nxd_H,
-    nxd_F,
+    nxd_S,
     nxd_D,
-    nxd_L,
+    nxd_E,
     nxd_Q,
 
-    nxd_cH,
-    nxd_cF,
+    nxd_cS,
     nxd_cD,
-    nxd_cL,
+    nxd_cE,
     nxd_cQ
 ;
-
 
 void _ksi_nx_dtype() {
     
@@ -143,16 +141,14 @@ void _ksi_nx_dtype() {
     nxd_s64 = make_int("s64", "s64", sizeof(nx_s64));
     nxd_u64 = make_int("u64", "u64", sizeof(nx_u64));
 
-    nxd_H = make_float("half", "H", sizeof(nx_H));
-    nxd_F = make_float("float", "F", sizeof(nx_F));
+    nxd_S = make_float("float", "S", sizeof(nx_S));
     nxd_D = make_float("double", "D", sizeof(nx_D));
-    nxd_L = make_float("longdouble", "L", sizeof(nx_L));
+    nxd_E = make_float("longdouble", "E", sizeof(nx_E));
     nxd_Q = make_float("quad", "Q", sizeof(nx_Q));
 
-    nxd_cH = make_complex("complexhalf", "cH", sizeof(nx_cH));
-    nxd_cF = make_complex("complexfloat", "cF", sizeof(nx_cF));
+    nxd_cS = make_complex("complexfloat", "cS", sizeof(nx_cS));
     nxd_cD = make_complex("complexdouble", "cD", sizeof(nx_cD));
-    nxd_cL = make_complex("complexlongdouble", "cL", sizeof(nx_cL));
+    nxd_cE = make_complex("complexlongdouble", "cE", sizeof(nx_cE));
     nxd_cQ = make_complex("complexquad", "cQ", sizeof(nx_cQ));
 
     #define LOOP(TYPE, NAME) do { \

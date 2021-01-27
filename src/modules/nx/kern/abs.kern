@@ -1,0 +1,33 @@
+/* abs.kern
+ *
+ * ARGS:
+ *   X:(...,) Input
+ *   R:(...,) Output
+ * 
+ * Computes 'R = abs(X)'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int len, void* extra) {
+    NXK_ARG_1D(0, X);
+    NXK_ARG_1D(1, R);
+    if (nx_realtype(X.dtype) != R.dtype) {
+        KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);
+        return -1;
+    }
+
+    ks_cint i;
+    #pragma omp parrallel for
+    for (i = 0; i < len; ++i) {
+        NXK_TYPE x = NXK_GET_1D(X, i);
+    #if NXK_C
+        *(NXK_ATTR(r)*)(pR + sR * i) = NXK_FUNC(rhypot)(x.re, x.im);
+    #else
+        NXK_GET_1D(R, i) = x < 0 ? -x : x;
+    #endif
+    }
+
+    return 0;
+}
+

@@ -52,8 +52,8 @@ ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
         /* Set alpha channel */
         if (!nx_fpcast(
             nx_make(
-                (nx_F[]){ 1.0f },
-                nxd_F,
+                (nx_S[]){ 1.0f },
+                nxd_S,
                 0,
                 NULL,
                 NULL
@@ -107,8 +107,8 @@ ksnk_Image ksnk_Image_new(ks_type tp, nx_t img) {
         /* Set alpha channel */
         if (d < 4 && !nx_fpcast(
             nx_make(
-                (nx_F[]){ 1.0 },
-                nxd_F,
+                (nx_S[]){ 1.0 },
+                nxd_S,
                 0,
                 NULL,
                 NULL

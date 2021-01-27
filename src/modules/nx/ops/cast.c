@@ -3,333 +3,310 @@
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
+#include <ks/nxi.h>
 #include <ks/nxt.h>
 
 #define K_NAME "cast"
 
+#define PASTE3(X, Y, Z) NXK_PASTE(NXK_PASTE(X, Y), Z)
+#define KERN_FUNC(_name) PASTE3(kern_, RTYPE_NAME, _name)
+#define RTYPE NXK_PASTE(nx_, RTYPE_NAME)
 
 
-#define LOOPR(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        *(RTYPE*)pR = nx_blv(*(TYPE*)pX); \
-    } \
-    return 0; \
-}
-
-#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        *(RTYPE*)pR = nx_blv(((TYPE*)pX)->re) && nx_blv(((TYPE*)pX)->im); \
-    } \
-    return 0; \
-}
-
-#define RNAME bl
-#define RTYPE nx_bl
-#define KN(_X) kern_##_X##_bl
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#undef LOOPR
-#undef LOOPC
+#define RTYPE_NAME bl
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.B.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
 
-#define LOOPR(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        *(RTYPE*)pR = *(TYPE*)pX; \
-    } \
-    return 0; \
-}
-
-#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        *(RTYPE*)pR = ((TYPE*)pX)->re; \
-    } \
-    return 0; \
-}
-
-#define RNAME u8
-#define RTYPE nx_u8
-#define KN(_X) kern_##_X##_u8
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME s8
-#define RTYPE nx_s8
-#define KN(_X) kern_##_X##_s8
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME u16
-#define RTYPE nx_u16
-#define KN(_X) kern_##_X##_u16
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME s16
-#define RTYPE nx_s16
-#define KN(_X) kern_##_X##_s16
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME u32
-#define RTYPE nx_u32
-#define KN(_X) kern_##_X##_u32
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME s32
-#define RTYPE nx_s32
-#define KN(_X) kern_##_X##_s32
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME u64
-#define RTYPE nx_u64
-#define KN(_X) kern_##_X##_u64
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME s64
-#define RTYPE nx_s64
-#define KN(_X) kern_##_X##_s64
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
+#define RTYPE_NAME s8
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+#define RTYPE_NAME s16
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+#define RTYPE_NAME s32
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+#define RTYPE_NAME s64
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
 
-#define RNAME H
-#define RTYPE nx_H
-#define KN(_X) kern_##_X##_H
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME F
-#define RTYPE nx_F
-#define KN(_X) kern_##_X##_F
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME D
-#define RTYPE nx_D
-#define KN(_X) kern_##_X##_D
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-
-#define RNAME L
-#define RTYPE nx_L
-#define KN(_X) kern_##_X##_L
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#define RNAME Q
-#define RTYPE nx_Q
-#define KN(_X) kern_##_X##_Q
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
-
-#undef LOOPR
-#undef LOOPC
+#define RTYPE_NAME u8
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+#define RTYPE_NAME u16
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+#define RTYPE_NAME u32
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+#define RTYPE_NAME u64
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
 
-#define LOOPR(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        ((RTYPE*)pR)->re = *(TYPE*)pX; \
-        ((RTYPE*)pR)->im = 0; \
-    } \
-    return 0; \
-}
+#define RTYPE_NAME S
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
-#define LOOPC(TYPE, NAME) static int KN(NAME)(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        ((RTYPE*)pR)->re = ((TYPE*)pX)->re; \
-        ((RTYPE*)pR)->im = ((TYPE*)pX)->im; \
-    } \
-    return 0; \
-}
+#define RTYPE_NAME D
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
-#define RNAME cH
-#define RTYPE nx_cH
-#define KN(_X) kern_##_X##_cH
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
+#define RTYPE_NAME E
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
-#define RNAME cF
-#define RTYPE nx_cF
-#define KN(_X) kern_##_X##_cF
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
+#define RTYPE_NAME Q
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.R.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
-#define RNAME cD
-#define RTYPE nx_cD
-#define KN(_X) kern_##_X##_cD
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
 
-#define RNAME cL
-#define RTYPE nx_cL
-#define KN(_X) kern_##_X##_cL
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
+#define RTYPE_NAME cS
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.C.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
-#define RNAME cQ
-#define RTYPE nx_cQ
-#define KN(_X) kern_##_X##_cQ
-  NXT_PASTE_I(LOOPR)
-  NXT_PASTE_F(LOOPR)
-  NXT_PASTE_C(LOOPC)
-#undef RNAME
-#undef RTYPE
-#undef KN
+#define RTYPE_NAME cD
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.C.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
 
-#undef LOOPR
-#undef LOOPC
+#define RTYPE_NAME cE
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.C.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+
+#define RTYPE_NAME cQ
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "cast.C.kern"
+#include <ks/nxk.h>
+#undef RTYPE_NAME
+#undef NXK_FILE
+
 
 bool nx_cast(nx_t X, nx_t R) {
-    #define LOOP(_X, _R) do { \
-        return !nx_apply_elem(kern_##_X##_##_R, 2, (nx_t[]){ X, R }, NULL); \
-    } while (0);
 
-    NXT_FOR_ALL2(X.dtype, R.dtype, LOOP);
-    #undef LOOP
+    if (false) {}
 
+    else if (R.dtype == nxd_bl) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, bl, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_s8) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, s8, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_s16) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, s16, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_s32) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, s32, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_s64) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, s64, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_u8) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, u8, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_u16) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, u16, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_u32) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, u32, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_u64) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, u64, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+
+    else if (R.dtype == nxd_S) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, S, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_D) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, D, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_E) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, E, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_Q) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, Q, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+
+    else if (R.dtype == nxd_cS) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, cS, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_cD) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, cD, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_cE) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, cE, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
+    else if (R.dtype == nxd_cQ) {
+        if (false) {}
+        #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
+            return !nx_apply_elem(PASTE3(kern_, cQ, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+        }
+        NXT_PASTE_IFC(LOOP)
+        #undef LOOP
+    }
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);
     return false;
 }

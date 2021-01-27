@@ -1,0 +1,27 @@
+/* diag.kern
+ *
+ * ARGS:
+ *   X:(..., 1, N) Input
+ *   R:(..., N, N) Output
+ * 
+ * Computes 'R[i, i] = X[i]'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape, void* extra) {
+    assert(rank == 2);
+    NXK_ARG_2D(0, X); /*  */
+    NXK_ARG_2D(1, R);
+
+    /* RxC matrix */
+    int nR = shape[0], nC = shape[1];
+
+    ks_cint i;
+    for (i = 0; i < nC; ++i) {
+        NXK_GET_2D(R, i, i) = NXK_GET_2D(X, 0, i);
+    }
+
+    return 0;
+}
+

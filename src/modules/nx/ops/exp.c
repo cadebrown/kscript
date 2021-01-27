@@ -3,90 +3,25 @@
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
-#include <ks/nx.h>
+#include <ks/nxi.h>
 #include <ks/nxt.h>
-#include <ks/nxm.h>
 
+#define KERN_FUNC(_name) NXK_PASTE(kern_, _name)
+
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "exp.kern"
 #define K_NAME "exp"
-
-
-#define LOOPI(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype); \
-    return 1; \
-}
-
-#define LOOPR(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    assert(X.dtype == R.dtype); \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        *(TYPE*)pR = TYPE##exp(*(TYPE*)pX); \
-    } \
-    return 0; \
-}
-
-#define LOOPC(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 2); \
-    nx_t X = args[0], R = args[1]; \
-    assert(X.dtype == R.dtype); \
-    ks_uint \
-        pX = (ks_uint)X.data, \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sX = X.strides[0], \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; i++, pX += sX, pR += sR) { \
-        TYPE x = *(TYPE*)pX, r; \
-        if (x.im == 0) { \
-            ((TYPE*)pR)->re = TYPE##rexp(x.re); \
-            ((TYPE*)pR)->im = 0; \
-        } else { \
-            TYPE##r a = TYPE##rexp(x.re); \
-            ((TYPE*)pR)->re = a * TYPE##rcos(x.im); \
-            ((TYPE*)pR)->im = a * TYPE##rsin(x.im); \
-        } \
-    } \
-    return 0; \
-}
-
-NXT_PASTE_I(LOOPI);
-
-NXT_PASTE_F(LOOPR);
-
-NXT_PASTE_C(LOOPC);
-
+#include <ks/nxk.h>
 
 bool nx_exp(nx_t X, nx_t R) {
-    nx_t cX;
-    void *fX = NULL;
-    if (!nx_getcast(X, R.dtype, &cX, &fX)) {
-        return false;
+
+    if (false) {}
+    #define LOOP(TYPE, NAME) else if (R.dtype == nxd_##NAME) { \
+        return !nx_apply_elem(KERN_FUNC(NAME), 2, (nx_t[]){ X, R }, R.dtype, NULL); \
     }
-
-    #define LOOP(NAME) do { \
-        bool res = !nx_apply_elem(kern_##NAME, 2, (nx_t[]){ cX, R }, NULL); \
-        ks_free(fX); \
-        return res; \
-    } while (0);
-
-    NXT_FOR_ALL(R.dtype, LOOP);
+    NXT_PASTE_FC(LOOP)
     #undef LOOP
-
-    ks_free(fX);
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R", K_NAME, X.dtype, R.dtype);
     return false;

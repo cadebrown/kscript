@@ -24,22 +24,26 @@ func proc(x) {
     x = x[..., :3]
 
     # Generate convolution kernel
-    K = 13
-    sigma = K * 0.2
+    K = 53
+    sigma = K * .00001
 
     k = nx.zeros(x.shape)
 
-    off = (K - 1) / 2
-    for i in range(K) {
-        for j in range(K) {
-            v = m.exp(-((i - off) ** 2 + (j - off) ** 2) / (2 * sigma ** 2)) / m.sqrt(2 * m.pi * sigma ** 2)
-            k[(i + 8) % K, j, 0] = v
-            k[i, j] = v
-            k[i, (j + 20) % K, 2] = v
-        }
-    }
+    #off = (K - 1) / 2
+    #for i in range(K) {
+    #    for j in range(K) {
+    #        v = m.exp(-((i - off) ** 2 + (j - off) ** 2) / (2 * sigma ** 2)) / m.sqrt(2 * m.pi * sigma ** 2)
+    #        k[(i + 8) % K, j, 0] = v
+    #        k[i, j] = v
+    #        k[i, (j + 50) % K, 2] = v
+    #    }
+    #}
     # Normalize per color
-    k /= nx.sum(k) / 3
+    
+    k[0, 0, 0] = 1
+    k[50, 50, 1] = 1
+    k[25, 80, 2] = 1
+    #k /= nx.sum(k) / 3
 
     # Now, apply the kernel
     Fx = nx.fft.fft(x, (0, 1))
@@ -53,6 +57,7 @@ func proc(x) {
 
     ret xk
 }
+
 
 func nextimg() {
     ret nuklear.Image(proc(next(imgs))) ?? none

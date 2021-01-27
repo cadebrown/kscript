@@ -1,0 +1,24 @@
+/* exp.kern
+ *
+ * ARGS:
+ *   X:(...,) Input
+ *   R:(...,) Output
+ * 
+ * Computes 'R = exp(X)'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int len, void* extra) {
+    NXK_ARG_1D(0, X);
+    NXK_ARG_1D(1, R);
+
+    ks_cint i;
+    #pragma omp parrallel for
+    for (i = 0; i < len; ++i) {
+        NXK_GET_1D(R, i) = NXK_FUNC(exp)(NXK_GET_1D(X, i));
+    }
+
+    return 0;
+}
+

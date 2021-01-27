@@ -222,20 +222,27 @@ ks_ccomplex ksm_cpow(ks_ccomplex x, ks_ccomplex y) {
         }
 
     } else {
+        /* pow(x, y) == exp(log(x) * y) == exp(|y| * |log(x)|) * cis(log(x) * y) 
+         *
+         * if x := a + bi, y := c + di
+         * 
+         * r = |a + bi|
+         * t = phase(a + bi)
+         * (a + bi) ** (c + di) 
+         *   = exp(log(r) * (c + di) + t * (c + di) * i)
+         *   = exp(log(r) * c + log(r) * di + t * c * i - t * d)
+         *   = exp(log(r) * c - t * d + i * (log(r) * d + t * c))
+         *   = exp(log(r) * c - t * d) * cis(log(r) * d + t * c)
+         */
+        ks_cfloat r = KS_CC_ABS(x);
+        ks_cfloat t = KS_CC_PHASE(x);
+        ks_cfloat logr = log(r);
 
-        /* absolute value & phase */
-        ks_cfloat a_x = KS_CC_ABS(x), a_y = KS_CC_ABS(y);
-        ks_cfloat p_x = KS_CC_PHASE(x);
-
-        /* result: 'v' */
-        ks_cfloat a_v = pow(a_x, y.re), p_v = p_x * y.re;
-        if (y.im != 0) {
-            /* adjust for complex exponent */
-            a_v *= exp(-p_x * y.im);
-            p_v += y.im * log(a_x);
-        }
-
-        return KS_CC_POLAR(a_v, p_v);
+        /* Absolute value and phase of the result */
+        ks_cfloat ar = exp(logr * y.re - t * y.im);
+        ks_cfloat pr = y.im * logr + y.re * t;
+        
+        return KS_CC_POLAR(ar, pr);
     }
 }
 

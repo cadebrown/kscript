@@ -1,0 +1,26 @@
+/* one.kern
+ *
+ * ARGS:
+ *   R:(...,) Output
+ * 
+ * Computes 'R = 1'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int len, void* extra) {
+    NXK_ARG_1D(0, R);
+
+    ks_cint i;
+    for (i = 0; i < len; ++i) {
+#if NXK_C
+        NXK_GET_1D(R, i).re = 1;
+        NXK_GET_1D(R, i).im = 0;
+#else
+        NXK_GET_1D(R, i) = 1;
+#endif
+    }
+
+    return 0;
+}
+

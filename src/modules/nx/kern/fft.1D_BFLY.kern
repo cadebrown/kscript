@@ -1,0 +1,93 @@
+/* fft.1D_BFLY.kern
+ *
+ * ARGS:
+ *   X:(...,) Input/Output
+ * 
+ * Computes FFT(R) in place
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape, void* extra) {
+    NXK_ARG_1D(0, X);
+    struct extra_data* ed = extra;
+    nxfft_plan p = ed->plan;
+    ks_size_t N = p->shape[0];
+
+    assert(rank == 1);
+    assert((N & (N - 1)) == 0);
+    assert(N == shape[0]);
+
+    NXK_TYPE t, u, v;
+    NXK_TYPE* W = p->k1D_BFLY.W.data;
+    assert(p->k1D_BFLY.W.dtype == X.dtype);
+    ks_cint i, j = 0, k;
+    ks_size_t m; /* Current sub-transform size (inner size) */
+    /* Do bit-reversal */
+    for (i = 1; i < N; ++i) {
+        ks_size_t b = N >> 1;
+        while (j >= b) {
+            j -= b;
+            b >>= 1;
+        }
+        j += b;
+        /* Swap if first matching */
+        if (j > i) {
+            t = NXK_GET_1D(X, i);
+            NXK_GET_1D(X, i) = NXK_GET_1D(X, j);
+            NXK_GET_1D(X, j) = t;
+        }
+    }
+
+    for (m = 1; m <= N; m *= 2) {
+        /* Do butterfly transform of length 'm' */
+        ks_size_t m2 = m / 2;
+
+        /* How many steps in the twiddle table per each entry? */
+        ks_size_t step = N / m;
+
+        /* 'j' index step */
+        ks_size_t jstep = step * m;
+
+        for (i = 0; i < m2; ++i) {
+
+            /* W[i], current root of unity (precomputed) */
+            NXK_TYPE Wi = W[i * N / m];
+
+            /*nx_getstr(ksos_stdout, nx_make(&Wi, nxd_##NAME, 0, NULL, NULL)); */
+            for (j = i; j < jstep + i; j += m) {
+                /* Inner-most butterfly */
+                u = NXK_GET_1D(X, j);
+                t = NXK_GET_1D(X, j + m2);
+                v.re = t.re*Wi.re - t.im*Wi.im;
+                v.im = t.re*Wi.im + t.im*Wi.re;
+                
+                NXK_GET_1D(X, j).re = u.re + v.re;
+                NXK_GET_1D(X, j).im = u.im + v.im;
+
+                NXK_GET_1D(X, j + m2).re = u.re - v.re;
+                NXK_GET_1D(X, j + m2).im = u.im - v.im;
+
+            }
+        }
+    }
+
+    /* Now, reverse some columns */
+    if (p->is_inv) {
+        NXK_GET_1D(X, 0).re /= N;
+        NXK_GET_1D(X, 0).im /= N;
+        for (i = 1; 2 * i <= N; ++i) {
+            t = NXK_GET_1D(X, i);
+         
+            NXK_GET_1D(X, i).re = NXK_GET_1D(X, N - i).re / N;
+            NXK_GET_1D(X, i).im = NXK_GET_1D(X, N - i).im / N;
+         
+            NXK_GET_1D(X, N - i).re = t.re / N;
+            NXK_GET_1D(X, N - i).im = t.im / N;
+
+        }
+    } else {
+    }
+    return 0;
+}

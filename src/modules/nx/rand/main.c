@@ -33,14 +33,17 @@ static KS_TFUNC(M, randb) {
 }
 
 static KS_TFUNC(M, randf) {
-    kso shape = KSO_NONE;
-    KS_ARGS("?shape", &shape);
+    int nS;
+    kso* S;
+    KS_ARGS("*shape", &nS, &S);
 
-    nx_t ns = nx_as_shape(shape);
-    if (ns.rank < 0) return NULL;
+    int rank;
+    ks_size_t shape[NX_MAXRANK];
+    if (!nx_getshapev(nS, S, &rank, shape)) {
+        return NULL;
+    }
 
-    nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, ns.rank, ns.shape, NULL);
-
+    nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, rank, shape, NULL);
     if (!nxrand_randf(nxrand_State_default, res->val)) {
         KS_DECREF(res);
         return NULL;
@@ -50,31 +53,22 @@ static KS_TFUNC(M, randf) {
 }
 
 static KS_TFUNC(M, normal) {
-    kso u, o;
-    kso shape = KSO_NONE;
-    KS_ARGS("u o ?shape", &u, &o, &shape);
+    int nS;
+    kso* S;
+    KS_ARGS("*shape", &nS, &S);
 
-    nx_t uar, oar;
-    kso uref, oref;
-    if (!nx_get(u, nxd_D, &uar, &uref)) {
+    int rank;
+    ks_size_t shape[NX_MAXRANK];
+    if (!nx_getshapev(nS, S, &rank, shape)) {
         return NULL;
     }
-    if (!nx_get(o, nxd_D, &oar, &oref)) {
-        KS_NDECREF(uref);
-        return NULL;
-    }
-    nx_t ns = nx_as_shape(shape);
-    if (ns.rank < 0) return NULL;
 
-    nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, ns.rank, ns.shape, NULL);
-    if (!nxrand_normal(nxrand_State_default, res->val, uar, oar)) {
-        KS_NDECREF(uref);
-        KS_NDECREF(oref);
+    nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, rank, shape, NULL);
+    if (!nxrand_normal(nxrand_State_default, res->val)) {
         KS_DECREF(res);
         return NULL;
     }
-    KS_NDECREF(uref);
-    KS_NDECREF(oref);
+
     return (kso)res;
 }
 
@@ -107,10 +101,8 @@ ks_module _ksi_nxrand() {
         {"seed",                   ksf_wrap(M_seed_, M_NAME ".seed(seed)", "Re-seed the default random number generator")},
         
         {"randb",                  ksf_wrap(M_randb_, M_NAME ".randb(num=1)", "Generate 'num' random bytes")},
-        {"randf",                  ksf_wrap(M_randf_, M_NAME ".randf(shape=none)", "Generate random floats with a given shape (default: scalar)")},
-        {"normal",                 ksf_wrap(M_normal_, M_NAME ".normal(u=0.0, o=1.0, shape=none)", "Generate random floats in the normal distribution with a given shape (default: scalar)")},
-
-
+        {"randf",                  ksf_wrap(M_randf_, M_NAME ".randf(*shape)", "Generate random floats with a given shape (default: scalar)")},
+        {"normal",                 ksf_wrap(M_normal_, M_NAME ".normal(*shape)", "Generate random floats within the 'normal' distribution (mean=0, stddev=1)")},
     
     ));
 

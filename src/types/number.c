@@ -383,7 +383,6 @@ static KS_TFUNC(T, div) {
 
             /* |R|^2 */
             ks_cfloat Ra2 = KS_CC_SQABS(Rc);
-            Ra2 *= Ra2;
 
             /* Conjugate 'R' */
             Rc.im = -Rc.im;

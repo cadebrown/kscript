@@ -1063,7 +1063,7 @@ echo "" >> $T
 echo "# compile-rules for compiling source to object files" >> $T
 echo ".tmp/src/%.o: src/%.c \$(all_H)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
-echo "	\$(CC) \$(CFLAGS) -I./include -DKS_BUILD -fPIC -c -o \$@ \$<" >> $T
+echo "	\$(CC) \$(CFLAGS) -I./include -I./src/modules/nx/kern -DKS_BUILD -fPIC -c -o \$@ \$<" >> $T
 echo "" >> $T
 echo "\$(libks_SHARED): \$(libks_O)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T

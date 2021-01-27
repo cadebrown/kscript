@@ -1,0 +1,32 @@
+/* cast.kern
+ *
+ * ARGS:
+ *   X:(...,) Input
+ *   R:(...,) Output
+ * 
+ * Computes 'R = X'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int len, void* extra) {
+    NXK_ARG_1D(0, X);
+    NXK_ARG_1D(1, R);
+
+    ks_cint i;
+    for (i = 0; i < len; ++i) {
+#if NXK_C
+        (*(RTYPE*)(pR + sR * i)).re = NXK_GET_1D(X, i).re;
+        (*(RTYPE*)(pR + sR * i)).im = NXK_GET_1D(X, i).im;
+#elif NXK_B
+        (*(RTYPE*)(pR + sR * i)).re = nx_blv(NXK_GET_1D(X, i));
+        (*(RTYPE*)(pR + sR * i)).im = 0;
+#else
+        (*(RTYPE*)(pR + sR * i)).re = NXK_GET_1D(X, i);
+        (*(RTYPE*)(pR + sR * i)).im = 0;
+#endif
+    }
+
+    return 0;
+}
+

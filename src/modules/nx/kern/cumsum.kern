@@ -1,0 +1,42 @@
+/* cumsum.kern
+ *
+ * ARGS:
+ *   X:(...,) Input
+ *   R:(...,) Output
+ * 
+ * Cumulatively sums 'X' into 'R'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape, void* extra) {
+    NXK_ARG_1D(0, X);
+    NXK_ARG_1D(1, R);
+    assert(rank == 1);
+
+    ks_size_t len = shape[0];
+
+    NXK_TYPE asum;
+#if NXK_C
+    asum.re = 0;
+    asum.im = 0;
+#else
+    asum = 0;
+#endif
+    ks_cint i = 0;
+    for (i = 0; i < len; ++i) {
+        NXK_TYPE x = NXK_GET_1D(X, i);
+#if NXK_C
+        asum.re += x.re;
+        asum.im += x.im;
+#else
+        asum += x;
+#endif
+        NXK_GET_1D(R, i) = asum;
+    }
+
+
+    return 0;
+}
+

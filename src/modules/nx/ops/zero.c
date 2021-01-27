@@ -1,64 +1,27 @@
 /* zero.c - 'zero' kernel
  *
- * 
- * @author:    Cade Brown <cade@kscript.org>
+ * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
+#include <ks/nxi.h>
 #include <ks/nxt.h>
 
+#define KERN_FUNC(_name) NXK_PASTE(kern_, _name)
+
+#define NXK_DO_I
+#define NXK_DO_F
+#define NXK_DO_C
+#define NXK_FILE "zero.kern"
 #define K_NAME "zero"
-
-
-
-/* Access Macros */
-
-#define LOOPR(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 1); \
-    nx_t R = args[0]; \
-    ks_uint \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; ++i, pR += sR) { \
-        *(TYPE*)pR = 0; \
-    } \
-    return 0; \
-}
-
-#define LOOPC(TYPE, NAME) static int kern_##NAME(int N, nx_t* args, int len, void* extra) { \
-    assert(N == 1); \
-    nx_t R = args[0]; \
-    ks_uint \
-        pR = (ks_uint)R.data  \
-    ; \
-    ks_cint \
-        sR = R.strides[0]  \
-    ; \
-    ks_cint i; \
-    for (i = 0; i < len; ++i, pR += sR) { \
-        ((TYPE*)pR)->re = 0; \
-        ((TYPE*)pR)->im = 0; \
-    } \
-    return 0; \
-}
-
-
-
-NXT_PASTE_I(LOOPR);
-NXT_PASTE_F(LOOPR);
-
-NXT_PASTE_C(LOOPC);
+#include <ks/nxk.h>
 
 bool nx_zero(nx_t R) {
-    #define LOOP(NAME) do { \
-        bool res = !nx_apply_elem(kern_##NAME, 1, (nx_t[]){ R }, NULL); \
-        return res; \
-    } while (0);
 
-    NXT_FOR_ALL(R.dtype, LOOP);
+    if (false) {}
+    #define LOOP(TYPE, NAME) else if (R.dtype == nxd_##NAME) { \
+        return !nx_apply_elem(KERN_FUNC(NAME), 1, (nx_t[]){ R }, NULL, NULL); \
+    }
+    NXT_PASTE_IFC(LOOP)
     #undef LOOP
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R", K_NAME, R.dtype);

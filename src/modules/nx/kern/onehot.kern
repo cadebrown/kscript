@@ -1,0 +1,36 @@
+/* onehot.kern
+ *
+ * ARGS:
+ *   X:(..., 1, N) Input
+ *   R:(..., N, N) Output
+ * 
+ * Computes 'R[X[i]] = 1'
+ * 
+ * @author: Cade Brown <cade@kscript.org>
+ */
+
+static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape, void* extra) {
+    assert(rank == 2);
+    NXK_ARG_2D(0, X); /* [1xN] */
+    NXK_ARG_2D(1, R);
+
+    assert(X.dtype == nxd_idx);
+
+    /* RxC matrix */
+    int nR = shape[0], nC = shape[1];
+
+    ks_cint i;
+    for (i = 0; i < nR; ++i) {
+        nx_idx ii = *(nx_idx*)(pX + srX * i) % nC;
+        if (ii < 0) ii += nC;
+#if NXK_C
+        NXK_GET_2D(R, i, ii).re = 1;
+        NXK_GET_2D(R, i, ii).im = 0;
+#else
+        NXK_GET_2D(R, i, ii) = 1;
+#endif
+    }
+
+    return 0;
+}
+
