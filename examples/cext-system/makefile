@@ -11,8 +11,14 @@ NAME           := system
 
 # -*- Config -*-
 
-# Directory that kscript is installed to
-KSDIR          ?= ../../
+# kscript directory
+#KS             ?= /usr/local
+KS             ?= ../..
+
+# install path
+PREFIX         := /usr/local
+DESTDIR        ?= 
+TODIR          := $(DESTDIR)$(PREFIX)
 
 
 # -*- Files -*-
@@ -22,28 +28,35 @@ src_H          := $(wildcard include/*.h)
 
 src_O          := $(patsubst %.c,%.o,$(src_C))
 
-lib_DLL        := lib/libksm_$(NAME).so
+mod_SO         := ksm_$(NAME).so
 
 
 # -*- Rules -*-
 
-.PHONY: all default clean lib
+.PHONY: default all clean install uninstall FORCE
 
-default: lib
+default: $(mod_SO)
 
-all: lib
+all: $(mod_SO)
 
-lib: $(lib_DLL)
-
-# Rule to clean temporary files
 clean:
-	rm -f $(wildcard $(lib_DLL) $(src_O))
+	rm -f $(wildcard $(mod_SO) $(src_O))
+
+install: FORCE
+	install -d $(TODIR)/lib/ks/pkgs/$(NAME)
+	install -m 664 $(mod_SO) $(PREFIX)/lib/ks/pkgs/$(NAME)/$(notdir $(mod_SO))
+	strip $(PREFIX)/lib/ks/pkgs/$(NAME)/$(notdir $(mod_SO))
+
+uninstall: FORCE
+	rm -rf $(TODIR)/lib/ks/pkgs/$(NAME)
+
+FORCE:
 
 # Rule to build the main library
-$(lib_DLL): $(src_O)
+$(mod_SO): $(src_O)
 	@mkdir -p $(dir $@)
-	$(CC) $^ -L$(KSDIR)/lib -lks -shared -o $@
+	$(CC) $^ -L$(KS)/lib -lks -shared -o $@
 
 # Rule to build a single object file
 %.o: %.c $(src_H)
-	$(CC) -I$(KSDIR)/include $< -fPIC -c -o $@
+	$(CC) -I$(KS)/include $< -fPIC -c -o $@

@@ -7,7 +7,6 @@
 
 import os
 import getarg
-import re
 import gram
 
 p = getarg.Parser("tokenize", "0.1.0", "Transforms the input into a stream of tokens", ["Cade Brown <cade@kscript.org>"])

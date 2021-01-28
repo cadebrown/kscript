@@ -1,3 +1,11 @@
+""" talk-client.ks - Example client which connects to a server
+
+
+SEE: talk-server.ks
+
+@author: Cade Brown <cade@kscript.org>
+"""
+
 
 import net
 import getarg
@@ -14,4 +22,6 @@ s = net.SocketIO()
 s.connect((args.addr, args.port))
 
 # Write 'stdin' to the socket
-for line in __stdin, s.write(line + '\n')
+for line in __stdin { 
+    s.write(line + '\n')
+}

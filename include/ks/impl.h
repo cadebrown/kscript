@@ -113,7 +113,6 @@ ks_module _ksi_nxrand();
 void _ksi_nxrand_State();
 
 ks_module _ksi_re();
-ks_module _ksi_gram();
 ks_module _ksi_ucd();
 
 ks_module _ksi_av();
@@ -124,7 +123,9 @@ void _ksi_parser();
 void _ksi_funcs();
 void _ksi_import();
 
-
+ks_module _ksi_gram();
+void _ksi_gram_Token();
+void _ksi_gram_Lexer();
 
 
 /* Initialize type */

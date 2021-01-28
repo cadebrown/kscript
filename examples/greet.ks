@@ -15,19 +15,19 @@ hello, YourName
 $ ./examples/greet.ks YourName -gHey
 Hey YourName
 $ ./examples/greet.ks -h
-usage: greet [opts] name
+usage: greet [opts] names...
+
+    names                       List of names to greet
 
 opts:
-    -h,--help                       Print this help/usage msesage and exit
-    -V,--version                    Print out the version information and exit
-    -g,--greeting[='hello,']        The greeting message to use (str)
+    -h,--help                   Prints this help/usage message and then exits
+    --version                   Prints the version information and then exits
+    -g,--greeting[=str]         The greeting message to use (default: hello,)
 
-    name[='cade']                   What is your user name (str)
-
-Prints a personalized greeting
-
-author: Cade Brown <cade@kscript.org>
+authors:
+    Cade Brown <cade@kscript.org>
 version: 0.1.0
+
 ```
 
 @author: Cade Brown <cade@kscript.org>

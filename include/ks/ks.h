@@ -961,6 +961,10 @@ KS_API ks_bytes ks_bytes_newo(ks_type tp, kso obj);
  */
 KS_API ks_regex ks_regex_new(ks_str expr);
 
+/* Create a new regular-expression to match a string literal
+ */
+KS_API ks_regex ks_regex_newlit(ks_str expr);
+
 
 /* Initialize a 'sim0'
  */

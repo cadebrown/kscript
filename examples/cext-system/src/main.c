@@ -14,8 +14,10 @@ static KS_TFUNC(M, system) {
     ks_str cmd;
     KS_ARGS("cmd:*", &cmd, kst_str);
 
+    /* Perform call */
     int res = system(cmd->data);
     if (res < 0) {
+        /* Handle C-library error with `KS_THROW_ERRNO`, which handles everything */
         KS_THROW_ERRNO(errno, "Executing command failed");
         return NULL;
     }
@@ -32,6 +34,7 @@ static ks_module get() {
         {"system",                 ksf_wrap(M_system_, M_NAME ".system(cmd)", "Execute a command, and return the return code from it")},
     ));
 
+    /* Return the module */
     return res;
 }
 

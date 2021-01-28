@@ -1,13 +1,15 @@
 #!/usr/bin/env ks
 """ qsort.ks - quicksort implementation
 
+Not extremely efficient -- but some call it beautiful!
+
 @author: Cade Brown <cade@kscript.org>
 """
 
 import os
 import getarg
 
-p = getarg.Parser("qsort", "0.1.0", "Sorts ", ["Cade Brown <cade@kscript.org>"])
+p = getarg.Parser("qsort", "0.1.0", "Sorts standard input according to the quicksort algorithm", ["Cade Brown <cade@kscript.org>"])
 
 args = p.parse()
 
@@ -21,4 +23,5 @@ func qsort(vals) {
     ret qsort(L) + [piv] + qsort(R)
 }
 
-print (qsort(list(map(float, filter(os.stdin)))))
+inp = map(float, filter(os.stdin)) as list)
+print (qsort(inp)

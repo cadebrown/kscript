@@ -512,7 +512,7 @@ void _ksi_net_SocketIO() {
         {"bind",                   ksf_wrap(T_bind_, T_NAME ".bind(self, addr)", "Bind the socket to the given address (the format depends on the type of socket)")},
         {"connect",                ksf_wrap(T_connect_, T_NAME ".connect(self, addr)", "Connect to the given address (the format depends on the type of socket)")},
         {"listen",                 ksf_wrap(T_listen_, T_NAME ".listen(self, num=16)", "Begin listening for connections, up to 'num' before refusing more")},
-        {"accept",                 ksf_wrap(T_accept_, T_NAME ".accept(self)", "Accept a new connection, retuning a tuple of '(sock, name)' for the new connection")},
+        {"accept",                 ksf_wrap(T_accept_, T_NAME ".accept(self)", "Accept a new connection, returning a tuple of '(sock, name)' for the new connection")},
 
     ));
 

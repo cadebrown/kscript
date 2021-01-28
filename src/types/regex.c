@@ -527,6 +527,33 @@ ks_regex ks_regex_new(ks_str expr) {
 }
 
 
+ks_regex ks_regex_newlit(ks_str expr) {
+    ksio_StringIO sio = ksio_StringIO_new();
+
+    struct ks_str_citer cit = ks_str_citer_make(expr);
+    ks_ucp c;
+    while (!cit.done) {
+        c = ks_str_citer_next(&cit);
+        if (cit.err) {
+            break;
+        }
+
+        if (c == '\\' || c == '[' || c == '(' || c == '*' || c == '+' || c == '?') {
+            ksio_add(sio, "\\%c", c);
+        } else {
+            ksio_add(sio, "%c", c);
+        }
+    }
+
+    ks_str newexpr = ksio_StringIO_getf(sio);
+    ks_regex res = ks_regex_new(newexpr);
+    KS_DECREF(newexpr);
+    return res;
+}
+
+
+
+
 /* High level interface */
 
 bool ks_regex_exact(ks_regex self, ks_str str) {

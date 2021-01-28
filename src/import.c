@@ -169,6 +169,8 @@ ks_module ks_import(ks_str name) {
     BIMOD(ucd)
     BIMOD(net)
     BIMOD(nx)
+    BIMOD(gram)
+
 
     /* Capture thread for exception */
     ksos_thread th = ksos_thread_get();

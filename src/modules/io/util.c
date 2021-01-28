@@ -1089,7 +1089,7 @@ bool ksio_info(ksio_BaseIO self, bool* is_r, bool* is_w, bool* is_b) {
     if (kso_issub(self->type, ksiot_FileIO)) {
         return ksio_modeinfo(((ksio_FileIO)self)->mode, is_r, is_w, is_b);
     } else if (kso_issub(self->type, ksiot_RawIO)) {
-        return ksio_modeinfo(((ksio_FileIO)self)->mode, is_r, is_w, is_b);
+        return ksio_modeinfo(((ksio_RawIO)self)->mode, is_r, is_w, is_b);
     } else if (kso_issub(self->type, ksiot_StringIO)) {
         *is_r = true;
         *is_w = true;

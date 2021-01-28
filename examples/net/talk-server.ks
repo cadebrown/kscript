@@ -1,3 +1,10 @@
+""" talk-server.ks - Example server showing how to create a telnet-like communication program
+
+
+SEE: talk-client.ks
+
+@author: Cade Brown <cade@kscript.org>
+"""
 
 import os
 import net
@@ -14,12 +21,19 @@ s = net.SocketIO()
 
 s.bind((args.addr, args.port))
 
-s.listen(12)
+# Accept up to 16 connections
+s.listen(16)
+
+# Globals
+g = {
+    'ct': 0
+}
 
 func handle(sock, name) {
-    print ('START', name)
+    tid = g['ct'] += 1
+    print ('START', name + '[' + str(tid) +']')
     for l in sock {
-        print (name + ':', l.decode())
+        print (name + '[' + str(tid) + ']' + ':', l.decode())
     }
     print ('END', name)
 }

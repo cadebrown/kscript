@@ -9,7 +9,7 @@ import getarg
 
 p = getarg.Parser("cat", "0.1.0", "Concatenate contents of files", ["Cade Brown <cade@kscript.org>"])
 
-p.pos("files", "List of files to output", str, -1)
+p.pos("files", "List of files to output", -1)
 
 args = p.parse()
 
@@ -20,5 +20,5 @@ for file in args.files {
         print(line)
     }
 
-    close(fp)
+    fp.close()
 }
