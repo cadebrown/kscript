@@ -43,12 +43,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: strfrom */
 
-#define nx_Sstrfrom strfromd
+#define nx_Fstrfrom strfromd
 #define nx_Dstrfrom strfromd
 #define nx_Estrfrom strfromd
 #define nx_Qstrfrom strfromd
 
-#define nx_cSrstrfrom nx_Sstrfrom
+#define nx_cFrstrfrom nx_Fstrfrom
 #define nx_cDrstrfrom nx_Dstrfrom
 #define nx_cErstrfrom nx_Estrfrom
 #define nx_cQrstrfrom nx_Qstrfrom
@@ -71,12 +71,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: fmin */
 
-#define nx_Sfmin fmin
+#define nx_Ffmin fmin
 #define nx_Dfmin fmin
 #define nx_Efmin fmin
 #define nx_Qfmin fmin
 
-#define nx_cSrfmin nx_Sfmin
+#define nx_cFrfmin nx_Ffmin
 #define nx_cDrfmin nx_Dfmin
 #define nx_cErfmin nx_Efmin
 #define nx_cQrfmin nx_Qfmin
@@ -99,12 +99,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: fmax */
 
-#define nx_Sfmax fmax
+#define nx_Ffmax fmax
 #define nx_Dfmax fmax
 #define nx_Efmax fmax
 #define nx_Qfmax fmax
 
-#define nx_cSrfmax nx_Sfmax
+#define nx_cFrfmax nx_Ffmax
 #define nx_cDrfmax nx_Dfmax
 #define nx_cErfmax nx_Efmax
 #define nx_cQrfmax nx_Qfmax
@@ -127,12 +127,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: fabs */
 
-#define nx_Sfabs fabs
+#define nx_Ffabs fabs
 #define nx_Dfabs fabs
 #define nx_Efabs fabs
 #define nx_Qfabs fabs
 
-#define nx_cSrfabs nx_Sfabs
+#define nx_cFrfabs nx_Ffabs
 #define nx_cDrfabs nx_Dfabs
 #define nx_cErfabs nx_Efabs
 #define nx_cQrfabs nx_Qfabs
@@ -155,12 +155,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: fmod */
 
-#define nx_Sfmod fmod
+#define nx_Ffmod fmod
 #define nx_Dfmod fmod
 #define nx_Efmod fmod
 #define nx_Qfmod fmod
 
-#define nx_cSrfmod nx_Sfmod
+#define nx_cFrfmod nx_Ffmod
 #define nx_cDrfmod nx_Dfmod
 #define nx_cErfmod nx_Efmod
 #define nx_cQrfmod nx_Qfmod
@@ -183,12 +183,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: ceil */
 
-#define nx_Sceil ceil
+#define nx_Fceil ceil
 #define nx_Dceil ceil
 #define nx_Eceil ceil
 #define nx_Qceil ceil
 
-#define nx_cSrceil nx_Sceil
+#define nx_cFrceil nx_Fceil
 #define nx_cDrceil nx_Dceil
 #define nx_cErceil nx_Eceil
 #define nx_cQrceil nx_Qceil
@@ -211,12 +211,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: floor */
 
-#define nx_Sfloor floor
+#define nx_Ffloor floor
 #define nx_Dfloor floor
 #define nx_Efloor floor
 #define nx_Qfloor floor
 
-#define nx_cSrfloor nx_Sfloor
+#define nx_cFrfloor nx_Ffloor
 #define nx_cDrfloor nx_Dfloor
 #define nx_cErfloor nx_Efloor
 #define nx_cQrfloor nx_Qfloor
@@ -239,12 +239,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: trunc */
 
-#define nx_Strunc trunc
+#define nx_Ftrunc trunc
 #define nx_Dtrunc trunc
 #define nx_Etrunc trunc
 #define nx_Qtrunc trunc
 
-#define nx_cSrtrunc nx_Strunc
+#define nx_cFrtrunc nx_Ftrunc
 #define nx_cDrtrunc nx_Dtrunc
 #define nx_cErtrunc nx_Etrunc
 #define nx_cQrtrunc nx_Qtrunc
@@ -267,12 +267,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: copysign */
 
-#define nx_Scopysign copysign
+#define nx_Fcopysign copysign
 #define nx_Dcopysign copysign
 #define nx_Ecopysign copysign
 #define nx_Qcopysign copysign
 
-#define nx_cSrcopysign nx_Scopysign
+#define nx_cFrcopysign nx_Fcopysign
 #define nx_cDrcopysign nx_Dcopysign
 #define nx_cErcopysign nx_Ecopysign
 #define nx_cQrcopysign nx_Qcopysign
@@ -295,12 +295,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: exp */
 
-#define nx_Sexp exp
+#define nx_Fexp exp
 #define nx_Dexp exp
 #define nx_Eexp exp
 #define nx_Qexp exp
 
-#define nx_cSrexp nx_Sexp
+#define nx_cFrexp nx_Fexp
 #define nx_cDrexp nx_Dexp
 #define nx_cErexp nx_Eexp
 #define nx_cQrexp nx_Qexp
@@ -323,12 +323,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: expm1 */
 
-#define nx_Sexpm1 expm1
+#define nx_Fexpm1 expm1
 #define nx_Dexpm1 expm1
 #define nx_Eexpm1 expm1
 #define nx_Qexpm1 expm1
 
-#define nx_cSrexpm1 nx_Sexpm1
+#define nx_cFrexpm1 nx_Fexpm1
 #define nx_cDrexpm1 nx_Dexpm1
 #define nx_cErexpm1 nx_Eexpm1
 #define nx_cQrexpm1 nx_Qexpm1
@@ -351,12 +351,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: log */
 
-#define nx_Slog log
+#define nx_Flog log
 #define nx_Dlog log
 #define nx_Elog log
 #define nx_Qlog log
 
-#define nx_cSrlog nx_Slog
+#define nx_cFrlog nx_Flog
 #define nx_cDrlog nx_Dlog
 #define nx_cErlog nx_Elog
 #define nx_cQrlog nx_Qlog
@@ -379,12 +379,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: log1p */
 
-#define nx_Slog1p log1p
+#define nx_Flog1p log1p
 #define nx_Dlog1p log1p
 #define nx_Elog1p log1p
 #define nx_Qlog1p log1p
 
-#define nx_cSrlog1p nx_Slog1p
+#define nx_cFrlog1p nx_Flog1p
 #define nx_cDrlog1p nx_Dlog1p
 #define nx_cErlog1p nx_Elog1p
 #define nx_cQrlog1p nx_Qlog1p
@@ -407,12 +407,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: sqrt */
 
-#define nx_Ssqrt sqrt
+#define nx_Fsqrt sqrt
 #define nx_Dsqrt sqrt
 #define nx_Esqrt sqrt
 #define nx_Qsqrt sqrt
 
-#define nx_cSrsqrt nx_Ssqrt
+#define nx_cFrsqrt nx_Fsqrt
 #define nx_cDrsqrt nx_Dsqrt
 #define nx_cErsqrt nx_Esqrt
 #define nx_cQrsqrt nx_Qsqrt
@@ -435,12 +435,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: cbrt */
 
-#define nx_Scbrt cbrt
+#define nx_Fcbrt cbrt
 #define nx_Dcbrt cbrt
 #define nx_Ecbrt cbrt
 #define nx_Qcbrt cbrt
 
-#define nx_cSrcbrt nx_Scbrt
+#define nx_cFrcbrt nx_Fcbrt
 #define nx_cDrcbrt nx_Dcbrt
 #define nx_cErcbrt nx_Ecbrt
 #define nx_cQrcbrt nx_Qcbrt
@@ -463,12 +463,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: hypot */
 
-#define nx_Shypot hypot
+#define nx_Fhypot hypot
 #define nx_Dhypot hypot
 #define nx_Ehypot hypot
 #define nx_Qhypot hypot
 
-#define nx_cSrhypot nx_Shypot
+#define nx_cFrhypot nx_Fhypot
 #define nx_cDrhypot nx_Dhypot
 #define nx_cErhypot nx_Ehypot
 #define nx_cQrhypot nx_Qhypot
@@ -491,12 +491,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: pow */
 
-#define nx_Spow pow
+#define nx_Fpow pow
 #define nx_Dpow pow
 #define nx_Epow pow
 #define nx_Qpow pow
 
-#define nx_cSrpow nx_Spow
+#define nx_cFrpow nx_Fpow
 #define nx_cDrpow nx_Dpow
 #define nx_cErpow nx_Epow
 #define nx_cQrpow nx_Qpow
@@ -519,12 +519,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: erf */
 
-#define nx_Serf erf
+#define nx_Ferf erf
 #define nx_Derf erf
 #define nx_Eerf erf
 #define nx_Qerf erf
 
-#define nx_cSrerf nx_Serf
+#define nx_cFrerf nx_Ferf
 #define nx_cDrerf nx_Derf
 #define nx_cErerf nx_Eerf
 #define nx_cQrerf nx_Qerf
@@ -547,12 +547,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: erfc */
 
-#define nx_Serfc erfc
+#define nx_Ferfc erfc
 #define nx_Derfc erfc
 #define nx_Eerfc erfc
 #define nx_Qerfc erfc
 
-#define nx_cSrerfc nx_Serfc
+#define nx_cFrerfc nx_Ferfc
 #define nx_cDrerfc nx_Derfc
 #define nx_cErerfc nx_Eerfc
 #define nx_cQrerfc nx_Qerfc
@@ -575,12 +575,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: tgamma */
 
-#define nx_Stgamma tgamma
+#define nx_Ftgamma tgamma
 #define nx_Dtgamma tgamma
 #define nx_Etgamma tgamma
 #define nx_Qtgamma tgamma
 
-#define nx_cSrtgamma nx_Stgamma
+#define nx_cFrtgamma nx_Ftgamma
 #define nx_cDrtgamma nx_Dtgamma
 #define nx_cErtgamma nx_Etgamma
 #define nx_cQrtgamma nx_Qtgamma
@@ -603,12 +603,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: atan2 */
 
-#define nx_Satan2 atan2
+#define nx_Fatan2 atan2
 #define nx_Datan2 atan2
 #define nx_Eatan2 atan2
 #define nx_Qatan2 atan2
 
-#define nx_cSratan2 nx_Satan2
+#define nx_cFratan2 nx_Fatan2
 #define nx_cDratan2 nx_Datan2
 #define nx_cEratan2 nx_Eatan2
 #define nx_cQratan2 nx_Qatan2
@@ -631,12 +631,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: sin */
 
-#define nx_Ssin sin
+#define nx_Fsin sin
 #define nx_Dsin sin
 #define nx_Esin sin
 #define nx_Qsin sin
 
-#define nx_cSrsin nx_Ssin
+#define nx_cFrsin nx_Fsin
 #define nx_cDrsin nx_Dsin
 #define nx_cErsin nx_Esin
 #define nx_cQrsin nx_Qsin
@@ -659,12 +659,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: cos */
 
-#define nx_Scos cos
+#define nx_Fcos cos
 #define nx_Dcos cos
 #define nx_Ecos cos
 #define nx_Qcos cos
 
-#define nx_cSrcos nx_Scos
+#define nx_cFrcos nx_Fcos
 #define nx_cDrcos nx_Dcos
 #define nx_cErcos nx_Ecos
 #define nx_cQrcos nx_Qcos
@@ -687,12 +687,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: tan */
 
-#define nx_Stan tan
+#define nx_Ftan tan
 #define nx_Dtan tan
 #define nx_Etan tan
 #define nx_Qtan tan
 
-#define nx_cSrtan nx_Stan
+#define nx_cFrtan nx_Ftan
 #define nx_cDrtan nx_Dtan
 #define nx_cErtan nx_Etan
 #define nx_cQrtan nx_Qtan
@@ -715,12 +715,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: asin */
 
-#define nx_Sasin asin
+#define nx_Fasin asin
 #define nx_Dasin asin
 #define nx_Easin asin
 #define nx_Qasin asin
 
-#define nx_cSrasin nx_Sasin
+#define nx_cFrasin nx_Fasin
 #define nx_cDrasin nx_Dasin
 #define nx_cErasin nx_Easin
 #define nx_cQrasin nx_Qasin
@@ -743,12 +743,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: acos */
 
-#define nx_Sacos acos
+#define nx_Facos acos
 #define nx_Dacos acos
 #define nx_Eacos acos
 #define nx_Qacos acos
 
-#define nx_cSracos nx_Sacos
+#define nx_cFracos nx_Facos
 #define nx_cDracos nx_Dacos
 #define nx_cEracos nx_Eacos
 #define nx_cQracos nx_Qacos
@@ -771,12 +771,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: atan */
 
-#define nx_Satan atan
+#define nx_Fatan atan
 #define nx_Datan atan
 #define nx_Eatan atan
 #define nx_Qatan atan
 
-#define nx_cSratan nx_Satan
+#define nx_cFratan nx_Fatan
 #define nx_cDratan nx_Datan
 #define nx_cEratan nx_Eatan
 #define nx_cQratan nx_Qatan
@@ -799,12 +799,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: sinh */
 
-#define nx_Ssinh sinh
+#define nx_Fsinh sinh
 #define nx_Dsinh sinh
 #define nx_Esinh sinh
 #define nx_Qsinh sinh
 
-#define nx_cSrsinh nx_Ssinh
+#define nx_cFrsinh nx_Fsinh
 #define nx_cDrsinh nx_Dsinh
 #define nx_cErsinh nx_Esinh
 #define nx_cQrsinh nx_Qsinh
@@ -827,12 +827,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: cosh */
 
-#define nx_Scosh cosh
+#define nx_Fcosh cosh
 #define nx_Dcosh cosh
 #define nx_Ecosh cosh
 #define nx_Qcosh cosh
 
-#define nx_cSrcosh nx_Scosh
+#define nx_cFrcosh nx_Fcosh
 #define nx_cDrcosh nx_Dcosh
 #define nx_cErcosh nx_Ecosh
 #define nx_cQrcosh nx_Qcosh
@@ -855,12 +855,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: tanh */
 
-#define nx_Stanh tanh
+#define nx_Ftanh tanh
 #define nx_Dtanh tanh
 #define nx_Etanh tanh
 #define nx_Qtanh tanh
 
-#define nx_cSrtanh nx_Stanh
+#define nx_cFrtanh nx_Ftanh
 #define nx_cDrtanh nx_Dtanh
 #define nx_cErtanh nx_Etanh
 #define nx_cQrtanh nx_Qtanh
@@ -883,12 +883,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: asinh */
 
-#define nx_Sasinh asinh
+#define nx_Fasinh asinh
 #define nx_Dasinh asinh
 #define nx_Easinh asinh
 #define nx_Qasinh asinh
 
-#define nx_cSrasinh nx_Sasinh
+#define nx_cFrasinh nx_Fasinh
 #define nx_cDrasinh nx_Dasinh
 #define nx_cErasinh nx_Easinh
 #define nx_cQrasinh nx_Qasinh
@@ -911,12 +911,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: acosh */
 
-#define nx_Sacosh acosh
+#define nx_Facosh acosh
 #define nx_Dacosh acosh
 #define nx_Eacosh acosh
 #define nx_Qacosh acosh
 
-#define nx_cSracosh nx_Sacosh
+#define nx_cFracosh nx_Facosh
 #define nx_cDracosh nx_Dacosh
 #define nx_cEracosh nx_Eacosh
 #define nx_cQracosh nx_Qacosh
@@ -939,12 +939,12 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: atanh */
 
-#define nx_Satanh atanh
+#define nx_Fatanh atanh
 #define nx_Datanh atanh
 #define nx_Eatanh atanh
 #define nx_Qatanh atanh
 
-#define nx_cSratanh nx_Satanh
+#define nx_cFratanh nx_Fatanh
 #define nx_cDratanh nx_Datanh
 #define nx_cEratanh nx_Eatanh
 #define nx_cQratanh nx_Qatanh

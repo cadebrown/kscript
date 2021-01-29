@@ -204,7 +204,7 @@ typedef   int64_t  nx_s64;
  * 
  ***/
 
-typedef        float  nx_S;
+typedef        float  nx_F;
 typedef       double  nx_D;
 typedef  long double  nx_E;
 #if defined(KS_HAVE__Float128)
@@ -218,8 +218,8 @@ typedef  long double  nx_E;
 
 
 /* Value from literal */
-#define nx_Sv_(_val) _val##f
-#define nx_Sv(_val) nx_Sv_(_val)
+#define nx_Fv_(_val) _val##f
+#define nx_Fv(_val) nx_Fv_(_val)
 #define nx_Dv_(_val) _val
 #define nx_Dv(_val) nx_Dv_(_val)
 #define nx_Ev_(_val) _val##l
@@ -232,25 +232,25 @@ typedef  long double  nx_E;
 #define nx_Qv(_val) nx_Qv_(_val)
 
 
-#define nx_Sdtype nxd_S
+#define nx_Fdtype nxd_F
 #define nx_Ddtype nxd_D
 #define nx_Edtype nxd_E
 #define nx_Qdtype nxd_Q
 
 /* '+inf' value */
-#define nx_SINF INFINITY
+#define nx_FINF INFINITY
 #define nx_DINF INFINITY
 #define nx_EINF INFINITY
 #define nx_QINF INFINITY
 
 /* 'nan' value */
-#define nx_SNAN NAN
+#define nx_FNAN NAN
 #define nx_DNAN NAN
 #define nx_ENAN NAN
 #define nx_QNAN NAN
 
 /* Digits of accuracy */
-#define nx_SDIG FLT_DIG
+#define nx_FDIG FLT_DIG
 #define nx_DDIG DBL_DIG
 #define nx_EDIG LDBL_DIG
 #ifdef FLT128_DIG
@@ -260,7 +260,7 @@ typedef  long double  nx_E;
 #endif
 
 /* Difference between 1.0 and next largest number */
-#define nx_SEPS FLT_EPSILON
+#define nx_FEPS FLT_EPSILON
 #define nx_DEPS DBL_EPSILON
 #define nx_EEPS LDBL_EPSILON
 #ifdef FLT128_EPSILON
@@ -270,7 +270,7 @@ typedef  long double  nx_E;
 #endif
 
 /* Minimum positive value */
-#define nx_SMIN FLT_MIN
+#define nx_FMIN FLT_MIN
 #define nx_DMIN DBL_MIN
 #define nx_EMIN LDBL_MIN
 #ifdef FLT128_MIN
@@ -280,7 +280,7 @@ typedef  long double  nx_E;
 #endif
 
 /* Maximum positive finite value */
-#define nx_SMAX FLT_MAX
+#define nx_FMAX FLT_MAX
 #define nx_DMAX DBL_MAX
 #define nx_EMAX LDBL_MAX
 #ifdef FLT128_MAX
@@ -297,49 +297,49 @@ typedef  long double  nx_E;
  ***/
 
 /* Structure definitions */
-typedef struct { nx_S re, im; } nx_cS;
+typedef struct { nx_F re, im; } nx_cF;
 typedef struct { nx_D re, im; } nx_cD;
 typedef struct { nx_E re, im; } nx_cE;
 typedef struct { nx_Q re, im; } nx_cQ;
 
 
 /* Aliases to 'real'/'scalar' type*/
-#define nx_cSr nx_S
+#define nx_cFr nx_F
 #define nx_cDr nx_D
 #define nx_cEr nx_E
 #define nx_cQr nx_Q
 
-#define nx_cSrdtype nx_Sdtype
+#define nx_cFrdtype nx_Fdtype
 #define nx_cDrdtype nx_Ddtype
 #define nx_cErdtype nx_Edtype
 #define nx_cQrdtype nx_Qdtype
 
-#define nx_cSrv nx_Sv
+#define nx_cFrv nx_Fv
 #define nx_cDrv nx_Dv
 #define nx_cErv nx_Ev
 #define nx_cQrv nx_Qv
 
-#define nx_cSrINF nx_SINF
+#define nx_cFrINF nx_FINF
 #define nx_cDrINF nx_DINF
 #define nx_cErINF nx_EINF
 #define nx_cQrINF nx_QINF
 
-#define nx_cSrNAN nx_SNAN
+#define nx_cFrNAN nx_FNAN
 #define nx_cDrNAN nx_DNAN
 #define nx_cErNAN nx_ENAN
 #define nx_cQrNAN nx_QNAN
 
-#define nx_cSrMIN nx_SMIN
+#define nx_cFrMIN nx_FMIN
 #define nx_cDrMIN nx_DMIN
 #define nx_cErMIN nx_EMIN
 #define nx_cQrMIN nx_QMIN
 
-#define nx_cSrMAX nx_SMAX
+#define nx_cFrMAX nx_FMAX
 #define nx_cDrMAX nx_DMAX
 #define nx_cErMAX nx_EMAX
 #define nx_cQrMAX nx_QMAX
 
-#define nx_cSrEPS nx_SEPS
+#define nx_cFrEPS nx_FEPS
 #define nx_cDrEPS nx_DEPS
 #define nx_cErEPS nx_EEPS
 #define nx_cQrEPS nx_QEPS
@@ -1259,12 +1259,12 @@ KS_API_DATA nx_dtype
     nxd_s64,
     nxd_u64,
 
-    nxd_S,
+    nxd_F,
     nxd_D,
     nxd_E,
     nxd_Q,
 
-    nxd_cS,
+    nxd_cF,
     nxd_cD,
     nxd_cE,
     nxd_cQ

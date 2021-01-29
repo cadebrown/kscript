@@ -258,7 +258,7 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
         enum AVPixelFormat pix_fmt = ksav_AV_filterfmt(self->frame->format);
 
         /* Now, specify input and output */
-        nx_dtype idt = NULL, odt = nxd_S;
+        nx_dtype idt = NULL, odt = nxd_F;
 
         /* Formats that are easy to process */
         if (pix_fmt == AV_PIX_FMT_RGBA || pix_fmt == AV_PIX_FMT_RGB24 || pix_fmt == AV_PIX_FMT_RGB0) {
@@ -391,7 +391,7 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
         enum AVSampleFormat smpfmt = self->frame->format;
 
         /* Create data to hold the result */
-        nx_S* tmp_data = ks_zmalloc(sizeof(*tmp_data), channels * nsamp);
+        nx_F* tmp_data = ks_zmalloc(sizeof(*tmp_data), channels * nsamp);
 
         /* The samples to use (depends on the sample format) */
         void** samples = (void**)self->frame->data; 
@@ -416,7 +416,7 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
 
 
         /* Construct result */
-        nx_array res = nx_array_newc(nxt_array, tmp_data, nxd_S, 2, (ks_size_t[]){ nsamp, channels }, (ks_ssize_t[]){ channels * sizeof(*tmp_data), sizeof(*tmp_data) });
+        nx_array res = nx_array_newc(nxt_array, tmp_data, nxd_F, 2, (ks_size_t[]){ nsamp, channels }, (ks_ssize_t[]){ channels * sizeof(*tmp_data), sizeof(*tmp_data) });
         ks_free(tmp_data);
 
         kso_catch_ignore();

@@ -22,6 +22,7 @@ ks_str
 _KS_DO_SPEC(_KSACT)
 #undef _KSACT
 
+    _ksv_empty,
     _ksv_r,
     _ksv_rb,
     _ksv_w,
@@ -74,6 +75,7 @@ _KS_DO_SPEC(_KSACT)
     _CONST(_ksv_io, "io");
     _CONST(_ksv_os, "os");
     _CONST(_ksv_getarg, "getarg");
+    _CONST(_ksv_empty, "");
     _CONST(_ksv_r, "r");
     _CONST(_ksv_rb, "rb");
     _CONST(_ksv_w, "w");

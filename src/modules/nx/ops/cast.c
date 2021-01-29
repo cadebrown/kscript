@@ -91,7 +91,7 @@
 #undef NXK_FILE
 
 
-#define RTYPE_NAME S
+#define RTYPE_NAME F
 #define NXK_DO_I
 #define NXK_DO_F
 #define NXK_DO_C
@@ -128,7 +128,7 @@
 #undef NXK_FILE
 
 
-#define RTYPE_NAME cS
+#define RTYPE_NAME cF
 #define NXK_DO_I
 #define NXK_DO_F
 #define NXK_DO_C
@@ -242,10 +242,10 @@ bool nx_cast(nx_t X, nx_t R) {
         #undef LOOP
     }
 
-    else if (R.dtype == nxd_S) {
+    else if (R.dtype == nxd_F) {
         if (false) {}
         #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
-            return !nx_apply_elem(PASTE3(kern_, S, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+            return !nx_apply_elem(PASTE3(kern_, F, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
         }
         NXT_PASTE_IFC(LOOP)
         #undef LOOP
@@ -275,10 +275,10 @@ bool nx_cast(nx_t X, nx_t R) {
         #undef LOOP
     }
 
-    else if (R.dtype == nxd_cS) {
+    else if (R.dtype == nxd_cF) {
         if (false) {}
         #define LOOP(TYPE, NAME) else if (X.dtype == nxd_##NAME) { \
-            return !nx_apply_elem(PASTE3(kern_, cS, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
+            return !nx_apply_elem(PASTE3(kern_, cF, NAME), 2, (nx_t[]){ X, R }, NULL, NULL); \
         }
         NXT_PASTE_IFC(LOOP)
         #undef LOOP

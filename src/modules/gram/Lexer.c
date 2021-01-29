@@ -205,8 +205,9 @@ static kso I_token(ksgram_Lexer self, bool* is_out) {
 static KS_TFUNC(T, new) {
     ks_type tp;
     kso rules = KSO_NONE;
-    KS_ARGS("tp:* ?rules", &tp, kst_type, &rules);
-    ksgram_Lexer res = ksgram_Lexer_new((kso)ksos_stdin);
+    kso src = (kso)ksos_stdin;
+    KS_ARGS("tp:* rules ?src", &tp, kst_type, &rules, &src);
+    ksgram_Lexer res = ksgram_Lexer_new(src);
 
     if (rules != KSO_NONE) {
         ks_cit it = ks_cit_make(rules);
@@ -273,7 +274,7 @@ static KS_TFUNC(T, repr) {
     ksgram_Lexer self;
     KS_ARGS("self:*", &self, ksgramt_Lexer);
 
-    return (kso)ks_fmt("%T(%R)", self, self->rules);
+    return (kso)ks_fmt("%T(%R, %R)", self, self->rules, self->src);
 }
 
 static KS_TFUNC(T, next) {
@@ -324,7 +325,7 @@ void _ksi_gram_Lexer() {
 
     _ksinit(ksgramt_Lexer, kst_object, T_NAME, sizeof(struct ksgram_Lexer_s), -1, "Lexer", KS_IKV(
 
-        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(self, src=os.stdin)", "")},
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(self, rules, src=os.stdin)", "")},
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
 
         {"__repr",                 ksf_wrap(T_repr_, T_NAME ".__repr(self)", "")},

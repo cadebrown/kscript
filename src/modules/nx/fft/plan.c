@@ -212,8 +212,8 @@ static nxfft_plan make_ND_FFTW3(nx_dtype dtype, int rank, ks_size_t* shape, bool
     nx_dtype idt = nxd_cD;
 
 #ifdef KS_HAVE_fftw3f
-    if (dtype == nxd_cS) {
-        idt = nxd_cS;
+    if (dtype == nxd_cF) {
+        idt = nxd_cF;
     }
 #elif defined(KS_HAVE_fftw3q)
     if (dtype == nxd_cQ) {
@@ -250,7 +250,7 @@ static nxfft_plan make_ND_FFTW3(nx_dtype dtype, int rank, ks_size_t* shape, bool
         NULL
     );
 
-    if (idt == nxd_cS) {
+    if (idt == nxd_cF) {
 #ifdef KS_HAVE_fftw3f
         self->kND_FFTW3.planf = fftwf_plan_many_dft(rank, fsz, 1,
             self->kND_FFTW3.tmp.data, NULL, 1, 0,
@@ -330,7 +330,7 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
     //return make_1D_DENSE(dtype, dims[0], is_inv);
     //return make_1D_BFLY(dtype, dims[0], is_inv);
 #ifdef KS_HAVE_fftw3f
-    if (dtype == nxd_cS) {
+    if (dtype == nxd_cF) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
     }
 #endif
@@ -338,7 +338,7 @@ nxfft_plan nxfft_make(nx_dtype dtype, int rank, ks_size_t* dims, bool is_inv) {
 #ifdef KS_HAVE_fftw3
     if (dtype == nxd_cD) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
-    } else if (dtype == nxd_cS) {
+    } else if (dtype == nxd_cF) {
         return make_ND_FFTW3(dtype, rank, dims, is_inv);
     }
 #endif

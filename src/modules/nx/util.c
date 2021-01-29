@@ -136,8 +136,8 @@ nx_dtype nx_realtype(nx_dtype X) {
     if (X->kind == NX_DTYPE_FLOAT) {
         return X;
     } else if (X->kind == NX_DTYPE_COMPLEX) {
-        if (X == nxd_cS) {
-            return nxd_S;
+        if (X == nxd_cF) {
+            return nxd_F;
         } else if (X == nxd_cD) {
             return nxd_D;
         } else if (X == nxd_cE) {
@@ -154,8 +154,8 @@ nx_dtype nx_realtype(nx_dtype X) {
 
 nx_dtype nx_complextype(nx_dtype X) {
     if (X->kind == NX_DTYPE_FLOAT) {
-        if (X == nxd_S) {
-            return nxd_cS;
+        if (X == nxd_F) {
+            return nxd_cF;
         } else if (X == nxd_D) {
             return nxd_cD;
         } else if (X == nxd_E) {

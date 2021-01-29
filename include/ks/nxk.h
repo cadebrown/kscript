@@ -166,7 +166,7 @@
 #ifdef NXK_DO_F
   #define NXK_F 1
 
-  #define NXK_NAME S
+  #define NXK_NAME F
   #include NXK_FILE
   #undef NXK_NAME
   #define NXK_NAME D
@@ -187,7 +187,7 @@
 #ifdef NXK_DO_C
   #define NXK_C 1
 
-  #define NXK_NAME cS
+  #define NXK_NAME cF
   #include NXK_FILE
   #undef NXK_NAME
   #define NXK_NAME cD

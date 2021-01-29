@@ -475,26 +475,26 @@ ks_module _ksi_nx() {
         {"s64",                    KS_NEWREF(nxd_s64)},
         {"u64",                    KS_NEWREF(nxd_u64)},
 
-        {"S",                      KS_NEWREF(nxd_S)},
+        {"F",                      KS_NEWREF(nxd_F)},
         {"D",                      KS_NEWREF(nxd_D)},
         {"E",                      KS_NEWREF(nxd_E)},
         {"Q",                      KS_NEWREF(nxd_Q)},
 
-        {"cS",                     KS_NEWREF(nxd_cS)},
+        {"cF",                     KS_NEWREF(nxd_cF)},
         {"cD",                     KS_NEWREF(nxd_cD)},
         {"cE",                     KS_NEWREF(nxd_cE)},
         {"cQ",                     KS_NEWREF(nxd_cQ)},
 
         /** Aliases **/
-        {"float",                  KS_NEWREF(nxd_S)},
+        {"float",                  KS_NEWREF(nxd_F)},
         {"double",                 KS_NEWREF(nxd_D)},
         {"quad",                   KS_NEWREF(nxd_Q)},
 
-        {"float32",                KS_NEWREF(nxd_S)},
+        {"float32",                KS_NEWREF(nxd_F)},
         {"float64",                KS_NEWREF(nxd_D)},
         {"float128",               KS_NEWREF(nxd_Q)},
 
-        {"complex32",              KS_NEWREF(nxd_cS)},
+        {"complex32",              KS_NEWREF(nxd_cF)},
         {"complex64",              KS_NEWREF(nxd_cD)},
         {"complex128",             KS_NEWREF(nxd_cQ)},
 

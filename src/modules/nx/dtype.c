@@ -107,12 +107,12 @@ nx_dtype
     nxd_s64,
     nxd_u64,
 
-    nxd_S,
+    nxd_F,
     nxd_D,
     nxd_E,
     nxd_Q,
 
-    nxd_cS,
+    nxd_cF,
     nxd_cD,
     nxd_cE,
     nxd_cQ
@@ -141,12 +141,12 @@ void _ksi_nx_dtype() {
     nxd_s64 = make_int("s64", "s64", sizeof(nx_s64));
     nxd_u64 = make_int("u64", "u64", sizeof(nx_u64));
 
-    nxd_S = make_float("float", "S", sizeof(nx_S));
+    nxd_F = make_float("float", "F", sizeof(nx_F));
     nxd_D = make_float("double", "D", sizeof(nx_D));
     nxd_E = make_float("longdouble", "E", sizeof(nx_E));
     nxd_Q = make_float("quad", "Q", sizeof(nx_Q));
 
-    nxd_cS = make_complex("complexfloat", "cS", sizeof(nx_cS));
+    nxd_cF = make_complex("complexfloat", "cF", sizeof(nx_cF));
     nxd_cD = make_complex("complexdouble", "cD", sizeof(nx_cD));
     nxd_cE = make_complex("complexlongdouble", "cE", sizeof(nx_cE));
     nxd_cQ = make_complex("complexquad", "cQ", sizeof(nx_cQ));
