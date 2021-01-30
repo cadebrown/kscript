@@ -359,11 +359,12 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
         int sz = -1; \
         if (SHOULD_SCI(val)) { \
             sz = TYPE##strfrom(tmp, sizeof(tmp) - 1, GENFMTSTR_SCI(TYPE##DIG), val); \
+            assert(sz < sizeof(tmp) - 1); \
         } else { \
             sz = TYPE##strfrom(tmp, sizeof(tmp) - 1, GENFMTSTR(TYPE##DIG), val); \
+            assert(sz < sizeof(tmp) - 1); \
+            while (sz > 3 && tmp[sz - 1] == '0' && tmp[sz - 2] != '.') sz--; \
         } \
-        assert(sz < sizeof(tmp) - 1); \
-        while (sz > 3 && tmp[sz - 1] == '0' && tmp[sz - 2] != '.') sz--; \
         return ksio_addbuf(bio, sz, tmp); \
     }
     NXT_PASTE_F(LOOP)

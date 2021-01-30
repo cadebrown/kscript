@@ -7,6 +7,31 @@
 #define rNAN NXK_ATTR(rNAN)
 #define rINF NXK_ATTR(rINF)
 
+/* mul(x, y) */
+static inline 
+NXK_TYPE NXK_FUNC(mul)(NXK_TYPE x, NXK_TYPE y) {
+    NXK_TYPE r;
+    r.re = x.re * y.re - x.im * y.im;
+    r.im = x.re * y.im + x.im * y.re;
+    return r;
+}
+
+
+/* div(x, y) */
+static inline 
+NXK_TYPE NXK_FUNC(div)(NXK_TYPE x, NXK_TYPE y) {
+    y.im = -y.im;
+    NXK_ATTR(r) rf = y.re*y.re + y.im*y.im;
+    NXK_TYPE r;
+    r.re = x.re * y.re - x.im * y.im;
+    r.im = x.re * y.im + x.im * y.re;
+
+    r.re /= rf;
+    r.im /= rf;
+
+    return r;
+}
+
 /* pow(x, y) */
 static inline 
 NXK_TYPE NXK_FUNC(pow)(NXK_TYPE x, NXK_TYPE y) {

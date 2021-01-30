@@ -398,6 +398,41 @@ static KS_TFUNC(T, setelem) {
 
 #define T_A2(_name) T_A2v(_name, nx_##_name)
 
+
+/* Arithmetic function taking 1 arguments */
+#define T_A1(_name) static KS_TFUNC(T, _name) { \
+    nx_array self; \
+    KS_ARGS("self:*", &self, nxt_array); \
+    nx_array ar = nx_array_newc(nxt_array, NULL, self->val.dtype, self->val.rank, self->val.shape, NULL); \
+    if (!ar) { \
+        return NULL; \
+    } \
+    if (!nx_##_name(self->val, ar->val)) { \
+        KS_DECREF(ar); \
+        return NULL; \
+    } \
+    return (kso)ar; \
+}
+
+
+/* Arithmetic function taking 1 arguments */
+#define T_A1r2c(_name) static KS_TFUNC(T, _name) { \
+    nx_array self; \
+    KS_ARGS("self:*", &self, nxt_array); \
+    nx_dtype dtype = nx_realtype(self->val.dtype); \
+    if (!dtype) return NULL; \
+    nx_array ar = nx_array_newc(nxt_array, NULL, dtype, self->val.rank, self->val.shape, NULL); \
+    if (!ar) { \
+        return NULL; \
+    } \
+    if (!nx_##_name(self->val, ar->val)) { \
+        KS_DECREF(ar); \
+        return NULL; \
+    } \
+    return (kso)ar; \
+}
+
+
 T_A2(add)
 T_A2(sub)
 T_A2(mul)
@@ -407,6 +442,10 @@ T_A2(mod)
 T_A2(pow)
 T_A2v(matmul, nxla_matmul)
 
+
+T_A1(neg)
+T_A1(conj)
+T_A1r2c(abs)
 
 /* Export */
 
@@ -427,6 +466,11 @@ void _ksi_nx_array() {
 
         {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *keys)", "")},
         {"__setelem",              ksf_wrap(T_setelem_, T_NAME ".__setelem(self, *keys, val)", "")},
+
+        {"__abs",                  ksf_wrap(T_abs_, T_NAME ".__abs(self)", "")},
+        {"__neg",                  ksf_wrap(T_abs_, T_NAME ".__neg(self)", "")},
+        {"__sqig",                 ksf_wrap(T_conj_, T_NAME ".__sqig(self)", "")},
+
 
         {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
         {"__sub",                  ksf_wrap(T_sub_, T_NAME ".__sub(L, R)", "")},

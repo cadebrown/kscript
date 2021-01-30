@@ -34,19 +34,36 @@ static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape
     }
 
     /* Tolerance for degenerate matrices */
+#if NXK_C
+    NXK_ATTR(r) tol = 0;
+#else
     NXK_TYPE tol = 0;
+#endif
 
     for (j = 0; j < N; ++j) {
         /* Find largest argument on this column */
         ks_cint maxi = j;
-        NXK_TYPE maxa = 0;
+        #if NXK_C
+            NXK_ATTR(r) maxa = 0;
+        #else
+            NXK_TYPE maxa = 0;
+        #endif
         for (i = j; i < N; ++i) {
+        #if NXK_C
+            NXK_TYPE tm = NXK_GET_2D(L, P_(i), j);
+            NXK_ATTR(r) tma = tm.re*tm.re + tm.im*tm.im;
+            if (tma > maxa) {
+                maxa = tma;
+                maxi = i;
+            }
+        #else
             NXK_TYPE tm = NXK_GET_2D(L, P_(i), j);
             if (tm < 0) tm = -tm;
             if (tm > maxa) {
                 maxa = tm;
                 maxi = i;
             }
+        #endif
         }
         if (maxa < tol) {
             /* Degenerate matrix */
@@ -60,9 +77,22 @@ static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape
         ks_cint jj = P_(j);
         for (i = j + 1; i < N; ++i) {
             ks_cint ii = P_(i);
+        #if NXK_C
+            NXK_TYPE g = NXK_GET_2D(L, ii, j), h = NXK_GET_2D(L, jj, j);
+            NXK_GET_2D(L, ii, j) = NXK_FUNC(div)(g, h);
+        #else
             NXK_GET_2D(L, ii, j) /= NXK_GET_2D(L, jj, j);
+        #endif
+
             for (k = j + 1; k < N; ++k) {
+            #if NXK_C
+                NXK_TYPE a = NXK_GET_2D(L, ii, j), b = NXK_GET_2D(L, jj, k);
+                NXK_TYPE ab = NXK_FUNC(mul)(a, b);
+                NXK_GET_2D(L, ii, k).re -= ab.re;
+                NXK_GET_2D(L, ii, k).im -= ab.im;
+            #else
                 NXK_GET_2D(L, ii, k) -= NXK_GET_2D(L, ii, j) * NXK_GET_2D(L, jj, k);
+            #endif
             }
         }
     }
@@ -80,11 +110,26 @@ static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape
     for (i = 0; i < N; ++i) {
         for (j = 0; j < i; ++j) {
             NXK_GET_2D(L, i, j) = NXK_GET_2D(U, i, j);
+        #if NXK_C
+            NXK_GET_2D(U, i, j).re = 0;
+            NXK_GET_2D(U, i, j).im = 0;
+        #else
             NXK_GET_2D(U, i, j) = 0;
+        #endif
         }
+    #if NXK_C
+        NXK_GET_2D(L, i, i).re = 1;
+        NXK_GET_2D(L, i, i).im = 0;
+    #else
         NXK_GET_2D(L, i, i) = 1;
+    #endif
         for (j = i + 1; j < N; ++j) {
+        #if NXK_C
+            NXK_GET_2D(L, i, j).re = 0;
+            NXK_GET_2D(L, i, j).im = 0;
+        #else
             NXK_GET_2D(L, i, j) = 0;
+        #endif
         }
     }
 

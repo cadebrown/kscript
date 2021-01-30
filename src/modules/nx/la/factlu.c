@@ -24,7 +24,7 @@ struct extra_data {
 
 #define NXK_DO_I
 #define NXK_DO_F
-//#define NXK_DO_C
+#define NXK_DO_C
 #define NXK_FILE "factlu.kern"
 #define K_NAME "factlu"
 #include <ks/nxk.h>
@@ -48,7 +48,7 @@ bool nxla_factlu(nx_t X, nx_t P, nx_t L, nx_t U) {
     #define LOOP(TYPE, NAME) else if (L.dtype == nxd_##NAME && U.dtype == nxd_##NAME) { \
         return !nx_apply_Nd(KERN_FUNC(NAME), 3, (nx_t[]){ P, L, U }, 2, NULL, NULL); \
     }
-    NXT_PASTE_IF(LOOP)
+    NXT_PASTE_IFC(LOOP)
     #undef LOOP
 
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R, %R", K_NAME, X.dtype, P.dtype, L.dtype, U.dtype);
