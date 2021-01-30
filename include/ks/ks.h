@@ -645,6 +645,10 @@ KS_API bool ks_cfloat_from_str(const char* str, int sz, ks_cfloat* out);
  */
 KS_API int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int base);
 
+/* strfromd-like wrapper
+ */
+KS_API int ks_strfromd(char* str, size_t n, char* fmt, ks_cfloat val);
+
 /* Return whether 'x' is a regular floating point number (not inf, -inf, or nan)
  */
 KS_API bool ks_cfloat_isreg(ks_cfloat x);

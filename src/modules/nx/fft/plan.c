@@ -127,7 +127,7 @@ static nxfft_plan make_1D_BLUE(nx_dtype dtype, ks_size_t N, bool is_inv) {
 
 
 static nxfft_plan make_1D_BFLY(nx_dtype dtype, ks_size_t N, bool is_inv) {
-    if (N & (N - 1) != 0) {
+    if ((N & (N - 1)) != 0) {
         KS_THROW(kst_SizeError, "Invalid BFLY FFT size %u: must be power of 2", N);
         return NULL;
     }

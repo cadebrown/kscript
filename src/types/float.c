@@ -343,6 +343,28 @@ int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int b
     return i;
 }
 
+int ks_strfromd(char* str, size_t n, char* fmt, ks_cfloat val) {
+    int i = 0;
+    assert(fmt[i] == '%');
+    i++;
+
+    int prec = 6;
+    bool is_sci = false;
+
+    int sl = strlen(fmt);
+    if (fmt[i] == '.') {
+        i++;
+        prec = 0;
+        while (i < sl && ('0' <= fmt[i] && fmt[i] <= '9')) {
+            prec = prec * 10 + (fmt[i] - '0');
+            i++;
+        }
+    }
+
+    return ks_cfloat_to_str(str, n, val, is_sci, prec, 10);
+}
+
+
 bool ks_cfloat_isreg(ks_cfloat x) {
     return x != KS_CFLOAT_INF && x != -KS_CFLOAT_INF && x == x;
 }

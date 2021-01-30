@@ -43,6 +43,10 @@ static inline ks_size_t szprod(int rank, ks_size_t* shape) {
 
 /* Function: strfrom */
 
+#ifndef KS_HAVE_strfromd
+  #define strfromd ks_strfromd
+#endif
+
 #define nx_Fstrfrom strfromd
 #define nx_Dstrfrom strfromd
 #define nx_Estrfrom strfromd
