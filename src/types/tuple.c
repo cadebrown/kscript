@@ -9,7 +9,6 @@
 #define TI_NAME T_NAME ".__iter"
 
 
-
 /* C-API */
 
 ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems) {

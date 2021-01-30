@@ -84,6 +84,12 @@ ks_str kstime_asc(kstime_DateTime ts) {
 
 ks_str kstime_format(const char* fmt, kstime_DateTime ts) {
     /* TODO: implement this from scratch */
+    if (!ts) {
+        ts = kstime_new_utc(kstime_time());
+        if (!ts) {
+            return NULL;
+        }
+    }
 
 #ifdef KS_HAVE_strftime
     /* Try with a fixed size quick buffer */

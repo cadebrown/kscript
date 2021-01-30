@@ -201,6 +201,7 @@ KS_API kstime_DateTime kstime_new_tz(ks_cfloat tse, kso tz);
 
 /** Specific format strings **/
 #define KSTIME_FMT_ISO8601 "%FT%T%z"
+#define KSTIME_FMT_LOCALE "%c"
 
 /* Return a formatted time string, using similar semantics to 'strftime()'
  * Format Codes:

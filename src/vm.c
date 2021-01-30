@@ -376,7 +376,6 @@ kso _ks_exec(ks_code bc, ks_type _in) {
         VMD_OP_END
 
         VMD_OP(KSB_CALLV)
-        ks_printf("STK: %R\n", stk);
             lis = (ks_list)ks_list_pop(stk);
             assert(lis->type == kst_list);
             V = kso_call(lis->elems[0], lis->len-1, lis->elems+1);

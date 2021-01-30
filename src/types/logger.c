@@ -137,7 +137,7 @@ ks_logger ks_logger_gett(ks_type tp, ks_str name) {
         KS_INCREF(ksos_stderr);
         res->output = (kso)ksos_stderr;
 
-        res->level = KS_LOGGER_WARN;
+        res->level = ksg_logger_level_default;
 
         ks_dict_set(all_loggers, (kso)key, (kso)res);
         KS_DECREF(key);
@@ -323,6 +323,7 @@ static KS_TFUNC(T, fatal) {
 static struct ks_type_s tp;
 ks_type kst_logger = &tp;
 
+int ksg_logger_level_default = KS_LOGGER_WARN;
 
 void _ksi_logger() {
     E_level = ks_enum_make(T_NAME ".levels", KS_EIKV(

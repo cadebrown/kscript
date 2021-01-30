@@ -77,7 +77,8 @@
 /* Stringified version of the ext symbol */
 #define _KS_CEXTINIT_SYMBOL_STR "_ks_cextinit_this"
 
-
+/* Control+LineFeed */
+#define KS_CRLF "\r\n"
 
 
 #endif /* KS_CONST_H__ */

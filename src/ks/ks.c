@@ -130,6 +130,7 @@ static KS_FUNC(verbose) {
     ks_logger lg = ks_logger_get_c("ks");
     lg->level -= 10;
     KS_DECREF(lg);
+    ksg_logger_level_default -= 10;
 
     return KSO_NONE;
 }

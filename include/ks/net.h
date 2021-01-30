@@ -196,11 +196,130 @@ KS_API ks_str ksnet_SocketIO_name(ksnet_SocketIO self);
  */
 KS_API bool ksnet_Socket_port(ksnet_SocketIO self, int* out);
 
-/** Functions **/
 
 /* Types */
 KS_API_DATA ks_type
     ksnett_SocketIO
 ;
+
+
+
+/** Submodule: net.http **/
+
+/* net.http.Request - Represents a request sent to an HTTP(s) server
+ *
+ */
+typedef struct ksnet_http_req_s {
+    KSO_BASE
+
+    /* The HTTP method being requested
+     *
+     * Should be one of:
+     *  - 'GET'
+     *  - 'HEAD'
+     *  - 'POST'
+     *  - 'PUT'
+     *  - 'DELETE'
+     *  - 'CONNECT'
+     *  - 'OPTIONS'
+     *  - 'TRACE'
+     */
+    ks_str method;
+
+    /* Uniform Resource Identifier (i.e. target being requested)
+     */
+    ks_str uri;
+
+    /* Protocol version
+     * Almost always 'HTTP/1.1' 
+     */
+    ks_str httpv;
+
+    /* Key-value headers
+     * SEE: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
+     */
+    ks_dict headers;
+
+    /* Body sent along with the request */
+    ks_bytes body;
+
+}* ksnet_http_req;
+
+/* 'net.http.Response' - represents an HTTP response sent back from a server
+ *
+ * SEE: https://www.tutorialspoint.com/http/http_responses.htm
+ */
+typedef struct ksnet_http_resp_s {
+    KSO_BASE
+
+    /* Version of HTTP protocol
+     * Almost always 'HTTP/1.1'
+     */
+    ks_str httpv;
+
+    /* Status code
+     * SEE: https://developer.mozilla.org/en-US/docs/Web/HTTP/Status
+     */
+    int status_code;
+
+    /* Key-value headers 
+     * SEE: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers
+     */
+    ks_dict headers;
+
+    /* Raw bytes being delivered */
+    ks_bytes body;
+
+}* ksnet_http_resp;
+
+
+/* 'net.http.Server' - represents an HTTP server
+ *
+ * This is just the base class that any specific application should inherit from, which
+ *   allows any number of attributes to be stored, and requires a socket (in attribute '.sock')
+ *   to actually sent and receive messages on
+ */
+typedef struct ksnet_http_server_s {
+    KSO_BASE
+
+    /* __attr__ */
+    ks_dict attr;
+    
+}* ksnet_http_server;
+
+
+/* Functions */
+
+/* Create a new 'net.http.Request'
+ */
+KS_API ksnet_http_req ksnet_http_req_new(ks_type tp, ks_str method, ks_str uri, ks_str httpv, ks_dict headers, ks_bytes body);
+
+/* Create a new 'net.http.Response'
+ */
+KS_API ksnet_http_resp ksnet_http_resp_new(ks_type tp, ks_str httpv, int status_code, ks_dict headers, ks_bytes body);
+
+/* Create a new HTTP server from a given address
+ */
+KS_API ksnet_http_server ksnet_http_server_new(ks_type tp, kso addr);
+
+/* Serve forever on the current thread
+ */
+KS_API bool ksnet_http_server_serve_forever(ksnet_http_server self);
+
+/* Attempt to parse a request and return it from a socket
+ */
+KS_API ksnet_http_req ksnet_http_get_request(ksio_BaseIO sock);
+
+
+
+/* Types */
+KS_API_DATA ks_type
+    ksnet_httpt_req,
+    ksnet_httpt_server,
+    ksnet_httpt_resp
+;
+
+
+
 
 #endif /* KSNET_H__ */

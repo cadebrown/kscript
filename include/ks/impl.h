@@ -39,6 +39,7 @@ void _ksi_slice();
 
 void _ksi_list();
 void _ksi_tuple();
+void _ksi_attrtuple();
 void _ksi_set();
 void _ksi_dict();
 void _ksi_names();
@@ -85,6 +86,9 @@ void _ksi_time_DateTime();
 ks_module _ksi_net();
 void _ksi_net_SocketIO();
 ks_module _ksi_net_http();
+void _ksi_net_http_req();
+void _ksi_net_http_resp();
+void _ksi_net_http_server();
 
 ks_module _ksi_ffi();
 void _ksi_ffi_dll();
@@ -138,6 +142,8 @@ KS_API_DATA ks_str
     _ksv_os,
     _ksv_getarg,
 
+    _ksv_attrtuplemap,
+    _ksv_attrtuplemaplist,
     _ksv_stdin,
     _ksv_stdout,
     _ksv_stderr,

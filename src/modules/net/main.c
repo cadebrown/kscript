@@ -51,7 +51,7 @@ ks_module _ksi_net() {
 
         /* Submodules */
 
-       // {"http",                   (kso)_ksm_net_http()},
+        {"http",                   (kso)_ksi_net_http()},
 
 
         /* Constants */

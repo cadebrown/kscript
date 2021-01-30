@@ -300,7 +300,7 @@ KS_API_DATA ks_type
     kst_slice,
     kst_list,
     kst_tuple,
-    kst_tuple_named,
+    kst_attrtuple,
     kst_set,
     kst_dict,
     kst_names,
@@ -387,6 +387,9 @@ KS_API_DATA ks_func
     ksf_iter,
     ksf_next
 ;
+
+KS_API_DATA int ksg_logger_level_default;
+
 
 
 /** C-style helpers **/
@@ -1074,6 +1077,9 @@ KS_API void ks_list_popu(ks_list self);
  */
 KS_API bool ks_list_del(ks_list self, ks_cint idx);
 
+/* Create a new 'attrtuple' subtype
+ */
+KS_API ks_type ks_attrtuple_newtype(ks_str name, int nmem, kso* mem);
 
 /* Create a new 'tuple' from elements
  * newn absorbs references

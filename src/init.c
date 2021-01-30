@@ -10,6 +10,8 @@ ks_str
     _ksv_io,
     _ksv_os,
     _ksv_getarg,
+    _ksv_attrtuplemap,
+    _ksv_attrtuplemaplist,
     _ksv_stdin,
     _ksv_stdout,
     _ksv_stderr,
@@ -80,6 +82,8 @@ _KS_DO_SPEC(_KSACT)
     _CONST(_ksv_rb, "rb");
     _CONST(_ksv_w, "w");
     _CONST(_ksv_wb, "wb");
+    _CONST(_ksv_attrtuplemap, "attrtuplemap");
+    _CONST(_ksv_attrtuplemaplist, "attrtuplemaplist");
     _CONST(_ksv_stdin, "<stdin>");
     _CONST(_ksv_stdout, "<stdout>");
     _CONST(_ksv_stderr, "<stderr>");
@@ -116,6 +120,7 @@ _KS_DO_SPEC(_KSACT)
     _ksi_dict();
     _ksi_list();
     _ksi_tuple();
+    _ksi_attrtuple();
     _ksi_module();
 
     _ksi_func();
@@ -186,6 +191,7 @@ _KS_DO_SPEC(_KSACT)
         {"range",                  (kso)kst_range},
         {"list",                   (kso)kst_list},
         {"tuple",                  (kso)kst_tuple},
+        {"attrtuple",              (kso)kst_attrtuple},
         {"set",                    (kso)kst_set},
         {"dict",                   (kso)kst_dict},
         //{"graph",                  (kso)ksutilt_Graph},
