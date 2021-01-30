@@ -12,10 +12,9 @@
 
 static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape, void* extra) {
     struct extra_data* ed = extra;
-
-    assert(rank == 2);
     assert(nargs == 3);
     nx_t X = args[0], Y = args[1], R = args[2];
+    assert(X.dtype == Y.dtype && Y.dtype == R.dtype);
 
     ks_uint 
         pX = (ks_uint)X.data,
@@ -33,6 +32,7 @@ static int KERN_FUNC(NXK_NAME)(int nargs, nx_t* args, int rank, ks_size_t* shape
     int K = ed->K;
 
     /* TODO: Check for BLAS? Or inspect strides? */
+
 
     ks_cint i, j, k;
     for (i = 0; i < M; ++i) {

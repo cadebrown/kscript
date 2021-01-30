@@ -756,14 +756,18 @@ KS_API bool nx_onehot(nx_t X, nx_t R);
  */
 KS_API bool nx_sum(nx_t X, nx_t R, int naxes, int* axes);
 
-/* R[:] = cumsum(X)
- */
-KS_API bool nx_cumsum(nx_t X, nx_t R, int axis);
-
 /* R[:] = prod(X)
  * 
  */
 KS_API bool nx_prod(nx_t X, nx_t R, int naxes, int* axes);
+
+/* R[:] = cumsum(X)
+ */
+KS_API bool nx_cumsum(nx_t X, nx_t R, int axis);
+
+/* R[:] = cumprod(X)
+ */
+KS_API bool nx_cumprod(nx_t X, nx_t R, int axis);
 
 /* R[:] = min(X)
  *
@@ -1002,7 +1006,7 @@ KS_API bool nxla_matpowi(nx_t X, int n, nx_t R);
  * L's shape should be [..., N, N]
  * U's shape should be [..., N, N]
  */
-KS_API bool nxla_lu(nx_t X, nx_t P, nx_t L, nx_t U);
+KS_API bool nxla_factlu(nx_t X, nx_t P, nx_t L, nx_t U);
 
 
 /** Submodule: 'nx.fft' (Fast Fourier Transform) **/

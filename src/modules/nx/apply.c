@@ -314,6 +314,7 @@ int nx_apply_Nde(nxf_Nd func, int nargs, nx_t* args, int M, nx_dtype dtype, int 
                 kargsS[i].shape[j] = kargs[i].shape[j + kargs[i].rank - M];
             }
 
+
             /* Allocate data */
             void* dptr = ks_malloc(szprod(srank, sshape) * dtype->size);
             if (!dptr) {
@@ -325,6 +326,7 @@ int nx_apply_Nde(nxf_Nd func, int nargs, nx_t* args, int M, nx_dtype dtype, int 
                 KS_THROW(kst_InternalError, "Malloc failed");
                 return -1;
             }
+
             kargsS[i] = nx_make(dptr, dtype, srank, sshape, NULL);
 
         } else {

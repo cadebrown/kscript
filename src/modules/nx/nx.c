@@ -258,9 +258,10 @@ nx_t nx_getevo(nx_t self, int nargs, kso* args) {
                 res.rank = -1;
                 return res;
             }
+            ks_cint dim = self.shape[p];
 
             if (v < 0) {
-                v = (v % self.shape[p] + self.shape[p]) % self.shape[p];
+                v = ((v % dim) + dim) % dim;
             } else if (v >= self.shape[p]) {
                 KS_THROW(kst_IndexError, "Index #%i out of range (value: %i)", i, (int)v);
                 res.rank = -1;
@@ -338,6 +339,8 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
         return ksio_addbuf(bio, 1, *(nx_bl*)ptr ? "1" : "0");
     }
 
+    #define SHOULD_SCI(_val) (_val != 0 && ((_val > 1e9 || _val < -1e9) || (_val < 1e-9 && _val > -1e-9)))
+
     /* Integers */
     #define LOOP(TYPE, NAME) else if (dtype == nxd_##NAME) { \
         return ksio_add(bio, "%l", (ks_cint)*(TYPE*)ptr); \
@@ -346,10 +349,19 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
     #undef LOOP
 
     /* Floats */
+    #define _GENFMTSTR_SCI(_dig) "%." #_dig "e"
     #define _GENFMTSTR(_dig) "%." #_dig "f"
+    #define GENFMTSTR_SCI(_dig) _GENFMTSTR_SCI(_dig)
     #define GENFMTSTR(_dig) _GENFMTSTR(_dig)
+
     #define LOOP(TYPE, NAME) if (dtype == nxd_##NAME) { \
-        int sz = TYPE##strfrom(tmp, sizeof(tmp) - 1, GENFMTSTR(TYPE##DIG), *(TYPE*)ptr); \
+        TYPE val = *(TYPE*)ptr; \
+        int sz = -1; \
+        if (SHOULD_SCI(val)) { \
+            sz = TYPE##strfrom(tmp, sizeof(tmp) - 1, GENFMTSTR_SCI(TYPE##DIG), val); \
+        } else { \
+            sz = TYPE##strfrom(tmp, sizeof(tmp) - 1, GENFMTSTR(TYPE##DIG), val); \
+        } \
         assert(sz < sizeof(tmp) - 1); \
         while (sz > 3 && tmp[sz - 1] == '0' && tmp[sz - 2] != '.') sz--; \
         return ksio_addbuf(bio, sz, tmp); \

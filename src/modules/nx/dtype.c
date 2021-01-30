@@ -131,25 +131,25 @@ void _ksi_nx_dtype() {
 
     ));
     
-    nxd_bl = make_int("bool", "bool", sizeof(nx_bl));
-    nxd_s8 = make_int("s8", "s8", sizeof(nx_s8));
-    nxd_u8 = make_int("u8", "u8", sizeof(nx_u8));
-    nxd_s16 = make_int("s16", "s16", sizeof(nx_s16));
-    nxd_u16 = make_int("u16", "u16", sizeof(nx_u16));
-    nxd_s32 = make_int("s32", "s32", sizeof(nx_s32));
-    nxd_u32 = make_int("u32", "u32", sizeof(nx_u32));
-    nxd_s64 = make_int("s64", "s64", sizeof(nx_s64));
-    nxd_u64 = make_int("u64", "u64", sizeof(nx_u64));
+    nxd_bl = make_int("nx.bool", "bool", sizeof(nx_bl));
+    nxd_s8 = make_int("nx.s8", "s8", sizeof(nx_s8));
+    nxd_u8 = make_int("nx.u8", "u8", sizeof(nx_u8));
+    nxd_s16 = make_int("nx.s16", "s16", sizeof(nx_s16));
+    nxd_u16 = make_int("nx.u16", "u16", sizeof(nx_u16));
+    nxd_s32 = make_int("nx.s32", "s32", sizeof(nx_s32));
+    nxd_u32 = make_int("nx.u32", "u32", sizeof(nx_u32));
+    nxd_s64 = make_int("nx.s64", "s64", sizeof(nx_s64));
+    nxd_u64 = make_int("nx.u64", "u64", sizeof(nx_u64));
 
-    nxd_F = make_float("float", "F", sizeof(nx_F));
-    nxd_D = make_float("double", "D", sizeof(nx_D));
-    nxd_E = make_float("longdouble", "E", sizeof(nx_E));
-    nxd_Q = make_float("quad", "Q", sizeof(nx_Q));
+    nxd_F = make_float("nx.float", "F", sizeof(nx_F));
+    nxd_D = make_float("nx.double", "D", sizeof(nx_D));
+    nxd_E = make_float("nx.longdouble", "E", sizeof(nx_E));
+    nxd_Q = make_float("nx.quad", "Q", sizeof(nx_Q));
 
-    nxd_cF = make_complex("complexfloat", "cF", sizeof(nx_cF));
-    nxd_cD = make_complex("complexdouble", "cD", sizeof(nx_cD));
-    nxd_cE = make_complex("complexlongdouble", "cE", sizeof(nx_cE));
-    nxd_cQ = make_complex("complexquad", "cQ", sizeof(nx_cQ));
+    nxd_cF = make_complex("nx.complexfloat", "cF", sizeof(nx_cF));
+    nxd_cD = make_complex("nx.complexdouble", "cD", sizeof(nx_cD));
+    nxd_cE = make_complex("nx.complexlongdouble", "cE", sizeof(nx_cE));
+    nxd_cQ = make_complex("nx.complexquad", "cQ", sizeof(nx_cQ));
 
     #define LOOP(TYPE, NAME) do { \
         nx_array arv = nx_array_newc(nxt_array, (TYPE[]){ TYPE##MIN }, nxd_##NAME, 0, NULL, NULL); \
@@ -161,6 +161,9 @@ void _ksi_nx_dtype() {
         arv = nx_array_newc(nxt_array, (TYPE[]){ TYPE##EPS }, nxd_##NAME, 0, NULL, NULL); \
         ks_dict_set_c(nxd_##NAME->attr, "EPS", (kso)arv); \
         KS_DECREF(arv); \
+        ks_int arvi = ks_int_new(TYPE##DIG); \
+        ks_dict_set_c(nxd_##NAME->attr, "DIG", (kso)arvi); \
+        KS_DECREF(arvi); \
     } while (0);
 
     NXT_PASTE_F(LOOP)

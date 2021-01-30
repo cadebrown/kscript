@@ -40,36 +40,67 @@ bool nxla_matmul(nx_t X, nx_t Y, nx_t R) {
         return false;
     }
 
+    nx_t cX, cY;
+    void *fX = NULL, *fY = NULL;
+    if (X.dtype != R.dtype) {
+        fX = ks_malloc(szprod(X.rank, X.shape) * R.dtype->size);
+        cX = nx_make(fX, R.dtype, X.rank, X.shape, NULL);
+        if (!nx_cast(X, cX)) {
+            ks_free(fX);
+            ks_free(fY);
+            return false;
+        }
+    } else {
+        cX = X;
+    }
+    if (Y.dtype != R.dtype) {
+        fY = ks_malloc(szprod(Y.rank, Y.shape) * R.dtype->size);
+        cY = nx_make(fY, R.dtype, Y.rank, Y.shape, NULL);
+        if (!nx_cast(Y, cY)) {
+            ks_free(fX);
+            ks_free(fY);
+            return false;
+        }
+    } else {
+        cY = Y;
+    }
+
     /* Since matmul is a weird operation, we have to store strides and sizes within 'extra_data'
      *
      */
     struct extra_data ed;
 
-    ed.M = X.shape[X.rank - 2];
-    ed.N = X.shape[X.rank - 1];
-    ed.K = Y.shape[Y.rank - 1];
+    ed.M = cX.shape[X.rank - 2];
+    ed.N = cX.shape[X.rank - 1];
+    ed.K = cY.shape[Y.rank - 1];
 
-    ed.srX = X.strides[X.rank - 2];
-    ed.scX = X.strides[X.rank - 1];
-    ed.srY = Y.strides[Y.rank - 2];
-    ed.scY = Y.strides[Y.rank - 1];
+    ed.srX = cX.strides[X.rank - 2];
+    ed.scX = cX.strides[X.rank - 1];
+    ed.srY = cY.strides[Y.rank - 2];
+    ed.scY = cY.strides[Y.rank - 1];
     ed.srR = R.strides[R.rank - 2];
     ed.scR = R.strides[R.rank - 1];
 
+
     /* Lower to the root of each matrix */
     nx_t 
-        lX = nx_make(X.data, X.dtype, X.rank - 2, X.shape, X.strides), 
-        lY = nx_make(Y.data, Y.dtype, Y.rank - 2, Y.shape, Y.strides),
+        lX = nx_make(cX.data, cX.dtype, cX.rank - 2, cX.shape, cX.strides), 
+        lY = nx_make(cY.data, cY.dtype, cY.rank - 2, cY.shape, cY.strides),
         lR = nx_make(R.data, R.dtype, R.rank - 2, R.shape, R.strides)
     ;
     
     if (false) {}
     #define LOOP(TYPE, NAME) else if (R.dtype == nxd_##NAME) { \
-        return !nx_apply_Nd(KERN_FUNC(NAME), 3, (nx_t[]){ lX, lY, lR }, 2, R.dtype, &ed); \
+        bool res = !nx_apply_Nd(KERN_FUNC(NAME), 3, (nx_t[]){ lX, lY, lR }, 0, NULL, &ed); \
+        ks_free(fX); \
+        ks_free(fY); \
+        return res; \
     }
     NXT_PASTE_IFC(LOOP)
     #undef LOOP
 
+    ks_free(fX);
+    ks_free(fY);
     KS_THROW(kst_TypeError, "Unsupported types for kernel '%s': %R, %R, %R", K_NAME, X.dtype, Y.dtype, R.dtype);
     return false;
 }

@@ -191,12 +191,116 @@
 }
 
 
+
+/* Matrix LU factorization */
+#define T_A2_lu(_name) static KS_TFUNC(M, _name) { \
+    kso ax, ap = KSO_NONE, al = KSO_NONE, au = KSO_NONE; \
+    KS_ARGS("x ?p ?l ?u", &ax, &ap, &al, &au); \
+    nx_t x, p, l, u; \
+    kso xr, pr, lr, ur; \
+    if (!nx_get(ax, NULL, &x, &xr)) { \
+        return NULL; \
+    } \
+    if (x.rank < 2) { \
+        KS_THROW(kst_SizeError, "Expected matrix to have rank >= 1"); \
+        KS_NDECREF(xr); \
+        return NULL; \
+    } \
+    int i; \
+    if (ap == KSO_NONE) { \
+        nx_dtype dtype = nxd_idx; \
+        int rank = x.rank - 1; \
+        ks_size_t shape[NX_MAXRANK]; \
+        memcpy(shape, x.shape, rank * sizeof(*shape)); \
+        ap = (kso)nx_array_newc(nxt_array, NULL, dtype, rank, shape, NULL); \
+        if (!ap) { \
+            KS_NDECREF(xr); \
+            return NULL; \
+        } \
+    } else { \
+        KS_INCREF(ap); \
+    } \
+    if (al == KSO_NONE) { \
+        nx_dtype dtype = x.dtype; \
+        int rank = x.rank; \
+        ks_size_t shape[NX_MAXRANK]; \
+        memcpy(shape, x.shape, rank * sizeof(*shape)); \
+        al = (kso)nx_array_newc(nxt_array, NULL, dtype, rank, shape, NULL); \
+        if (!al) { \
+            KS_NDECREF(xr); \
+            KS_DECREF(ap); \
+            return NULL; \
+        } \
+    } else { \
+        KS_INCREF(al); \
+    } \
+    if (au == KSO_NONE) { \
+        nx_dtype dtype = x.dtype; \
+        int rank = x.rank; \
+        ks_size_t shape[NX_MAXRANK]; \
+        memcpy(shape, x.shape, rank * sizeof(*shape)); \
+        au = (kso)nx_array_newc(nxt_array, NULL, dtype, rank, shape, NULL); \
+        if (!au) { \
+            KS_NDECREF(xr); \
+            KS_DECREF(ap); \
+            KS_DECREF(au); \
+            return NULL; \
+        } \
+    } else { \
+        KS_INCREF(au); \
+    } \
+    if (!nx_get(ap, NULL, &p, &pr)) { \
+        KS_NDECREF(xr); \
+        KS_DECREF(ap); \
+        KS_DECREF(al); \
+        KS_DECREF(au); \
+        return NULL; \
+    } \
+    if (!nx_get(al, NULL, &l, &lr)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(pr); \
+        KS_DECREF(ap); \
+        KS_DECREF(al); \
+        KS_DECREF(au); \
+        return NULL; \
+    } \
+    if (!nx_get(au, NULL, &u, &ur)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(pr); \
+        KS_NDECREF(lr); \
+        KS_DECREF(ap); \
+        KS_DECREF(al); \
+        KS_DECREF(au); \
+        return NULL; \
+    } \
+    if (!nxla_##_name(x, p, l, u)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(pr); \
+        KS_NDECREF(lr); \
+        KS_NDECREF(ur); \
+        KS_DECREF(ap); \
+        KS_DECREF(al); \
+        KS_DECREF(au); \
+        return NULL; \
+    } \
+    KS_NDECREF(xr); \
+    KS_NDECREF(pr); \
+    KS_NDECREF(lr); \
+    KS_NDECREF(ur); \
+    return (kso)ks_tuple_newn(3, (kso[]) { \
+        ap, al, au \
+    }); \
+}
+
+
+
 T_A1_n(norm_fro)
 
 T_A1_v2m(diag)
 T_A1_v2m(perm)
 
 T_A2_mm(matmul)
+T_A2_lu(factlu)
 
 /* Export */
 
@@ -208,17 +312,10 @@ ks_module _ksi_nx_la() {
         {"norm",                   ksf_wrap(M_norm_fro_, M_NAME ".norm_fro(x, r=none)", "Calculates the Frobenius norm of the matrix")},
 
         {"diag",                   ksf_wrap(M_diag_, M_NAME ".diag(x, r=none)", "Creates a matrix with 'x' as the diagonal")},
-        {"perm",                   ksf_wrap(M_perm_, M_NAME ".perm(p, r=none)", "Creates a permutation matrix with 'p' as the row changes")},
+        {"perm",                   ksf_wrap(M_perm_, M_NAME ".perm(x, r=none)", "Creates a permutation matrix with 'p' as the row changes")},
         {"matmul",                 ksf_wrap(M_matmul_, M_NAME ".matmul(x, y, r=none)", "Computes matrix multiplication")},
 
-/*
-
-
-        {"matpow",                 ksf_wrap(M_matpow_, M_NAME ".matpow(x, n, r=none)", "Computes matrix power")},
-
-        {"lu",                     ksf_wrap(M_lu_, M_NAME ".lu(x, p=none, l=none, r=none)", "Computes LU factorization with permutation indices, returns (P, L, U) such that 'x == nx.la.perm(P) @ L @ U")},
-
-*/
+        {"factlu",                 ksf_wrap(M_factlu_, M_NAME ".factlu(x, p=none, l=none, r=none)", "Computes LU factorization with permutation indices, returns (P, L, U) such that 'x == nx.la.perm(P) @ L @ U")},
     ));
 
     return res;

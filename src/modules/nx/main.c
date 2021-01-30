@@ -229,6 +229,63 @@
     return ar; \
 }
 
+
+/* Arithmetic function taking 2 arguments, which defaults to float conversions */
+#define T_A2i2f(_name) static KS_TFUNC(M, _name) { \
+    kso ax, ay, ar = KSO_NONE; \
+    KS_ARGS("x y ?r", &ax, &ay, &ar); \
+    nx_t x, y, r; \
+    kso xr, yr, rr; \
+    if (!nx_get(ax, NULL, &x, &xr)) { \
+        return NULL; \
+    } \
+    if (!nx_get(ay, NULL, &y, &yr)) { \
+        KS_NDECREF(xr); \
+        return NULL; \
+    } \
+    if (ar == KSO_NONE) { \
+        nx_dtype dtype = nx_resnum(x.dtype, y.dtype); \
+        if (!dtype) { \
+            KS_NDECREF(xr); \
+            KS_NDECREF(yr); \
+            return NULL; \
+        } \
+        if (dtype->kind == NX_DTYPE_INT) dtype = nxd_D; \
+        int rank; \
+        ks_size_t shape[NX_MAXRANK]; \
+        if (!nx_getbc(2, (nx_t[]) { x, y }, &rank, shape)) { \
+            KS_NDECREF(xr); \
+            KS_NDECREF(yr); \
+            return NULL; \
+        } \
+        ar = (kso)nx_array_newc(nxt_array, NULL, dtype, rank, shape, NULL); \
+        if (!ar) { \
+            KS_NDECREF(xr); \
+            KS_NDECREF(yr); \
+            return NULL; \
+        } \
+    } else { \
+        KS_INCREF(ar); \
+    } \
+    if (!nx_get(ar, NULL, &r, &rr)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(yr); \
+        KS_DECREF(ar); \
+        return NULL; \
+    } \
+    if (!nx_##_name(x, y, r)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(yr); \
+        KS_NDECREF(rr); \
+        KS_DECREF(ar); \
+        return NULL; \
+    } \
+    KS_NDECREF(xr); \
+    KS_NDECREF(yr); \
+    KS_NDECREF(rr); \
+    return ar; \
+}
+
 /* Conversion function taking 2 argument (array, and result type) */
 #define T_C2(_name) static KS_TFUNC(M, _name) { \
     kso ax, ar = KSO_NONE; \
@@ -418,6 +475,8 @@ T_C2(fpcast)
 T_A2(add)
 T_A2(sub)
 T_A2(mul)
+T_A2(div)
+T_A2(floordiv)
 T_A2(mod)
 T_A2(pow)
 
@@ -426,6 +485,7 @@ T_A2(fmax)
 
 T_A1(exp)
 T_A1(log)
+T_A1(sqrt)
 
 T_A1_r(abs)
 T_A1(conj)
@@ -439,6 +499,7 @@ T_R1(sum)
 T_R1(prod)
 
 T_SORT2(cumsum)
+T_SORT2(cumprod)
 
 T_SORT1(sort)
 
@@ -456,6 +517,11 @@ ks_module _ksi_nx() {
         {"la",                     (kso)_ksi_nx_la()},
         {"rand",                   (kso)_ksi_nxrand()},
         {"fft",                    (kso)_ksi_nx_fft()},
+
+        /* Constants */
+
+        {"MAXRANK",                (kso)ks_int_new(NX_MAXRANK)},
+        {"MAXBCS",                 (kso)ks_int_new(NX_MAXBCS)},
 
         /* Types */
 
@@ -488,6 +554,7 @@ ks_module _ksi_nx() {
         /** Aliases **/
         {"float",                  KS_NEWREF(nxd_F)},
         {"double",                 KS_NEWREF(nxd_D)},
+        {"longdouble",             KS_NEWREF(nxd_E)},
         {"quad",                   KS_NEWREF(nxd_Q)},
 
         {"float32",                KS_NEWREF(nxd_F)},
@@ -512,22 +579,28 @@ ks_module _ksi_nx() {
         {"add",                    ksf_wrap(M_add_, M_NAME ".add(x, y, r=none)", "Computes elementwise addition")},
         {"sub",                    ksf_wrap(M_sub_, M_NAME ".sub(x, y, r=none)", "Computes elementwise subtraction")},
         {"mul",                    ksf_wrap(M_mul_, M_NAME ".mul(x, y, r=none)", "Computes elementwise multiplication")},
+        {"div",                    ksf_wrap(M_div_, M_NAME ".div(x, y, r=none)", "Computes elementwise division (true division, not floor)")},
+        {"floordiv",               ksf_wrap(M_floordiv_, M_NAME ".floordiv(x, y, r=none)", "Computes elementwise floored division")},
         {"mod",                    ksf_wrap(M_mod_, M_NAME ".mod(x, y, r=none)", "Computes elementwise modulo")},
         {"pow",                    ksf_wrap(M_pow_, M_NAME ".pow(x, y, r=none)", "Computes elementwise power")},
 
         {"exp",                    ksf_wrap(M_exp_, M_NAME ".exp(x, y, r=none)", "Computes elementwise exponential")},
         {"log",                    ksf_wrap(M_log_, M_NAME ".log(x, y, r=none)", "Computes elementwise logarithm")},
 
+        {"sqrt",                   ksf_wrap(M_sqrt_, M_NAME ".sqrt(x, y, r=none)", "Computes elementwise square root")},
+
+
         {"min",                    ksf_wrap(M_min_, M_NAME ".min(x, axes=none, r=none)", "Minimum of elements")},
         {"max",                    ksf_wrap(M_max_, M_NAME ".max(x, axes=none, r=none)", "Maximum of elements")},
         {"sum",                    ksf_wrap(M_sum_, M_NAME ".sum(x, axes=none, r=none)", "Sum elements")},
+        {"cumsum",                 ksf_wrap(M_cumsum_, M_NAME ".cumsum(x, axis=-1, r=none)", "Computes cumulative sum")},
         {"prod",                   ksf_wrap(M_prod_, M_NAME ".prod(x, axes=none, r=none)", "Product elements")},
+        {"cumprod",                ksf_wrap(M_cumprod_, M_NAME ".cumprod(x, axis=-1, r=none)", "Computes cumulative product")},
 
         {"cast",                   ksf_wrap(M_cast_, M_NAME ".cast(x, dtype, r=none)", "Casts to a datatype")},
         {"fpcast",                 ksf_wrap(M_fpcast_, M_NAME ".fpcast(x, dtype=none, r=none)", "Casts to a datatype, with automatic fixed-point and floating-point conversion")},
 
         {"sort",                   ksf_wrap(M_sort_, M_NAME ".sort(x, axis=-1, r=none)", "Sorts")},
-        {"cumsum",                 ksf_wrap(M_cumsum_, M_NAME ".cumsum(x, axis=-1, r=none)", "Computes cumulative sum")},
 
 
     /*
@@ -545,8 +618,6 @@ ks_module _ksi_nx() {
         {"sub",                    ksf_wrap(M_sub_, M_NAME ".sub(x, y, r=none)", "Computes elementwise subtraction")},
         {"mul",                    ksf_wrap(M_mul_, M_NAME ".mul(x, y, r=none)", "Computes elementwise multiplication")},
         {"mod",                    ksf_wrap(M_mod_, M_NAME ".mod(x, y, r=none)", "Computes elementwise modulo")},
-        {"div",                    ksf_wrap(M_div_, M_NAME ".div(x, y, r=none)", "Computes elementwise division (true division, not floor)")},
-        {"floordiv",               ksf_wrap(M_floordiv_, M_NAME ".floordiv(x, y, r=none)", "Computes elementwise floored division")},
 
         {"pow",                    ksf_wrap(M_pow_, M_NAME ".pow(x, y, r=none)", "Computes elementwise exponentiation")},
         

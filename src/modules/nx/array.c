@@ -289,6 +289,16 @@ static KS_TFUNC(T, getattr) {
         return KS_NEWREF(self->val.dtype);
     } else if (ks_str_eq_c(attr, "data", 4)) {
         return (kso)ks_int_newu((ks_uint)self->val.data);
+    }else if (ks_str_eq_c(attr, "T", 1)) {
+        nx_t sT = self->val;
+        if (sT.rank == 0) {
+        } else if (sT.rank == 1) {
+            sT = nx_newaxis(sT, 1);
+        } else {
+            sT = nx_swapaxes(sT, sT.rank - 2, sT.rank - 1);
+        }
+
+        return (kso)nx_view_newo(nxt_view, sT, (kso)self);
     }
     
     KS_THROW_ATTR(self, attr);
