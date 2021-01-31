@@ -148,6 +148,22 @@ static KS_FUNC(exit) {
 }
 
 
+
+static KS_FUNC(eval) {
+    ks_str src, fname = _ksv_expr;
+    kso locals = NULL;
+    KS_ARGS("src:* ?fname:* ?locals", &src, kst_str, &fname, kst_str, &locals);
+
+    if (locals == KSO_NONE) {
+        locals = NULL;
+    } else if (locals && !kso_issub(locals->type, kst_dict)) {
+        KS_THROW(kst_TypeError, "Expected 'locals' to be a 'dict', but got '%T' object", locals);
+        return NULL;
+    }
+
+    return kso_eval(src, fname, (ks_dict)locals);
+}
+
 static KS_FUNC(repr) {
     kso obj;
     KS_ARGS("obj", &obj);
@@ -303,6 +319,7 @@ void _ksi_funcs() {
     F(repr, "repr(obj)", "Computes the string representation of an object, which aims to be a string that can either be executed and result in the same value, or give as much information as possible\n\n    Delegates to 'type(obj).__repr(obj)'");
 
     F(exit, "exit(code=0)", "Exit the program with a given exit code")
+    F(eval, "eval(src, fname='<expr>', locals=none)", "Evaluate kscript source code, and return the result")
 
     F(pow, "pow(L, R, M=none)", "Computes exponentiation (i.e. 'L ** R'), or modular exponentiation ('L ** R % m'), if 'M' is given")
 

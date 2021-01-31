@@ -304,7 +304,7 @@ KS_API ksnet_http_server ksnet_http_server_new(ks_type tp, kso addr);
 
 /* Serve forever on the current thread
  */
-KS_API bool ksnet_http_server_serve_forever(ksnet_http_server self);
+KS_API bool ksnet_http_server_serve(ksnet_http_server self);
 
 /* Attempt to parse a request and return it from a socket
  */

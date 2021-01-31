@@ -588,29 +588,44 @@ RULE(STMT) {
         /* Parse 'catch' clauses */
         while (TOK.kind == KS_TOK_CATCH) {
             ks_tok t = EAT();
-        
-            ks_ast tp = SUBF(EXPR, (flags & PF_NO_AS));
-            if (!tp) {
-                KS_DECREF(res);
-                return NULL;
-            }
+            ks_ast tp = NULL, assign = NULL;
 
-            ks_ast assign = NULL;
-            
             if (TOK.kind == KS_TOK_AS) {
-                /* If given 'as' we should assign it to an expression */
-                EAT();
+                /* catch as <name> */
+                ks_str ename = ks_str_new(-1, "Exception");
+                tp = ks_ast_new(KS_AST_NAME, 0, NULL, (kso)ename, EAT());
+                KS_DECREF(ename);
+                
                 assign = SUB(EXPR);
-            }  else {
-                /* Otherwise, don't assign to anything */
-                assign = (ks_ast)KS_NEWREF(ast_none);
-            }
+                
+                if (!assign) {
+                    KS_DECREF(res);
+                    KS_DECREF(tp);
+                    return NULL;
+                }
+            } else {
+                ks_ast tp = SUBF(EXPR, (flags | PF_NO_AS));
+                if (!tp) {
+                    KS_DECREF(res);
+                    return NULL;
+                }
 
-            if (!assign) {
-                KS_DECREF(res);
-                KS_DECREF(tp);
-                return NULL;
+                if (TOK.kind == KS_TOK_AS) {
+                    /* If given 'as' we should assign it to an expression */
+                    EAT();
+                    assign = SUB(EXPR);
+                }  else {
+                    /* Otherwise, don't assign to anything */
+                    assign = (ks_ast)KS_NEWREF(ast_none);
+                }
+
+                if (!assign) {
+                    KS_DECREF(res);
+                    KS_DECREF(tp);
+                    return NULL;
+                }
             }
+        
 
             /* Parse body */
             body = SUB(BORC);

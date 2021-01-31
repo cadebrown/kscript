@@ -157,6 +157,7 @@ _KS_DO_SPEC(_KSACT)
     _ksva__doc,
 
 
+    _ksv_expr,
     _ksv_empty,
     _ksv_r,
     _ksv_rb,

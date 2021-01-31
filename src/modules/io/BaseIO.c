@@ -27,7 +27,7 @@ bool ksio_close(ksio_BaseIO self) {
 
         return true;
 
-    } else if (kso_issub(self->type, ksiot_RawIO)) {
+    } else if (kso_issub(self->type, ksiot_RawIO) && self->type == ksiot_RawIO) {
         ksio_RawIO rio = (ksio_RawIO)self;
 
         if (rio->do_close && rio->fd >= 0) {

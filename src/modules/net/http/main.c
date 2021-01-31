@@ -173,9 +173,7 @@ static KS_TFUNC(M, uriencode) {
     }
 
     return (kso)ksio_StringIO_getf(sio);
-
 }
-
 
 static KS_TFUNC(M, uridecode) {
     ks_str text;

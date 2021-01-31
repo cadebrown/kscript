@@ -56,6 +56,7 @@ static KS_TFUNC(T, init) {
 
     return KSO_NONE;
 }
+
 static KS_TFUNC(T, free) {
     ks_Exception self;
     KS_ARGS("self:*", &self, kst_Exception);
@@ -71,6 +72,19 @@ static KS_TFUNC(T, free) {
     return KSO_NONE;
 }
 
+static KS_TFUNC(T, str) {
+    ks_Exception self;
+    KS_ARGS("self:*", &self, kst_Exception);
+
+    return KS_NEWREF(self->what);
+}
+
+static KS_TFUNC(T, repr) {
+    ks_Exception self;
+    KS_ARGS("self:*", &self, kst_Exception);
+
+    return (kso)ks_fmt("%T(%R, %R, %R, %R)", self, self->what, self->args, self->frames, self->inner ? self->inner : KSO_NONE);
+}
 
 /* Export */
 
@@ -114,6 +128,8 @@ void _ksi_Exception() {
     _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, "Exception, which is an anomoly/error, is something that can be 'thrown' up the call stack. Only objects of types deriving from 'Exception' may be thrown\n\n    To throw an exception, use the 'throw' statement, like so: 'throw Exception(\"Reasoning here\")'", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__init",               ksf_wrap(T_init_, T_NAME ".__init(self, what='')", "")},
+        {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__repr",               ksf_wrap(T_repr_, T_NAME ".__repr(self)", "")},
     ));
     
     #define INIT(_name, _par) \

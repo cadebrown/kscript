@@ -24,6 +24,7 @@ ks_str
 _KS_DO_SPEC(_KSACT)
 #undef _KSACT
 
+    _ksv_expr,
     _ksv_empty,
     _ksv_r,
     _ksv_rb,
@@ -74,6 +75,7 @@ KS_API bool ks_init() {
 _KS_DO_SPEC(_KSACT)
 #undef _KSACT
 
+    _CONST(_ksv_expr, "<expr>");
     _CONST(_ksv_io, "io");
     _CONST(_ksv_os, "os");
     _CONST(_ksv_getarg, "getarg");
@@ -238,6 +240,7 @@ _KS_DO_SPEC(_KSACT)
         {"repr", (kso)ksf_repr},
 
         {"exit", (kso)ksf_exit},
+        {"eval", (kso)ksf_eval},
 
         {"iter", (kso)ksf_iter},
         {"next", (kso)ksf_next},

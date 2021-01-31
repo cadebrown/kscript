@@ -52,7 +52,7 @@ static KS_TFUNC(T, repr) {
     ksnet_http_resp self;
     KS_ARGS("self:*", &self, ksnet_httpt_resp);
 
-    return (kso)ks_fmt("<'%T' code=%i>", self, self->status_code);
+    return (kso)ks_fmt("<%T http=%R, code=%i, headers=%R, body=%R>", self, self->httpv, self->status_code, self->headers, self->body);
 }
 
 static KS_TFUNC(T, bytes) {

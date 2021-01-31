@@ -1,6 +1,14 @@
 /* server.c - implementation of the 'net.http.Server' type
  *
  * This isn't an abstract base class, but can be subclassed for others
+ * 
+ * 
+ * Essentially, types should overload '.handle(self, addr, sock, req)' (default: file server),
+ *   to return either 'str', 'bytes', or a request object.
+ * 
+ * Then, internally, the '.serve()' function will call '._handle(self, addr, sock, req)' in a new
+ *   thread for each request. The '_handle' function should *not* be overloaded
+ * 
  *
  * @author: Cade Brown <brown.cade@gmail.com>
  */
@@ -40,7 +48,7 @@ ksnet_http_server ksnet_http_server_new(ks_type tp, kso addr) {
     return self;
 }
 
-bool ksnet_http_server_serve_forever(ksnet_http_server self) {
+bool ksnet_http_server_serve(ksnet_http_server self) {
 
     ks_str tk = ks_str_new(-1, "_handle");
     kso handle = kso_getattr((kso)self, tk);
@@ -53,7 +61,7 @@ bool ksnet_http_server_serve_forever(ksnet_http_server self) {
         return false;
     }
 
-    ks_debug("net.http", "Serving forever: %R", self);
+    ks_debug("net.http", "Serving: %R", self);
 
     ksnet_SocketIO client = NULL;
     ks_str addr = NULL;
@@ -77,8 +85,6 @@ bool ksnet_http_server_serve_forever(ksnet_http_server self) {
             KS_DECREF(addr);  
             return false;
         }
-
-        ks_debug("request", "%S %R %S (%R)", req->method, req->uri, req->httpv, req->headers);
 
         /* Create new thread to handle the request in */
         ks_tuple args = ks_tuple_new(3, (kso[]){ (kso)addr, (kso)client, (kso)req });
@@ -122,11 +128,11 @@ static KS_TFUNC(T, new) {
     return (kso)ksnet_http_server_new(tp, addr);
 }
 
-static KS_TFUNC(T, serve_forever) {
+static KS_TFUNC(T, serve) {
     ksnet_http_server self;
     KS_ARGS("self:*", &self, ksnet_httpt_server);
 
-    if (!ksnet_http_server_serve_forever(self)) return NULL;
+    if (!ksnet_http_server_serve(self)) return NULL;
 
     return KSO_NONE;
 }
@@ -138,38 +144,88 @@ static KS_TFUNC(T, _handle) {
     ksnet_SocketIO sock;
     ksnet_http_req req;
     KS_ARGS("self:* addr:* sock:* req:*", &self, ksnet_httpt_server, &addr, kst_str, &sock, ksnett_SocketIO, &req, ksnet_httpt_req);
+
+    /* Debug what's happening */
+    ks_debug("net.http", "request: %S %R %S (%R)", req->method, req->uri, req->httpv, req->headers);
+
+    /* Response object (NULL until determined) */
+    ksnet_http_resp resp = NULL;
+
     ks_str tk = ks_str_new(-1, "handle");
     kso handle = kso_getattr((kso)self, tk);
     KS_DECREF(tk);
     if (!handle) return NULL;
 
+    /* Get result of request handler */
     kso res = kso_call((kso)handle, 3, (kso[]){ (kso)addr, (kso)sock, (kso)req });
     KS_DECREF(handle);
     if (!res) {
         return NULL;
     }
-
-
     if (kso_issub(res->type, ksnet_httpt_resp)) {
-        ks_debug("response", "%R (%R)", res, ((ksnet_http_resp)res)->headers);
+        /* Already given response object */
+        KS_INCREF(res);
+        resp = (ksnet_http_resp)res;
+    } else if (kso_issub(res->type, kst_str) || kso_issub(res->type, kst_bytes)) {
+        /* Create response with this as the body (along with some default headers) */
 
-        ks_bytes resp_tob = ks_bytes_newo(kst_bytes, res);
-        if (!resp_tob) {
+        ks_dict h = ks_dict_new(KS_IKV(
+            {"Date",               (kso)kstime_format(KSTIME_FMT_LOCALE, NULL)},
+            {"Last-Modified",               (kso)kstime_format(KSTIME_FMT_LOCALE, NULL)},
+            {"Server",             (kso)ks_fmt("kscript/Server")},
+            {"Connection",         (kso)ks_fmt("Closed")},
+            {"Content-Disposition",(kso)ks_fmt("inline")},
+        ));
+
+        ks_bytes b = ks_bytes_newo(kst_bytes, res);
+        if (!b) {
+            KS_DECREF(res);
+            KS_DECREF(h);
+            return NULL;
+        }
+
+        /* Create response */
+        resp = ksnet_http_resp_new(ksnet_httpt_resp, req->httpv, 200 /* OK */, h, b);
+        KS_DECREF(h);
+        KS_DECREF(b);
+        if (!resp) {
             KS_DECREF(res);
             return NULL;
         }
 
-        /* Actually send bytes */
-        if (!ksio_addbuf(sock, resp_tob->len_b, resp_tob->data)) {
-            KS_DECREF(resp_tob);
-            return NULL;
-        }
-        KS_DECREF(resp_tob);
-    
+    } else {
+        KS_THROW(kst_TypeError, "Expected either 'net.http.Response', 'str', or 'bytes' object from the '.handle()' method, but got '%T' object", res);
+        KS_DECREF(res);
+        return NULL;
     }
 
+    /* Now, we have the response */
     KS_DECREF(res);
+    assert(resp != NULL);
 
+    ks_debug("net.http", "response: %S %i %R (%R)", resp->httpv, resp->status_code, resp->headers, resp->body);
+
+    /* Flatten the response and send it */
+
+    ks_bytes resb = ks_bytes_newo(kst_bytes, (kso)resp);
+    KS_DECREF(resp);
+    if (!resb) {
+        return NULL;
+    }
+
+    /* Actually send bytes */
+    if (!ksio_addbuf(sock, resb->len_b, resb->data)) {
+        KS_DECREF(resb);
+        return NULL;
+    }
+
+    /* Close socket */
+    if (!ksio_close((ksio_BaseIO)sock)) {
+        KS_DECREF(resb);
+        return NULL;
+    }
+
+    KS_DECREF(resb);
     return KSO_NONE;
 }
 
@@ -195,7 +251,7 @@ static KS_TFUNC(T, handle) {
     ks_dict resp_headers = ks_dict_new(KS_IKV(
         {"Date",               (kso)atime},
         {"Server",             (kso)ks_fmt("kscript/Server")},
-        {"Last-Modified",      (kso)atime},
+        //{"Last-Modified",      (kso)atime},
         {"Connection",         (kso)ks_fmt("Closed")},
         {"Content-Disposition",(kso)ks_fmt("inline")},
     ));
@@ -241,7 +297,7 @@ void _ksi_net_http_server() {
     _ksinit(ksnet_httpt_server, kst_object, T_NAME, sizeof(struct ksnet_http_server_s), offsetof(struct ksnet_http_server_s, attr), "HTTP Server", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, addr)", "Create a new HTTP server")},
 
-        {"serve_forever",          ksf_wrap(T_serve_forever_, T_NAME ".serve_forever(self)", "Serve forever, stalling the current thread")},
+        {"serve",          ksf_wrap(T_serve_, T_NAME ".serve(self)", "Serve forever, stalling the current thread")},
         {"_handle",                ksf_wrap(T__handle_, T_NAME "._handle(self, addr, sock, req)", "Internal connection handler")},
         {"handle",                 ksf_wrap(T_handle_, T_NAME ".handle(self, addr, sock, req)", "Handles a connection")},
     ));
