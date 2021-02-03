@@ -837,7 +837,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         for (i = 0; i < cfa_n; ++i) {
             struct compiler_loop_action* a = &cfa[i];
 
-            PATCH(a->loc, a->from, a->is_cont ? body_l : BC_N);
+            PATCH(a->loc, a->from, a->is_cont ? cond_l : BC_N);
         }
         ks_free(cfa);
 

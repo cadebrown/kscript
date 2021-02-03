@@ -604,7 +604,7 @@ RULE(STMT) {
                     return NULL;
                 }
             } else {
-                ks_ast tp = SUBF(EXPR, (flags | PF_NO_AS));
+                tp = SUBF(EXPR, (flags | PF_NO_AS));
                 if (!tp) {
                     KS_DECREF(res);
                     return NULL;

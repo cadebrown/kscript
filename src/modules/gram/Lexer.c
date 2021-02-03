@@ -164,11 +164,6 @@ static kso I_token(ksgram_Lexer self, bool* is_out) {
 
             if (action == KSO_NONE) {
                 /* Skip the token */
-            } else if (kso_is_int(action)) {
-                /* Assume the action is a token type to return */
-                ksgram_Token res = ksgram_Token_new(ksgramt_Token, action, val, 0, 0, 0, 0, 0, 0, 0, 0);
-                KS_DECREF(val);
-                return (kso)res;
             } else if (kso_is_callable(action)) {
                 /* Call the action with the available match */
 
@@ -185,9 +180,16 @@ static kso I_token(ksgram_Lexer self, bool* is_out) {
                     return res;
                 }
             } else {
+                /* Assume the action is a token type to return */
+                ksgram_Token res = ksgram_Token_new(ksgramt_Token, action, val, 0, 0, 0, 0, 0, 0, 0, 0);
+                KS_DECREF(val);
+                return (kso)res;
+
+                /*
                 KS_THROW(kst_Error, "Expected either an integral value, or callable for a token action, but got '%T' object", action);
                 KS_DECREF(val);
                 return NULL;
+                */
             }
 
             /* If it has gotten here, we need to just repeat because we've skipped the token */
