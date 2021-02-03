@@ -7,7 +7,7 @@
  *   directories, which is a pain in languages that directly wrap the C-API, like Python)
  * 
  * @author:    Cade Brown <cade@kscript.org>
- *             Gregory Croisdale <greg@kscript.org>
+ * @author:    Gregory Croisdale <greg@kscript.org>
  */
 
 #pragma once

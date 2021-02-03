@@ -3,6 +3,8 @@
  * Don't include this! Just include `ks.h` for the officially supported API. This header
  *   may define things outside of the standard 'ks_' and 'KS_' namespace.
  *
+ * For kscript devs only!
+ * 
  * @author:    Cade Brown <cade@kscript.org>
  * @license:   GPLv3
  */

@@ -3,6 +3,44 @@
  * Meant as a simple replacement of 'getopt', which supports things like type checking,
  *   conversions, and repeated arguments
  * 
+ *
+ * Useful as a general tool, but not overly extensible (cough cough, Python's argparse). I
+ *   find that a tool that covers 98% of the use cases and is much simpler is a better design.
+ *   In truth, adding overly complicated usecases that barely anyone uses over complicates everyones
+ *   uses. I have to google everytime I want to parse arguments in Python. I think kscript should be different
+ * 
+ * Here's a basic example:
+ * 
+ * ```
+ * #!/usr/bin/env ks
+ * # ex1.ks - example 1
+ * import getarg
+ * 
+ * p = getarg.Parser("ex1", "0.0.1", "Example 1, prints a single argument, optionally multiplied, optionally in hex", ["Cade Brown <cade@kscript.org>"])
+ * 
+ * # pos(name, doc, num=1, trans=str, defa=none)
+ * # NOTE: this means we are accepting 1 'int', and the conversion will be automatic
+ * p.pos("arg", "Single argument", 1, int)
+ * 
+ * # opt(name, opts, doc, trans=str, defa=none)
+ * p.opt("fact", ["-m", "--mul"], "Number to multiply by", int, 1)
+ * 
+ * # flag(name, opts, doc, action=none)
+ * p.flag("hex", ["--hex"], "If given, then output in hex")
+ * 
+ * # Now, parse, and throw an exception if required
+ * args = p.parse()
+ * 
+ * # Notice we use '.arg', since we gave "arg" to the 'p.pos()' call
+ * res = args.arg * args.fact
+ * if args.hex {
+ *     print (str(res, 16))
+ * } else {
+ *     print (res)
+ * }
+ * ```
+ * 
+ * 
  * @author: Cade Brown <brown.cade@gmail.com>
  */
 

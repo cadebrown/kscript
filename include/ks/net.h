@@ -1,7 +1,7 @@
 /* ks/net.h - header for the 'net' (networking module) module
  * 
- * Also includes the submodule 'net.http'
- * 
+ * Also includes the submodule 'net.http', which has a server that implements the HTTP protocol
+ *   (along with request and response objects)
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */

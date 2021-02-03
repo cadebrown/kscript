@@ -1,5 +1,5 @@
 #!/usr/bin/env ks
-""" t_re.ks - Regex features
+""" regex.ks - Test cases for the `regex` type
 
 @author: Cade Brown <cade@kscript.org>
 """

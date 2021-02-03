@@ -2,10 +2,13 @@
  *
  * Provides general interfaces to file streams, buffer streams, and more
  * 
- * General methods:
+ * General methods (on io.BaseIO): 
  *   s.read(sz=none): Read a given size (default: everything left) message and return it
  *   s.write(msg): Write a (string, bytes, or object) to the stream
- *   close(s): Close a stream
+ *   s.seek(pos, whence=io.Seek.SET): Seek to a position
+ *   s.trunc(sz=none): Truncate an open stream
+ *   s.close(): Close a stream
+ *   s.eof(): Tells if at the EOF
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */

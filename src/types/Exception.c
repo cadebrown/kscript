@@ -83,7 +83,7 @@ static KS_TFUNC(T, repr) {
     ks_Exception self;
     KS_ARGS("self:*", &self, kst_Exception);
 
-    return (kso)ks_fmt("%T(%R, %R, %R, %R)", self, self->what, self->args, self->frames, self->inner ? self->inner : KSO_NONE);
+    return (kso)ks_fmt("%T(%R, %R, %R, %R)", self, self->what, self->args, self->frames, self->inner ? (kso)self->inner : KSO_NONE);
 }
 
 /* Export */

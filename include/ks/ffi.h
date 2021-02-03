@@ -1,4 +1,4 @@
-/* ks/ffi.h - header for the 'ffi' (C library, FFI) module of kscript
+/* ks/ffi.h - header for the 'ffi' (Foreign Function Interface) module in kscript
  *
  * Provides wrappers for interfacing with C functions/libraries, through Foreign Function Interface
  * 
@@ -14,6 +14,8 @@
  *   long long
  *   unsigned long long
  * 
+ * 
+ * Allows you to dynamically load C libraries, and then call functions from them
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -32,7 +34,7 @@
  *
  */
 #ifdef KS_HAVE_ffi
- #include <ffi.h>
+  #include <ffi.h>
 #endif
 
 

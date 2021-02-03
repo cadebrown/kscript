@@ -3,6 +3,9 @@
  * The internal implementation uses recursive descent parsing, on the grammar (given below in this file).
  *   The grammar is very close to an expression grammar completely, but still has some statement constructs
  * 
+ * 
+ * 
+ * 
  * @author: Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
@@ -155,8 +158,9 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  *         | '[' ELEM (',' ELEM)* ','? ']'
  *         | '{' ELEM (',' ELEM)* ','? '}'
  *         | '{' ELEMKV (',' ELEMKV)* ','? '}'
- *         | 'func' NAME? ('(' (PAR (',' PAR)* ','?)? ')')? B
- *         | 'type' NAME? ('extends' EXPR)? B
+ *         | 'func' NAME? ('(' (PAR (',' PAR)* ','?)? ')')? B    (* Func constructor *)
+ *         | 'type' NAME? ('extends' EXPR)? B                    (* Type constructor *)
+ *         | 'enum' NAME? B                                      (* Enum constructor *)
  *         | E14 '.' NAME
  *         | E14 '++'
  *         | E14 '--'
@@ -1334,6 +1338,31 @@ RULE(E14) {
         } else {
             ks_ast ext = ks_ast_newn(KS_AST_NAME, 0, NULL, (kso)ks_str_new(-1, "object"), res->tok);
             ks_ast_pushn(res, ext);
+        }
+
+        ks_ast body = SUB(B);
+        if (!body) {
+            KS_DECREF(res);
+            return NULL;
+        }
+
+        ks_ast_pushn(res, body);
+
+        /* TODO: detect doc */
+        ks_str doc = ks_str_new(-1, "");
+
+        res->val = (kso)ks_tuple_newn(2, (kso[]){
+            (kso)tname,
+            (kso)doc
+        });
+
+    } else if (TOK_EQ(TOK, "enum") && (toks[toki+1].kind == KS_TOK_LBRC || toks[toki+1].kind == KS_TOK_NAME)) {
+        res = ks_ast_new(KS_AST_ENUM, 0, NULL, NULL, EAT());
+        ks_str tname = NULL;
+        if (TOK.kind == KS_TOK_NAME) {
+            tname = ks_tok_str(src, EAT());
+        } else {
+            tname = ks_str_new(-1, "<anon-enum>");
         }
 
         ks_ast body = SUB(B);

@@ -16,6 +16,8 @@
  *   see the block comments and the documentation for how to use each. I basically implement
  *   all useful functionality needed, and try to have a pure subset avialable when possible
  *
+ * TODO: Custom implementation of 'kstime_format' and 'kstime_parse'
+ * 
  * @author: Cade Brown <brown.cade@gmail.com>
  */
 

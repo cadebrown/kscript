@@ -1,5 +1,20 @@
-/* ks/cext.h - header to be included by modules/extensions written in C
+/* ks/cext.h - header to be included by C-extension modules
  *
+ * Example:
+ * 
+ * ```
+ * #include <ks/cext.h>
+ *  
+ * // Get module
+ * static ks_module get() {
+ *   return ks_module_new(...);
+ * }
+ * KS_CEXT_DECL(get);
+ * ```
+ *
+ * Then, compile that file to `ksm_<name>.so`, and it will be loadable via `import <name>`
+ *
+ * 
  * @author: Cade Brown <brown.cade@gmail.com>
  */
 
@@ -9,7 +24,6 @@
 
 #include <ks/ks.h>
 
-
 /* Macro to declare a C extension as being visible to the kscript module importer.
  *
  * Place this only once in a C extension, in the main 'module.c' file (recommended). Give it the argument
@@ -18,12 +32,13 @@
  * So, you should define like:
  * 
  * ```
- * static ks_module get_module() {
+ * static ks_module get() {
+ *    ks_module res = ks_module_new(...);
  *    ...
  *    return res;
  * }
  * 
- * KS_CEXT_DECL(get_module);
+ * KS_CEXT_DECL(get);
  * ```
  *
  */

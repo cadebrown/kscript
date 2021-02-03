@@ -1,9 +1,17 @@
 /* ks/nuklear.h - header for the 'nuklear' (nuklear GUI) module
  * 
- * The porefix is 'ksnk' instead of something longer, just to save space in the C API
+ * This module provides an integrated nuklear implementation of GUI platform, which is good
+ *   for small demos and proof-of-concepts. It is distributed as an external module, and is
+ *   only built when support is detected for it (only requirements are X11 and OpenGL, or
+ *   some other combos for other OSes)
+ * 
+ * 
+ * 
+ * The prefix is 'ksnk' instead of something longer, just to save space in the C API
  * 
  * 
  * SEE: https://github.com/vurtun/nuklear/issues/226
+ * TODO: Document and add more features, this is still nto well developed yet
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */

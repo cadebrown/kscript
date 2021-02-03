@@ -1,7 +1,5 @@
 #!/usr/bin/env ks
-""" t_range.ks - test 'range' class and operations
-
-Test string literals and operations
+""" range.ks - Test cases for the `range` type
 
 @author: Cade Brown <cade@kscript.org>
 """

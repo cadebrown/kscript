@@ -1,11 +1,8 @@
-/* ks/io.h - header for the 'io' (input/output) module of kscript
+/* ks/util.h - header for the 'util' builtin module in kscript
  *
- * Provides general interfaces to file streams, buffer streams, and more
- * 
- * General methods:
- *   s.read(sz=none): Read a given size (default: everything left) message and return it
- *   s.write(msg): Write a (string, bytes, or object) to the stream
- *   close(s): Close a stream
+ * Provides general datastructures not included as builtins, such as graph, binary search tree,
+ *   bitset, and more. The goal is to have efficient implementations with best case Big-Oh 
+ *   performance.
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -275,8 +272,6 @@ KS_API bool ks_graph_has_edge(ks_graph self, kso nodeA, kso nodeB, bool* out);
 /* Clear a graph
  */
 KS_API void ks_graph_clear(ks_graph self);
-
-
 
 
 /* Types */

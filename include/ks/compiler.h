@@ -1,7 +1,7 @@
-/* ks/compiler.h - kscript compiler
+/* ks/compiler.h - kscript compiler utilities
  * 
  * This module and C-API is meant to transform kscript source (in strings) into
- *   Tokens, ASTs (Abstract Syntax Trees), and also bytecodes
+ *   Tokens, ASTs (Abstract Syntax Trees), and also code objects
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -255,6 +255,14 @@ enum {
      * args = [extends, body]
      */
     KS_AST_TYPE,
+
+    /* Enum constructor
+     *
+     * val = name
+     * args = [name OR name=VAL OR misc body]
+     */
+    KS_AST_ENUM,
+
 
     /* Import statement
      *

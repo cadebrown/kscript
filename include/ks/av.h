@@ -1,5 +1,24 @@
 /* ks/av.h - header file for the kscript audio/video/media builtin module `import av'
  *
+ * The general idea of this module is to provide an audio/video encoding/decoding interface
+ *   available to kscript. The most important thing, as with other kscript standard modules,
+ *   is to provide a consistent and general interface that can be implemented in any number of ways
+ * 
+ * Right now, the following modes are supported:
+ *   * No external libraries
+ *     * Image formats: .gif, .jpg, .png, .tga
+ *     * Audio formats: .wav, .ogg
+ *   * Built with libavcodec, libavutil, libavformat, and libswscale
+ *     * Video containers: Supported
+ *     * Image formats: (many, many)
+ *     * Audio formats: (many, many)
+ * 
+ * Public API:
+ *   * av.open(src, mode='r') - Return an IO-like object that can be read and written from (see 'av.IO')
+ *   * av.imread(src) - Reads an image from 'src', which should be an IO-like object or a filename
+ *   * av.imwrite(src, data, fmt=none) - Writes an image to 'src' (image data in 'data'), with optional 'fmt' (default: inferred)
+ * 
+ * 
  * 
  * SEE: https://github.com/leandromoreira/ffmpeg-libav-tutorial#intro
  * 
@@ -125,13 +144,13 @@ typedef struct ksav_IO_s {
 
 }* ksav_IO;
 
-/* av.Stream - Stream wrapper
+/* av.Stream - Single audio/video stream
  *
  */
 typedef struct ksav_Stream_s {
     KSO_BASE
 
-    /* What the stream is a part of */
+    /* What IO the stream is a part of */
     ksav_IO of;
 
     /* Stream index */
@@ -163,8 +182,12 @@ KS_API enum AVPixelFormat ksav_AV_filterfmt(enum AVPixelFormat pix_fmt);
  */
 KS_API ksav_IO ksav_open(ks_type tp, kso iio, ks_str src, ks_str mode);
 
-
 /* Get the next data item from an 'av.IO', setting '*sidx' to the index of the stream it came from
+ * 
+ * Typically returns an `nx.array` containing the pixel/audio data of either:
+ * 
+ *   * (h, w, d) (video)
+ *   * (n, c) (audio)
  * 
  * If 'nvalid >= 0', then 'valid' should point to an array of valid indexes, and all packets from other
  *   streams will be ignored temporarily and pushed onto the queue for next time
@@ -182,11 +205,11 @@ KS_API bool ksav_isvideo(ksav_IO self, int sidx, bool* out);
 
 /* Get the best video stream for 'self', and return it, or -1 if there was no video stream (and throw an error)
  */
-KS_API int ksav_bestvideo(ksav_IO self);
+KS_API int ksav_best_video(ksav_IO self);
 
 /* Get the best audio stream for 'self', and return it, or -1 if there was no audio stream (and throw an error)
  */
-KS_API int ksav_bestaudio(ksav_IO self);
+KS_API int ksav_best_audio(ksav_IO self);
 
 
 /* Get a stream wrapper for a specific index
@@ -209,8 +232,6 @@ KS_API kso ksav_imread(kso src);
  * Otherwise, it is assumed to be an IO-like object to write to
  */
 KS_API bool ksav_imwrite(kso src, nx_t data, kso fmt);
-
-
 
 
 

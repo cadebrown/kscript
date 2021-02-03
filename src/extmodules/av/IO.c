@@ -559,7 +559,7 @@ bool ksav_isvideo(ksav_IO self, int sidx, bool* out) {
 #endif
 }
 
-int ksav_bestaudio(ksav_IO self) {
+int ksav_best_audio(ksav_IO self) {
 #ifdef KS_HAVE_libav
     int res = av_find_best_stream(self->fmtctx, AVMEDIA_TYPE_AUDIO, -1, -1, NULL, 0);
     if (res < 0) {
@@ -574,7 +574,7 @@ int ksav_bestaudio(ksav_IO self) {
 
 }
 
-int ksav_bestvideo(ksav_IO self) {
+int ksav_best_video(ksav_IO self) {
 #ifdef KS_HAVE_libav
     int res = av_find_best_stream(self->fmtctx, AVMEDIA_TYPE_VIDEO, -1, -1, NULL, 0);
     if (res < 0) {
@@ -704,7 +704,7 @@ static KS_TFUNC(T, bestaudio) {
     ksav_IO self;
     KS_ARGS("self:*", &self, ksavt_IO);
 
-    int res = ksav_bestaudio(self);
+    int res = ksav_best_audio(self);
     if (res < 0) return NULL;
 
     return (kso)ksav_getstream(self, res);
@@ -714,7 +714,7 @@ static KS_TFUNC(T, bestvideo) {
     ksav_IO self;
     KS_ARGS("self:*", &self, ksavt_IO);
 
-    int res = ksav_bestvideo(self);
+    int res = ksav_best_video(self);
     if (res < 0) return NULL;
     
     return (kso)ksav_getstream(self, res);

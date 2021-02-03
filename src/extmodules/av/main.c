@@ -7,7 +7,7 @@
 #include <ks/av.h>
 #include <ks/cext.h>
 
-#define M_NAME "mm"
+#define M_NAME "av"
 
 #ifndef KS_HAVE_libav
 //#warning Building kscript without libav support, so most media formats are not supported
@@ -157,7 +157,7 @@ kso ksav_imread(kso src) {
     if (!io) return NULL;
 
     /* Find video stream */
-    int vs = ksav_bestvideo(io);
+    int vs = ksav_best_video(io);
     if (vs < 0) {
         KS_DECREF(io);
         return NULL;

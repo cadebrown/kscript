@@ -129,7 +129,7 @@ uname_="$(uname -s)"
 
 # auto-detect
 if [ "x$PLATFORM" = 'xauto' ]; then
-    case "${Vuname}" in
+    case "${uname_}" in
         Linux*)     PLATFORM=linux;;
         darwin*)    PLATFORM=darwin;;
         CYGWIN*)    PLATFORM=cygwin;;

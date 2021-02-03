@@ -1,5 +1,7 @@
 /* ks/ks.h - kscript C API definitions
  *
+ * kscript is a dynamic programming language, and this is the header for the default implementation (written in C).
+ * 
  * Here are the rule(s) of thumb regarding exported functions/symbols/globals:
  *
  *   - kst_*: A standard/builtin type
@@ -24,7 +26,8 @@
  *       valid object you like.
  * 
  * Whenever using machine-specific types, it is recommended to use types like 'ks_cint', 'ks_uint', 'ks_cfloat', and 'ks_ccomplex'. These
- *   are typedef'd to the type specific for this build.
+ *   are typedef'd to the type specific for this build, and standard types can be created from them.
+ * 
  * 
  * 
  * SEE: https://kscript.org

@@ -3,6 +3,13 @@
  * Essentially, this module combines flex, yacc, and other utilities, and is runtime
  *   specified, so it allows arbitrary grammars and is cross platform.
  * 
+ * The most important API is the lexing/parsing API:
+ * 
+ *   * gram.Lexer(rules, src=os.stdin): Create an iterate which turns characters into tokens from an IO-like object
+ * 
+ * TODO: Implement parser generators
+ * TODO: Implement a C-code generator
+ * 
  * @author: Cade Brown <brown.cade@gmail.com>
  */
 

@@ -1,6 +1,6 @@
 # kscript (ks)
 
-kscript ([https://kscript.org](https://kscript.org)) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. It's primary aim is to allow developers to write platform agnostic programs that can run anywhere, and require little or no platform- or os- specific code.
+kscript ([https://kscript.org](https://kscript.org)) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. Its primary aim is to allow developers to write platform agnostic programs that can run anywhere, and require little or no platform- or os- specific code.
 
 Documentation is available at [kscript.org](https://kscript.org), which provides examples, tutorials, and coverage of the standard library. Formal specifications are available at the GitHub repository ([https://github.com/ChemicalDevelopment/kscript](https://github.com/ChemicaldDvelopment/kscript)), within the `docs` folder.
 
@@ -8,8 +8,10 @@ Documentation is available at [kscript.org](https://kscript.org), which provides
 
 ## Current Status
 
-kscript is currently a work-in-progress, and has gone through a few rewrites. 
+kscript is currently a work-in-progress, aiming at an alpha release soon-ish. The most important internals are done (i.e. standard types, most standard functions). However, there are needs in a few areas:
 
+  * Distribution to popular platforms (Linux, MacOS, Windows)
+  * 
 
 
 ## Running

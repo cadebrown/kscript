@@ -1,7 +1,5 @@
 #!/usr/bin/env ks
-""" t_basic.ks - Basic input tests
-
-Test basic input, including literals, truthiness, and equivalences
+""" basic.ks - Test cases for kscript syntax elements
 
 @author: Cade Brown <cade@kscript.org>
 """

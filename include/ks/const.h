@@ -1,5 +1,7 @@
 /* ks/const.h - Constants used in kscript
  * 
+ * This file should contain all the magic-numbers, and hand-wavey explanations for why
+ *   certain constants are using
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -55,7 +57,7 @@
 
 /** Implementation Constants **/
 
-/* Maximum recursive call depth for a thread. If this is hit, then an 'InternalError' is thrown */
+/* Maximum recursive call depth for a thread. If this is hit, then an error is thrown */
 /* #define KS_MAX_CALL_DEPTH          16 */
 #define KS_MAX_CALL_DEPTH          1024
 

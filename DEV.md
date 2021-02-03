@@ -17,6 +17,33 @@ $ make -j16 && ./bin/ks -e 'print (1, 2, 3)'
 
 To develop on your own branch, follow a tutorial such as: [https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging](https://git-scm.com/book/en/v2/Git-Branching-Basic-Branching-and-Merging).
 
+
+## Code Organization
+
+The kscript C-API and library are large, but are organized as such:
+
+  * Main C-API, general functionality
+    * Documented in `include/ks/ks.h`, `include/ks/types.h` (builtin types)
+    * Main code is `src/*.c`, and `src/types/*.c` (builtin types)
+    * Some other functionality is in `include/ks`
+    * Builtin functions are in `src/funcs.c`
+  * Standard modules, which can be imported via the `ks_import` function (although they are bundled in the standard distribution)
+    * Documented in `include/ks/<modulename>.h`
+    * Code is in `src/modules/<modulename>`
+  * Extra modules, which can also be imported via the `ks_import` function (although they are loaded as DLLs/shared libraries)
+    * Documented in `include/ks/<modulename>.h`
+    * Code is in `src/extmodules/<modulename>`
+    * Output is `ksm_<modulename>.so` (or `.dll`, `.dylib` on some platforms)
+
+Other than the actual C-API, there are also the following areas:
+ 
+  * There is a folder, `winbuild`, which contains projects for compiling on Windows. It is sometimes not up to date, however
+  * Within `tools`, there are code generation tools, packaging utilities, and other helpful scripts to automate tasks
+  * Within `extras`, there are extra projects which are not central to kscript. For example, editor extensions may go in there, as well as logos/branding
+  * Within `docs`, there are documentation resources for a formal manual (this is currently a WIP, and I am planning to write my own documentation generator soon, which will replace the texinfo)
+  * Within `tests`, there are a number of test cases (`.ks` are written in kscript, and should run successfully)
+
+
 ## Changing Code
 
 Say we want to change code -- we'll use a simple example -- what needs to be done?
@@ -28,17 +55,10 @@ For changing the builtin modules, check `src/modules/<name>` (i.e. `src/modules/
 For changing the general kscript API and utilities, those files are typically located in `src/` (i.e. `src/init.c` for initialization routines).
 
 
-## Adding a c-wrapped function to a module
+## Adding a function to a standard module
 
-1. Ensure that any required libraries are included in the relevant configure script
-2. In the module header (`include/ks/module.h`), create a function prototype using `KS_API` macro; for example, `KS_API bool ksos_setenv(ks_str key, ks_str val);`
-3. In the relevant module src file, add dictionary entry to `KS_IKV` with string representing function as key, and `ksf_wrap(M_FUNCNAME_, M_NAME ".funcname(parameters)", "function description")`
-4. Write the function in the src file
-
-
-## Commiting Changes
-
-To commit your changes, add any files you changed via `git add` (for example, `git add src/types/int.c`), then run `git commit` and enter your message (use `git commit -m "MESSAGE"` to not use an editor).
-
-Finally, run `git push` to push it to the GitHub repo. Note that most of the time you'll be pushing it to another branch than `master` which you should have already checked out. You can check out (or fork the repo, and send a pull request) your own branch if you are working on code that has a lot of interop with other code.
+1. Ensure that any required libraries are included in the `configure` script
+2. In the module header (`include/ks/<module>.h`), create a function prototype using `KS_API` macro; for example, `KS_API bool ksos_setenv(ks_str key, ks_str val);`
+3. In the relevant module src file (example: `src/modules/<module>/main.c`), add dictionary entry to `KS_IKV` with string representing function as key, and `ksf_wrap(M_<func>_, M_NAME ".<func>(parameters)", "function description")`
+4. Write the function in the src file, using the `static KS_TFUNC(M, <func>) { ... }` code. See other modules for an example of how to do this
 

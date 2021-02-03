@@ -3,6 +3,9 @@
  * Defines functions to look up information based on codepoint and Unicode
  *   name
  *
+ * TODO: Add more information in the Unicode generator script
+ * TODO: Use 'attrtuple' type for information descriptor
+ * 
  * @author: Cade Brown <cade@kscript.org>
  */
 

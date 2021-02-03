@@ -1,4 +1,4 @@
-/* ks/colors.h - defines kscript colors
+/* ks/colors.h - defines kscript colors, which are typically terminal escape codes
  * 
  * These colors are based partially on the list here: 
  * https://stackoverflow.com/questions/4842424/list-of-ansi-color-escape-sequences

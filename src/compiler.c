@@ -717,7 +717,24 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
         if (((ks_str)info->elems[0])->data[0] != '<') {
             EMITO(KSB_STORE, info->elems[0]);
         }
+    } else if (k == KS_AST_ENUM) {
+        assert(NSUB == 1);
+        ks_tuple info = (ks_tuple)v->val;
+        assert(info && kso_issub(info->type, kst_tuple) && info->len == 2);
+        ks_ast body = SUB(0);
 
+        ks_code body_bc = ks_compile((ks_str)info->elems[0], src, body, code);
+        if (!body_bc) return false;
+
+        body_bc->tok = v->tok;
+
+        /* Create ENUM */
+        assert(false && "TODO: allow enum syntax to compile");
+
+        /* Store as a name */
+        if (((ks_str)info->elems[0])->data[0] != '<') {
+            EMITO(KSB_STORE, info->elems[0]);
+        }
     } else if (k == KS_AST_IF) {
         /* Emit conditional */
         assert((NSUB == 2 || NSUB == 3) && "'if' AST requires either 2 or 3 children");

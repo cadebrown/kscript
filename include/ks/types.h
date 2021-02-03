@@ -1,5 +1,6 @@
 /* ks/types.h - kscript builtin types
  * 
+ * This file includes the definitions of the C-style structures for builtin types
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */

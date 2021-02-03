@@ -29,7 +29,6 @@ using namespace std;
 namespace ks {
 
 
-
 /** Utility Functions **/
 
 /* Return a kscript string from a UTF8 C++ stirng */
@@ -63,76 +62,11 @@ static ks_type make_type(const string& name, ks_type base, int sz, int pos_attr,
     return res;
 }
 
-
 /* Convert a C-style kscript string object to a C++ STL string */
 static string get_string(ks_str str) {
     return string(str->data, str->len_b);
 }
 
-
-
-/* ks::Ref - wrapper around 'kso', the C-style kscript object
- *
- * This class represents an active reference to an object, so that
- *   the destructor automatically deconstructs it
- * 
- * 
- * ```
- * kso cobj = ...;
- * ks::Ref cxxobj = ks::Ref(cobj);
- * ```
- *
- * Or, if you want the object creation to create a new reference, run:
- * 
- * ```
- * kso cobj = ...;
- * ks::Ref cxxobj = ks::Ref(cobj, true);
- * ```
- * 
- * 
- */
-struct Ref {
-    kso ob;
-
-    Ref(kso ob_, bool new_ref=false) : ob(ob_) {
-        if (new_ref) KS_INCREF(ob);
-
-    }
-
-    ~Ref() {
-        KS_DECREF(ob);
-    }
-
-    /* Increment reference count */
-    void incref() {
-        KS_INCREF(ob);
-    }
-
-    /* Decrement reference count */
-    void decref() {
-        KS_DECREF(ob);
-    }
-
-    /* Return a new reference to the object */
-    Ref& newref() {
-        KS_INCREF(ob);
-        return *this;
-    }
-
-    string __str() {
-        ks_str val = ks_fmt("%S", this);
-        string res = get_string(val);
-        KS_DECREF(val);
-        return res;
-    }
-
-    string __repr() {
-        ks_str val = ks_fmt("%R", this);
-        string res = get_string(val);
-        KS_DECREF(val);
-        return res;
-    }
-};
 
 
 };
