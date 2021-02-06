@@ -36,32 +36,13 @@ repository:
   statement-keyword:
     patterns:
       - name: keyword.control.flow.kscript
-        comment: |
-          if `as` is eventually followed by `:` or line continuation
-          it's probably control flow like:
-              with foo as bar, \
-                   Foo as Bar:
-                try:
-                  do_stuff()
-                except Exception as e:
-                  pass
-        match: \b(?<!\.)as\b(?=.*[:\\])
-      - name: keyword.control.import.kscript
-        comment: other legal use of `as` is in an import
-        match: \b(?<!\.)as\b
-      - name: keyword.control.flow.kscript
         match: |
           (?x)
             \b(?<!\.)(
-                cont | del | assert | break | finally | for
-              | from | elif | else | if | except | throw
-              | ret | try | while | with
-            )\b
-      - name: storage.modifier.declaration.kscript
-        match: |
-          (?x)
-            \b(?<!\.)(
-              global
+                if | elif | else
+              | while | for 
+              | try | catch | finally
+              | ret | throw 
             )\b
 
   expr:
@@ -82,14 +63,14 @@ repository:
       (?x)
           \b(?<!\.)
             (?:
-              (and | or | not | in | is)                         (?# 1)
+              (\?\? | \|\| | \&\&)                     (?# 1)
               |
-              (for | if | else)  (?# 2)
+              (for | if | else)                        (?# 2)
             )
           (?!\s*:)\b
-          | (<< | >> | & | \| | \^ | ~)                          (?# 3)
-          | (\*\* | \* | \+ | - | % | // | / | @)                (?# 4)
-          | (!= | == | >= | <= | < | > | <=>)                    (?# 5)
+          | (<< | >> | & | \| | \^ | ~)                (?# 3)
+          | (\*\* | \* | \+ | - | % | // | / | @)      (?# 4)
+          | (!= | == | >= | <= | < | > | <=>)          (?# 5)
     captures:
       '1': {name: keyword.operator.logical.kscript}
       '2': {name: keyword.control.flow.kscript}
@@ -121,34 +102,21 @@ repository:
         match: |
           (?x)
             (?<!\.) \b(
-              __import__ | abs | all | any | ascii | bin | breakpoint | callable
-              | chr | compile | copyright | credits | delattr | dir | divmod
-              | enumerate | eval | exec | exit | filter | format | getattr
-              | globals | hasattr | hash | help | hex | id | input
-              | isinstance | issubclass | iter | len | license | locals | map
-              | max | memoryview | min | next | oct | open | ord | pow | print
-              | quit | range | reload | repr | reversed | round
-              | setattr | sorted | sum | vars | zip
-            )\b
-      - name: variable.legacy.builtin.kscript
-        match: |
-          (?x)
-            (?<!\.) \b(
-              file | reduce | intern | raw_input | unicode | cmp | basestring
-              | execfile | long | xrange
+              abs | pow | min | max | sum | bin | oct | hex
+              | ord | chr | compile | eval | exec 
+              | enumerate | filter | map | zip | all | any
+              | iter | next | len | hash | id | repr
+              | print | printf | isinst | issub
+              | input | exit
             )\b
   builtin-types:
     name: support.type.kscript
     match: |
       (?x)
         (?<!\.) \b(
-          bool | bytearray | bytes | classmethod | complex | dict
-          | float | frozenset | int | list | object | property
-          | set | slice | staticmethod | str | tuple | type
-          (?# Although 'super' is not a type, it's related to types,
-              and is special enough to be highlighted differently from
-              other built-ins)
-          | super
+          object | number | int | enum | bool | float | complex
+          | str | bytes
+          | range | slice | tuple | list | set | dict
         )\b
 
   
@@ -160,25 +128,13 @@ repository:
       (?x)
         \b(
           __(?:
-            abs | add | aenter | aexit | aiter | and | anext | await
-            | bool | call | ceil | cmp | coerce | complex | contains
-            | copy | deepcopy | del | delattr | delete | delitem
-            | delslice | dir | div | divmod | enter | eq | exit | float
-            | floor | floordiv | format | ge | get | getattr
-            | getattribute | getinitargs | getitem | getnewargs
-            | getslice | getstate | gt | hash | hex | iadd | iand | idiv
-            | ifloordiv | ilshift | imod | imul | index | init
-            | instancecheck | int | invert | ior | ipow | irshift | isub
-            | iter | itruediv | ixor | le | len | long | lshift | lt
-            | missing | mod | mul | ne | neg | new | next | nonzero | oct | or
-            | pos | pow | radd | rand | rdiv | rdivmod | reduce
-            | reduce_ex | repr | reversed | rfloordiv | rlshift | rmod
-            | rmul | ror | round | rpow | rrshift | rshift | rsub
-            | rtruediv | rxor | set | setattr | setitem | setslice
-            | setstate | sizeof | str | sub | subclasscheck | truediv
-            | trunc | unicode | xor | matmul | rmatmul | imatmul
-            | init_subclass | set_name | fspath | bytes | prepare
-          )__
+            abs | template | new | init | free | call | iter | next | number
+            | integral | bool | int | float | complex | str | bytes | set | dict
+            | getattr | setattr | delattr | getelem | setelem | delelem
+            | contains | hash | abs | len | repr | add | sub | mul | div | floordiv
+            | mod | pow | cmp | eq | ne | lt | le | gt | ge | lsh | rsh | binior | binxor
+            | binand  | pos | neg | sqig
+          )
         )\b
     captures:
       '1': {name: support.function.magic.kscript}
@@ -189,13 +145,8 @@ repository:
       (?x)
         \b(
           __(?:
-            all | bases | builtins | class | class_getitem | code | debug
-            | defaults | dict | doc | file | func | kwdefaults | members
-            | metaclass | methods | module | mro | mro_entries | name
-            | fullname | self | signature | slots | subclasses
-            | version | weakref | wrapped | annotations | classcell
-            | spec | path | package | future | traceback
-          )__
+            
+          )
         )\b
     captures:
       '1': {name: support.variable.magic.kscript}
@@ -208,7 +159,7 @@ repository:
   literal:
     patterns:
       - name: constant.language.kscript
-        match: \b(true|false|inf|nan|none|undefined)\b
+        match: \b(true|false|inf|nan|none|undefined|\.\.\.)\b
       - include: '#regex'
       - include: '#number'
       - include: '#docstring'
@@ -254,7 +205,7 @@ repository:
       '2': {name: storage.type.imaginary.number.kscript}
 
   number-oct:
-    name: constant.numeric.ict.kscript
+    name: constant.numeric.oct.kscript
     match: |
       (?x)
         (?:0[oO])
@@ -314,24 +265,6 @@ repository:
           \d+ | \d+,(\d+)? | ,\d+
         )\}
 
-  regexp-backreference-number:
-    name: meta.backreference.regexp
-    match: (\\[1-9]\d?)
-    captures:
-      '1': {name: entity.name.tag.backreference.regexp}
-
-  regexp-backreference:
-    name: meta.backreference.named.regexp
-    match: |
-      (?x)
-        (\()  (\?P= \w+(?:\s+[[:alnum:]]+)?)  (\))
-    captures:
-      '1': {name: punctuation.parenthesis.backreference.named.begin.regexp
-                  support.other.parenthesis.regexp}
-      '2': {name: entity.name.tag.named.backreference.regexp}
-      '3': {name: punctuation.parenthesis.backreference.named.end.regexp
-                  support.other.parenthesis.regexp}
-
   regexp-flags:
     name: storage.modifier.flag.regexp
     match: \(\?[aiLmsux]+\)
@@ -368,7 +301,6 @@ repository:
       - include: '#regexp-escape-special'
       - include: '#regexp-escape-character'
       - include: '#regexp-escape-unicode'
-      - include: '#regexp-backreference-number'
       - include: '#regexp-escape-catchall'
 
   docstring:
@@ -424,7 +356,6 @@ repository:
           - include: '#codetags'
 
 
-
   docstring-guts-unicode:
     patterns:
       - include: '#escape-sequence-unicode'
@@ -455,7 +386,6 @@ repository:
   string-line-continuation:
     name: constant.language.kscript
     match: \\$
-
 
   func:
     name: meta.function.kscript
@@ -496,7 +426,7 @@ repository:
 
     patterns:
       - name: keyword.operator.unpacking.parameter.kscript
-        match: (\*\*|\*)
+        match: (\*)
       - include: '#lambda-incomplete'
       - include: '#illegal-names'
       - include: '#illegal-object-name'
@@ -567,7 +497,7 @@ repository:
 
   illegal-object-name:
     name: keyword.illegal.name.kscript
-    match: \b(true | false | none | nan | inf | undefined | extends)\b
+    match: \b(true | false | none | nan | inf | undefined)\b
 
   line-continuation:
     patterns:

@@ -183,7 +183,7 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  * ELEMKV  : EXPR ':' EXPR
  * 
  * PAR     : '*' NAME
- *         | 
+ *         | NAME ('=' EXPR)?
  * 
  * NAME    : ? unicode identifier ?
  * STR     : ? string literal ?

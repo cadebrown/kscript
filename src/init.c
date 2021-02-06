@@ -251,6 +251,10 @@ _KS_DO_SPEC(_KSACT)
         {"chr", (kso)ksf_chr},
         {"ord", (kso)ksf_ord},
         {"id", (kso)ksf_id},
+        
+        {"bin", (kso)ksf_bin},
+        {"oct", (kso)ksf_oct},
+        {"hex", (kso)ksf_hex},
     
     ));
 

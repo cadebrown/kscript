@@ -365,7 +365,6 @@ KS_API_DATA ks_func
     ksf_pow,
 
     ksf_open,
-    ksf_close,
 
     ksf_eval,
     ksf_exec,
@@ -379,6 +378,10 @@ KS_API_DATA ks_func
     ksf_len,
     ksf_repr,
     ksf_id,
+    
+    ksf_bin,
+    ksf_oct,
+    ksf_hex,
 
     ksf_ord,
     ksf_chr,

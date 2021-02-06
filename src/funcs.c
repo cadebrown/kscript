@@ -23,7 +23,6 @@ ks_func
     ksf_pow,
 
     ksf_open,
-    ksf_close,
 
     ksf_eval,
     ksf_exec,
@@ -41,6 +40,10 @@ ks_func
 
     ksf_ord,
     ksf_chr,
+
+    ksf_bin,
+    ksf_oct,
+    ksf_hex,
 
     ksf_input,
 
@@ -162,6 +165,44 @@ static KS_FUNC(eval) {
     }
 
     return kso_eval(src, fname, (ks_dict)locals);
+}
+
+
+static KS_FUNC(bin) {
+    kso obj;
+    KS_ARGS("obj", &obj);
+
+    ksio_StringIO sio = ksio_StringIO_new();
+    if (!ks_fmt2((ksio_BaseIO)sio, "0b%b", 1, &obj)) {
+        KS_DECREF(sio);
+        return NULL;
+    }
+
+    return (kso)ksio_StringIO_getf(sio);
+}
+static KS_FUNC(oct) {
+    kso obj;
+    KS_ARGS("obj", &obj);
+
+    ksio_StringIO sio = ksio_StringIO_new();
+    if (!ks_fmt2((ksio_BaseIO)sio, "0o%o", 1, &obj)) {
+        KS_DECREF(sio);
+        return NULL;
+    }
+
+    return (kso)ksio_StringIO_getf(sio);
+}
+static KS_FUNC(hex) {
+    kso obj;
+    KS_ARGS("obj", &obj);
+
+    ksio_StringIO sio = ksio_StringIO_new();
+    if (!ks_fmt2((ksio_BaseIO)sio, "0x%x", 1, &obj)) {
+        KS_DECREF(sio);
+        return NULL;
+    }
+
+    return (kso)ksio_StringIO_getf(sio);
 }
 
 static KS_FUNC(repr) {
@@ -332,6 +373,10 @@ void _ksi_funcs() {
     F(iter, "iter(obj)", "Returns an iterator over the contents of 'obj'\n\n    Delegates to 'type(obj).__iter'")
     F(next, "next(obj)", "Returns the next object in an iterator\n\n    Delegates to 'type(obj).__next', or 'next(iter(obj))'")
     F(input, "input(prompt='')", "Print an (optional) prompt and then return the next line of user input")
+
+    F(bin, "bin(obj)", "Return a string beginning with '0b' and containing the base-2 digits of 'obj' (which should be an integer)");
+    F(oct, "oct(obj)", "Return a string beginning with '0o' and containing the base-8 digits of 'obj' (which should be an integer)");
+    F(hex, "hex(obj)", "Return a string beginning with '0x' and containing the base-16 digits of 'obj' (which should be an integer)");
 
     F(id, "id(obj)", "Return the id of an object, which is its memory location");
 
