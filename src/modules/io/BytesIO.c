@@ -59,50 +59,12 @@ static KS_TFUNC(T, bytes) {
     KS_ARGS("self:*", &self, ksiot_BytesIO);
     return (kso)ksio_BytesIO_get(self);
 }
-
-
-static KS_TFUNC(T, read) {
+static KS_TFUNC(T, get) {
     ksio_BytesIO self;
-    ks_cint sz = KS_CINT_MAX;
-    KS_ARGS("self:* ?sz:cint", &self, ksiot_BytesIO, &sz);
-    
-    /* Read bytes */
-    ks_ssize_t bsz = KSIO_BUFSIZ, rsz = 0;
-    void* dest = NULL;
-    while (rsz < sz) {
-        dest = ks_realloc(dest, rsz + bsz);
-        ks_ssize_t csz = ksio_readb((ksio_BaseIO)self, bsz, ((char*)dest) + rsz);
+    KS_ARGS("self:*", &self, ksiot_BytesIO);
 
-        if (csz < 0) {
-            ks_free(dest);
-            return NULL;
-        }
-        rsz += csz;
-        if (csz == 0) break;
-    }
-
-    ks_bytes res = ks_bytes_new(rsz, dest);
-    ks_free(dest);
-    return (kso)res;
+    return (kso)ksio_BytesIO_get(self);
 }
-
-static KS_TFUNC(T, write) {
-    ksio_BytesIO self;
-    kso msg;
-    KS_ARGS("self:* msg", &self, ksiot_BytesIO, &msg);
-    /* Write bytes */
-    ks_bytes vm = kso_bytes(msg);
-    if (!vm) return NULL;
-    if (ksio_writeb((ksio_BaseIO)self, vm->len_b, vm->data) < 0) {
-        KS_DECREF(vm);
-        return NULL;
-    }
-    KS_DECREF(vm);
-
-    return KSO_NONE;
-}
-
-
 
 
 /* Export */
@@ -115,9 +77,8 @@ void _ksi_io_BytesIO() {
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
 
         {"__bytes",              ksf_wrap(T_bytes_, T_NAME ".__bytes(self)", "")},
+        {"get",                  ksf_wrap(T_get_, T_NAME ".get(self)", "Gets the current bytes being built")},
 
-        {"read",                 ksf_wrap(T_read_, T_NAME ".read(self, sz=none)", "")},
-        {"write",                ksf_wrap(T_write_, T_NAME ".write(self, msg)", "")},
 
     ));
 }

@@ -601,12 +601,21 @@ RULE(STMT) {
                 KS_DECREF(ename);
                 
                 assign = SUB(EXPR);
-                
                 if (!assign) {
                     KS_DECREF(res);
                     KS_DECREF(tp);
                     return NULL;
                 }
+            } else if (TOK.kind == KS_TOK_LBRC) {
+                /* Don't handle here, parse below */
+                ks_str ename = ks_str_new(-1, "Exception");
+                tp = ks_ast_new(KS_AST_NAME, 0, NULL, (kso)ename, TOK);
+                KS_DECREF(ename);
+
+                ks_str cname = ks_str_new(-1, "");
+                assign = ks_ast_new(KS_AST_NAME, 0, NULL, (kso)cname, TOK);
+                KS_DECREF(cname);
+
             } else {
                 tp = SUBF(EXPR, (flags | PF_NO_AS));
                 if (!tp) {

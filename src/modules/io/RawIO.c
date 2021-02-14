@@ -153,7 +153,7 @@ static KS_TFUNC(T, str) {
     ksio_RawIO self;
     KS_ARGS("self:*", &self, ksiot_RawIO);
 
-    return (kso)ks_fmt("<%T (fd=%i, src=%R, mode=%R)>", self, self->fd, self->src, self->mode);
+    return (kso)ks_fmt("<%T (fileno=%i, src=%R, mode=%R)>", self, self->fd, self->src, self->mode);
 }
 
 static KS_TFUNC(T, int) {
@@ -171,7 +171,7 @@ static KS_TFUNC(T, getattr) {
     ks_str attr;
     KS_ARGS("self:* attr:*", &self, ksiot_RawIO, &attr, kst_str);
 
-    if (ks_str_eq_c(attr, "fd", 2)) {
+    if (ks_str_eq_c(attr, "fileno", 6)) {
         return (kso)ks_int_new(self->fd);
     }
 
@@ -186,8 +186,8 @@ static KS_TFUNC(T, setattr) {
     kso val;
     KS_ARGS("self:* attr:* val", &self, ksiot_RawIO, &attr, kst_str, &val);
 
-    if (ks_str_eq_c(attr, "fd", 2)) {
-        KS_THROW(kst_AttrError, "Cannot set '.fd', is read only");
+    if (ks_str_eq_c(attr, "fileno", 6)) {
+        KS_THROW(kst_AttrError, "Cannot set '.fileno', is read only");
         return NULL;
     }
 

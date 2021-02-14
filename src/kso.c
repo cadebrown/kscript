@@ -1156,6 +1156,11 @@ kso kso_next(kso ob) {
 }
 
 void* kso_throw(ks_Exception exc) {
+    if (!kso_issub(exc->type, kst_Exception)) {
+        KS_THROW(kst_Exception, "Tried to throw '%T' object. Only subtypes of 'Exception' may be thrown", exc);
+        return NULL;
+    }
+
     ksos_thread th = ksos_thread_get();
     assert(th != NULL);
 

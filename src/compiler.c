@@ -928,7 +928,7 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 
             PATCH(jc_l, jc_f, BC_N);
 
-            if (!COMPILE(SUB(2))) return false;
+            if (!COMPILE(SUB(3))) return false;
             CLEAR(ssl+1);
 
             /* Patch true branch to jump to after the 'else' */

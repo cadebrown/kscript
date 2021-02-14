@@ -61,9 +61,9 @@ static KS_TFUNC(T, free) {
     ks_Exception self;
     KS_ARGS("self:*", &self, kst_Exception);
 
-    KS_DECREF(self->frames);
-    KS_DECREF(self->args);
-    KS_DECREF(self->what);
+    KS_NDECREF(self->frames);
+    KS_NDECREF(self->args);
+    KS_NDECREF(self->what);
 
     if (self->inner) KS_DECREF(self->inner);
 
