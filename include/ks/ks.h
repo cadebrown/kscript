@@ -1350,6 +1350,9 @@ KS_API bool ks_sort_insertion(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
 
 /* Sorts 'elems' in place according to 'keys' (may be '==elems'), according to 'cmpfunc'
  *
+ * If `cmpfunc` is not `NULL`, then it should be a callable object which has the signature:
+ *   (L, R) -> L <= R
+ * And returns whether its first argument is less than or equal to its second argument
  */
 KS_API bool ks_sort(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
 

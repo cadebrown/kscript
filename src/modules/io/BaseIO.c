@@ -702,6 +702,16 @@ bool ksio_writes(ksio_BaseIO self, ks_ssize_t sz_b, const void* data) {
 
 /* Type Functions */
 
+static KS_TFUNC(T, new) {
+    ks_type tp;
+    int nargs;
+    kso* args;
+    KS_ARGS("tp:* *args", &tp, kst_type, &nargs, &args);
+
+    KS_THROW(kst_TypeError, "Type '%R' is abstract and cannot be created", tp);
+    return NULL;
+}
+
 static KS_TFUNC(T, bool) {
     ksio_BaseIO self;
     KS_ARGS("self:*", &self, ksiot_BaseIO);
@@ -921,6 +931,7 @@ void _ksi_io_BaseIO() {
     ));
 
     _ksinit(ksiot_BaseIO, kst_object, T_NAME, sizeof(struct kso_s), -1, "Abstract base type of other IO objects", KS_IKV(
+        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__iter",                 KS_NEWREF(ksiot_BaseIO_iter)},
 

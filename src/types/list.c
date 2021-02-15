@@ -400,9 +400,7 @@ static KS_TFUNC(T, index) {
         } else if (eq) {
             return (kso)ks_int_new(i);
         }
-
     }
-
 
     KS_THROW_VAL(self, elem);
     return NULL;
@@ -410,11 +408,33 @@ static KS_TFUNC(T, index) {
 
 static KS_TFUNC(T, sort) {
     ks_list self;
-    KS_ARGS("self:*", &self, kst_list);
+    kso cmpfunc = NULL;
+    kso keys = NULL;
+    KS_ARGS("self:* ?cmpfunc ?keys", &self, kst_list, &cmpfunc, &keys);
 
-    if (!ks_sort(self->len, self->elems, self->elems, NULL)) {
-        return NULL;
+    if (!keys || keys == KSO_NONE) {
+        /* Use entries as keys */
+        if (!ks_sort(self->len, self->elems, self->elems, cmpfunc)) {
+            return NULL;
+        }
+    } else {
+        /* Use the other iterable as keys */
+        ks_list kl = ks_list_newi(keys);
+        if (!kl) {
+            return NULL;
+        }
+        if (kl->len != self->len) {
+            KS_THROW(kst_SizeError, "Expected 'self' and 'keys' to have same length, but they differed (%i and %i)", (int)self->len, (int)kl->len);
+            KS_DECREF(kl);
+            return NULL;
+        }
+        if (!ks_sort(self->len, self->elems, kl->elems, cmpfunc)) {
+            KS_DECREF(kl);
+            return NULL;
+        }
+        KS_DECREF(kl);
     }
+
 
     return KSO_NONE;
 }
@@ -477,7 +497,7 @@ void _ksi_list() {
         {"pop",                  ksf_wrap(T_pop_, T_NAME ".pop(self, num=1)", "Pops the given number of arguments off of the end of the list")},
         {"index",                ksf_wrap(T_index_, T_NAME ".index(self, elem)", "Calculates the index of an element")},
 
-        {"sort",                 ksf_wrap(T_sort_, T_NAME ".sort(self)", "Sorts, in place, the list")},
+        {"sort",                 ksf_wrap(T_sort_, T_NAME ".sort(self, cmpfunc=none, keys=none)", "Sorts, in place, the list according to 'cmpfunc' (which should return 'L <= R' for 'cmpfunc(L, R)'")},
 
     ));
 
