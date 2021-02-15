@@ -931,7 +931,6 @@ void _ksi_io_BaseIO() {
     ));
 
     _ksinit(ksiot_BaseIO, kst_object, T_NAME, sizeof(struct kso_s), -1, "Abstract base type of other IO objects", KS_IKV(
-        {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__iter",                 KS_NEWREF(ksiot_BaseIO_iter)},
 
