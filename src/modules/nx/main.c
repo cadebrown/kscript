@@ -504,6 +504,16 @@ T_SORT2(cumprod)
 T_SORT1(sort)
 
 
+static KS_TFUNC(M, struct) {
+    ks_str name;
+    kso members;
+    KS_ARGS("name:* members", &name, kst_str, &members);
+
+
+    return (kso)nx_dtype_struct(name, members);
+}
+
+
 /* Export */
 
 ks_module _ksi_nx() {
@@ -566,6 +576,8 @@ ks_module _ksi_nx() {
         {"complex128",             KS_NEWREF(nxd_cQ)},
 
         /* Functions */
+        
+        {"struct",                 ksf_wrap(M_struct_, M_NAME ".struct(name, members)", "Create a new structure datatype")},
 
         {"zeros",                  ksf_wrap(M_zeros_, M_NAME ".zeros(shape=none, dtype=nx.double)", "Create an array of zeros")},
         {"ones",                   ksf_wrap(M_ones_, M_NAME ".zeros(shape=none, dtype=nx.double)", "Create an array of ones")},

@@ -4,9 +4,11 @@
  * @author:    Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
+#include <ks/nxi.h>
 #include <ks/nx.h>
 
 #define T_NAME "nx.array"
+#define TI_NAME "nx.array.__iter"
 
 /* Internals */
 
@@ -161,6 +163,70 @@ static bool I_array_fill(ks_type tp, nx_dtype dtype, nx_array* resp, kso cur, in
 
 
 nx_array nx_array_newo(ks_type tp, kso obj, nx_dtype dtype) {
+    if (!dtype) dtype = nxd_D;
+    
+    /* Get block of objects */
+    int rank;
+    ks_size_t shape[NX_MAXRANK];
+    kso* oblk = nx_objblock(obj, &rank, shape);
+    if (!oblk) {
+        return NULL;
+    }
+
+    /* Construct result array */
+    nx_array res = NULL;
+    ks_size_t i;
+
+    /* Convert linearly */
+    if (dtype->kind == NX_DTYPE_STRUCT) {
+        res = nx_array_newc(tp, NULL, dtype, rank - 1, shape, NULL);
+        ks_size_t tnum = szprod(rank-1, shape);
+        for (i = 0; i < tnum; ++i) {
+            ks_uint outptr = (ks_uint)res->val.data + i * dtype->size;
+
+            /* Objects to convert */
+            int nobj = shape[rank - 1];
+            kso* obj = &oblk[i * shape[rank - 1]];
+            ks_list llo = ks_list_new(nobj, obj);
+            if (!nx_enc(dtype, (kso)llo, (void*)outptr)) {
+                for (i = 0; i < tnum; ++i) {
+                    KS_DECREF(oblk[i]);
+                }
+                KS_DECREF(llo);
+
+                KS_DECREF(res);
+                ks_free(oblk);
+                return NULL;
+            }
+            KS_DECREF(llo);
+        }
+    } else {
+        res = nx_array_newc(tp, NULL, dtype, rank, shape, NULL);
+        ks_size_t tnum = szprod(rank, shape);
+        for (i = 0; i < tnum; ++i) {
+            ks_uint outptr = (ks_uint)res->val.data + i * dtype->size;
+            if (!nx_enc(dtype, oblk[i], (void*)outptr)) {
+                for (i = 0; i < tnum; ++i) {
+                    KS_DECREF(oblk[i]);
+                }
+
+                KS_DECREF(res);
+                ks_free(oblk);
+                return NULL;
+            }
+        }
+    }
+
+    ks_size_t tnum = szprod(rank, shape);
+    for (i = 0; i < tnum; ++i) {
+        KS_DECREF(oblk[i]);
+    }
+
+    ks_free(oblk);
+    return res;
+
+    /** OLD METHOD **/
+
     if (kso_issub(obj->type, nxt_array)) {
         nx_t of = ((nx_array)obj)->val;
         nx_array res = nx_array_newc(tp, NULL, dtype, of.rank, of.shape, NULL);
@@ -259,6 +325,70 @@ static KS_TFUNC(T, str) {
     return (kso)ksio_StringIO_getf(sio);
 }
 
+static KS_TFUNC(T, float) {
+    nx_array self;
+    KS_ARGS("self:*", &self, nxt_array);
+
+    if (self->val.rank != 0) {
+        KS_THROW(kst_SizeError, "Only arrays of rank-0 may be converted to 'float'");
+        return NULL;
+    }
+
+    ks_cfloat v;
+    if (!nx_cast(
+        self->val,
+        nx_make(&v, nxd_D, 0, NULL, NULL)
+    )) {
+        return NULL;
+    }
+
+    return (kso)ks_float_new(v);
+}
+
+static KS_TFUNC(T, integral) {
+    nx_array self;
+    KS_ARGS("self:*", &self, nxt_array);
+
+    if (self->val.rank != 0) {
+        KS_THROW(kst_SizeError, "Only arrays of rank-0 may be converted as integers");
+        return NULL;
+    }
+    if (self->val.dtype->kind != NX_DTYPE_INT) {
+        KS_THROW(kst_SizeError, "Only arrays of integer datatype may be converted as integers");
+        return NULL;
+    }
+
+    nx_s64 v;
+    if (!nx_cast(
+        self->val,
+        nx_make(&v, nxd_s64, 0, NULL, NULL)
+    )) {
+        return NULL;
+    }
+
+    return (kso)ks_int_new(v);
+}
+
+static KS_TFUNC(T, int) {
+    nx_array self;
+    KS_ARGS("self:*", &self, nxt_array);
+
+    if (self->val.rank != 0) {
+        KS_THROW(kst_SizeError, "Only arrays of rank-0 may be converted as integers");
+        return NULL;
+    }
+
+    nx_s64 v;
+    if (!nx_cast(
+        self->val,
+        nx_make(&v, nxd_s64, 0, NULL, NULL)
+    )) {
+        return NULL;
+    }
+
+    return (kso)ks_int_new(v);
+}
+
 static KS_TFUNC(T, getattr) {
     nx_array self;
     ks_str attr;
@@ -299,6 +429,20 @@ static KS_TFUNC(T, getattr) {
         }
 
         return (kso)nx_view_newo(nxt_view, sT, (kso)self);
+    } else if (self->val.dtype->kind == NX_DTYPE_STRUCT) {
+        /* Find attribute and return view */
+
+        int i;
+        for (i = 0; i < self->val.dtype->s_cstruct.n_members; ++i) {
+            if (ks_str_eq(attr, self->val.dtype->s_cstruct.members[i].name)) {
+                /* Construct view */
+                ks_uint ptr = (ks_uint)self->val.data + self->val.dtype->s_cstruct.members[i].offset;
+                nx_t res = nx_make((void*)ptr, self->val.dtype->s_cstruct.members[i].dtype, self->val.rank, self->val.shape, self->val.strides);
+                return (kso)nx_view_newo(nxt_view, res, (kso)self);
+            }
+
+        }
+
     }
     
     KS_THROW_ATTR(self, attr);
@@ -447,13 +591,68 @@ T_A1(neg)
 T_A1(conj)
 T_A1r2c(abs)
 
+
+/* Iterator Type */
+
+
+static KS_TFUNC(TI, free) {
+    nx_array_iter self;
+    KS_ARGS("self:*", &self, nxt_array_iter);
+
+    KS_NDECREF(self->of);
+
+    KSO_DEL(self);
+
+    return KSO_NONE;
+}
+
+static KS_TFUNC(TI, init) {
+    nx_array_iter self;
+    nx_array of;
+    KS_ARGS("self:* of:*", &self, nxt_array_iter, &of, nxt_array);
+
+    KS_INCREF(of);
+    self->of = of;
+
+    self->pos = 0;
+
+    return KSO_NONE;
+}
+static KS_TFUNC(TI, next) {
+    nx_array_iter self;
+    KS_ARGS("self:*", &self, nxt_array_iter);
+
+    if (self->of->val.rank < 1 || self->pos >= self->of->val.shape[0]) {
+        KS_OUTOFITER();
+        return NULL;
+    }
+
+    /* Get position */
+    ks_cint p = self->pos++;
+
+    ks_uint ptr = (ks_uint)self->of->val.data + p * self->of->val.strides[0];
+    nx_t res = nx_make((void*)ptr, self->of->val.dtype, self->of->val.rank - 1, self->of->val.shape + 1, self->of->val.strides + 1);
+
+    return (kso)nx_view_newo(nxt_view, res, (kso)self->of);
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
 ks_type nxt_array = &tp;
 
+static struct ks_type_s tpi;
+ks_type nxt_array_iter = &tpi;
+
 void _ksi_nx_array() {
     
+    _ksinit(nxt_array_iter, kst_object, TI_NAME, sizeof(struct nx_array_iter_s), -1, "Array iterator", KS_IKV(
+        {"__free",                 ksf_wrap(TI_free_, TI_NAME ".__free(self)", "")},
+        {"__init",                 ksf_wrap(TI_init_, TI_NAME ".__init(self, of)", "")},
+        {"__next",                 ksf_wrap(TI_next_, TI_NAME ".__next(self)", "")},
+    ));
+
     _ksinit(nxt_array, kst_object, T_NAME, sizeof(struct nx_array_s), -1, "Multidimesional array", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, obj, dtype=nx.float64)", "")},
@@ -461,6 +660,9 @@ void _ksi_nx_array() {
 
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__float",                ksf_wrap(T_float_, T_NAME ".__float(self)", "")},
+        {"__int",                  ksf_wrap(T_int_, T_NAME ".__int(self)", "")},
+        {"__iter",                 (kso)nxt_array_iter},
 
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
 
@@ -470,7 +672,6 @@ void _ksi_nx_array() {
         {"__abs",                  ksf_wrap(T_abs_, T_NAME ".__abs(self)", "")},
         {"__neg",                  ksf_wrap(T_abs_, T_NAME ".__neg(self)", "")},
         {"__sqig",                 ksf_wrap(T_conj_, T_NAME ".__sqig(self)", "")},
-
 
         {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
         {"__sub",                  ksf_wrap(T_sub_, T_NAME ".__sub(L, R)", "")},

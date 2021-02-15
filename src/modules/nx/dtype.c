@@ -48,6 +48,81 @@ static nx_dtype make_complex(const char* name, const char* namecode, int sz) {
     return res;
 }
 
+nx_dtype nx_dtype_struct(ks_str name, kso members) {
+    nx_dtype res = KSO_NEW(nx_dtype, nxt_dtype);
+
+    KS_INCREF(name);
+    res->name = name;
+    KS_INCREF(name);
+    res->name = name;
+    res->kind = NX_DTYPE_STRUCT;
+
+    res->size = 0;
+
+    res->s_cstruct.n_members = 0;
+    res->s_cstruct.members = NULL;
+
+    ks_cit it = ks_cit_make(members);
+    kso ob;
+    while ((ob = ks_cit_next(&it)) != NULL) {
+        if (!kso_issub(ob->type, kst_tuple)) {
+            KS_THROW(kst_Error, "Structure member descriptor expected to be 'tuple', but given '%T' object", ob);
+            it.exc = true;
+        } else {
+            ks_tuple to = (ks_tuple)ob;
+            int off = res->size;
+            if (to->len == 3) {
+                ks_cint v;
+                if (!kso_get_ci(to->elems[2], &v)) {
+                    it.exc = true;
+                }
+            } else if (to->len < 2 || to->len > 3) {
+                KS_THROW(kst_Error, "Expected either 2 or 3 elements in structure member descriptor, but got %i", (int)to->len);
+                it.exc = true;
+            }
+
+            if (!it.exc) {
+                ks_str new_name = (ks_str)to->elems[0];
+                if (!kso_issub(new_name->type, kst_str)) {
+                    KS_THROW(kst_Error, "Expected tuples of '(name, dtype)' in structure descriptor, but 'name' was '%T' object (expected 'str')", new_name);
+                    it.exc = true;
+                } else {
+                    nx_dtype new_dtype = (nx_dtype)to->elems[1];
+                    if (!kso_issub(new_dtype->type, nxt_dtype)) {
+                        KS_THROW(kst_Error, "Expected tuples of '(name, dtype)' in structure descriptor, but 'dtype' was '%T' object (expected 'nx.dtype')", new_dtype);
+                        it.exc = true;
+                    } else {
+                        int ii = res->s_cstruct.n_members++;
+                        res->s_cstruct.members = ks_zrealloc(res->s_cstruct.members, sizeof(*res->s_cstruct.members), res->s_cstruct.n_members);
+                        res->s_cstruct.members[ii].offset = off;
+                        KS_INCREF(new_name);
+                        res->s_cstruct.members[ii].name = new_name;
+                        KS_INCREF(new_dtype);
+                        res->s_cstruct.members[ii].dtype = new_dtype;
+
+                        int new_sz = off + new_dtype->size;
+                        if (new_sz > res->size) {
+                            res->size = new_sz;
+                        }
+                    }
+                }
+            }
+        }
+        KS_DECREF(ob);
+    }
+
+    ks_cit_done(&it);
+    if (it.exc) {
+        KS_DECREF(res);
+        return NULL;
+    }
+
+    return res;
+}
+
+
+
+
 
 /* Type Functions */
 
@@ -89,6 +164,22 @@ static KS_TFUNC(T, call) {
 
     return (kso)nx_array_newo(nxt_array, obj, self);
 }
+static KS_TFUNC(T, scalar) {
+    nx_dtype self;
+    kso obj;
+    KS_ARGS("self:* obj", &self, nxt_dtype, &obj);
+
+    void* res = ks_malloc(self->size);
+    if (!nx_enc(self, obj, res)) {
+        ks_free(res);
+        return NULL;
+    }
+
+    nx_array rr = nx_array_newc(nxt_array, res, self, 0, NULL, NULL);
+    ks_free(res);
+
+    return (kso)rr;
+}
 
 /* Export */
 
@@ -128,6 +219,9 @@ void _ksi_nx_dtype() {
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
         {"__call",                 ksf_wrap(T_call_, T_NAME ".__call(self, obj)", "")},
+
+
+        {"scalar",                 ksf_wrap(T_scalar_, T_NAME ".scalar(self, obj)", "Creates a scalar from 'obj'")},
 
     ));
     

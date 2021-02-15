@@ -380,6 +380,24 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
     NXT_PASTE_C(LOOP)
     #undef LOOP
 
+
+    if (dtype->kind == NX_DTYPE_STRUCT) {
+        ksio_add(bio, "(");
+
+        int i = 0, tsz = 0;
+        for (i = 0; i < dtype->s_cstruct.n_members; ++i) {
+            if (dtype->s_cstruct.members[i].offset >= tsz) {
+                if (i > 0) ksio_add(bio, ", ");
+                if (!my_getstr_addelem(bio, dtype->s_cstruct.members[i].dtype, (void*)((ks_uint)ptr + dtype->s_cstruct.members[i].offset))) {
+                    return false;
+                }
+
+                tsz = dtype->s_cstruct.members[i].offset + dtype->s_cstruct.members[i].dtype->size;
+            }
+        }
+        ksio_add(bio, ")");
+    }
+
     return true;
 }
 

@@ -246,6 +246,15 @@ bool kso_get_ci(kso ob, ks_cint* val) {
 
         KS_DECREF(t);
         return res;
+    } else if (ob->type->i__int) {
+
+        kso t = kso_call(ob->type->i__int, 1, &ob);
+        if (!t) return NULL;
+
+        bool res = kso_get_ci(t, val);
+
+        KS_DECREF(t);
+        return res;
     }
 
     KS_THROW(kst_TypeError, "Failed to convert '%T' object to C-style integer", ob);

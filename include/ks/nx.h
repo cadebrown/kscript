@@ -499,6 +499,21 @@ typedef struct nx_array_s {
 
 }* nx_array;
 
+
+/* nx.array.__iter - Array iterator
+ *
+ */
+typedef struct nx_array_iter_s {
+    KSO_BASE
+
+    /* Object being iterated */
+    nx_array of;
+
+    /* Position in the major-most dimension */
+    ks_cint pos;
+
+}* nx_array_iter;
+
 /* 'nx.view' - View of a multi-dimensional array
  *
  * This just points to data -- nothing is allocated, but a reference is held to an
@@ -544,6 +559,7 @@ typedef int (*nxf_Nd)(int nargs, nx_t* args, int rank, ks_size_t* shape, void* e
 
 
 /* Functions */
+
 
 /** 'nx_t' operations (nx.c) **/
 
@@ -712,6 +728,12 @@ KS_API int nx_apply_Nde(nxf_Nd func, int nargs, nx_t* args, int M, nx_dtype dtyp
 
 /** Creation Routines **/
 
+
+/* Expand an iterable recursively to create a huge block of objects
+ */
+KS_API kso* nx_objblock(kso objs, int* rank, ks_size_t* shape);
+
+
 /* Create a new dense array from 'data', or initialized to zeros if 'data == NULL'. The new array
  *   will have the same rank and shape, but it will be tightly packed and so the strides may be different if
  *   'data' was not tightly packed
@@ -732,6 +754,14 @@ KS_API nx_array nx_array_newo(ks_type tp, kso objh, nx_dtype dtype);
  *
  */
 KS_API nx_view nx_view_newo(ks_type tp, nx_t val, kso ref);
+
+/** Datatypes **/
+
+/* Create a structure-style datatype
+ * 'members' should be an iterable of tuples of '(name, type)' or '(name, type, offset)'
+ */
+KS_API nx_dtype nx_dtype_struct(ks_str name, kso members);
+
 
 
 /** Operations **/
@@ -1242,6 +1272,7 @@ KS_API_DATA nxrand_State
 KS_API_DATA ks_type
     nxt_dtype,
     nxt_array,
+    nxt_array_iter,
     nxt_view,
 
     nxrandt_State,

@@ -7,10 +7,99 @@
 #include <ks/nxi.h>
 #include <ks/nxt.h>
 
+
+
+/* Internal routine to create a block of objects 
+ *
+ *  'nidxs' and 'idxs' are the array of current indexes into the output
+ *  'cur' is the current object to be expanded
+ */
+static bool my_oblk(int nidxs, ks_size_t* idxs, kso cur, int* rank, ks_size_t* shape, kso** rr, int* li, int dep) {
+    bool should_iter = kso_is_iterable(cur);
+    if (should_iter) {
+        if (kso_issub(cur->type, nxt_array)) {
+            if (((nx_array)cur)->val.rank == 0) {
+                should_iter = false;
+            }
+        }
+    }
+
+    if (should_iter) {
+        ks_list cl = ks_list_newi(cur);
+        if (!cl) {
+            return false;
+        }
+
+        if (*rank >= 0) {
+            /* Already reached max depth, so ensure we are of a correct length */
+            if (cl->len != shape[nidxs]) {
+                KS_THROW_ATTR(kst_SizeError, "Initializing entries had differing dimensions");
+                return false;
+            }
+        } else {
+            /* First time hitting this depth, so set the shape */
+            shape[nidxs] = cl->len;
+        }
+
+        int i;
+        for (i = 0; i < cl->len; ++i) {
+            idxs[nidxs] = i;
+            if (!my_oblk(nidxs + 1, idxs, cl->elems[i], rank, shape, rr, li, dep+1)) {
+                return false;
+            }
+        }
+        KS_DECREF(cl);
+    } else {
+        /* Leaf node */
+        /* Get my index */
+        int me = (*li)++;
+
+        if (me == 0) {
+            /* First time, so allocate it */
+            *rank = dep;
+            *rr = ks_malloc(sizeof(**rr) * szprod(*rank, shape));
+        }
+
+        /* Store the current object */
+        KS_INCREF(cur);
+        (*rr)[me] = cur;
+    }
+
+    return true;
+}
+
+kso* nx_objblock(kso objs, int* rank, ks_size_t* shape) {
+    kso* res = NULL;
+    if (kso_is_iterable(objs)) {
+        /* Needs a shape */
+        ks_size_t idxs[NX_MAXRANK];
+        int li = 0;
+        *rank = -1;
+        if (!my_oblk(0, idxs, objs, rank, shape, &res, &li, 0)) {
+            ks_free(res);
+            return NULL;
+        }
+
+    } else {
+        /* Single scalar value */
+        *rank = 0;
+        res = ks_malloc(sizeof(*res));
+        KS_INCREF(objs);
+        res[0] = objs;
+    }
+    return res;
+}
+
+
+
+
 bool nx_enc(nx_dtype dtype, kso obj, void* out) {
+
     if (dtype->kind == NX_DTYPE_INT) {
         ks_cint val;
-        if (!kso_get_ci(obj, &val)) return false;
+        if (!kso_get_ci(obj, &val)) {
+            return false;
+        }
 
         if (false) {}
         #define LOOP(TYPE, NAME) else if (dtype == nxd_##NAME) { \
@@ -40,6 +129,30 @@ bool nx_enc(nx_dtype dtype, kso obj, void* out) {
         }
         NXT_PASTE_C(LOOP)
         #undef LOOP
+    } else if (dtype->kind == NX_DTYPE_STRUCT) {
+        ks_cit it = ks_cit_make(obj);
+        kso ob;
+        int i = 0, tsz = 0;
+        while ((ob = ks_cit_next(&it)) != NULL && i <= dtype->s_cstruct.n_members) {
+            if (dtype->s_cstruct.members[i].offset >= tsz) {
+                /* Use this, the next non-overlapping member */
+                if (!nx_enc(dtype->s_cstruct.members[i].dtype, ob, (void*)((ks_uint)out + dtype->s_cstruct.members[i].offset))) {
+                    it.exc = true;
+                }
+                tsz = dtype->s_cstruct.members[i].offset + dtype->s_cstruct.members[i].dtype->size;
+                i++;
+            }
+            KS_DECREF(ob);
+        }
+
+        ks_cit_done(&it);
+        if (it.exc) {
+            return false;
+        }
+
+        return true;
+
+
     }
 
     KS_THROW(kst_TypeError, "Unsupported dtype: %R", dtype);
