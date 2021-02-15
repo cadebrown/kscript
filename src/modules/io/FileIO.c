@@ -120,6 +120,14 @@ static KS_TFUNC(T, int) {
 }
 
 
+static KS_TFUNC(T, flush) {
+    ksio_FileIO self;
+    KS_ARGS("self:*", &self, ksiot_FileIO);
+
+    fflush(self->fp);
+
+    return KSO_NONE;
+}
 static KS_TFUNC(T, read) {
     ksio_FileIO self;
     ks_cint sz = KS_CINT_MAX;
@@ -241,6 +249,7 @@ void _ksi_io_FileIO() {
 
         {"__integral",             ksf_wrap(T_int_, T_NAME ".__integral(self)", "Acts as 'self.fileno'")},
 
+        {"flush",                  ksf_wrap(T_flush_, T_NAME ".flush(self)", "Flushes the stream")},
         {"read",                   ksf_wrap(T_read_, T_NAME ".read(self, sz=-1)", "Reads a message from the stream")},
         {"write",                  ksf_wrap(T_write_, T_NAME ".write(self, msg)", "Writes a messate to the stream")},
 
