@@ -43,12 +43,12 @@ clean:
 	rm -f $(wildcard $(mod_SO) $(src_O))
 
 install: FORCE
-	install -d $(TODIR)/lib/ks/pkgs/$(NAME)
-	install -m 664 $(mod_SO) $(PREFIX)/lib/ks/pkgs/$(NAME)/$(notdir $(mod_SO))
-	strip $(PREFIX)/lib/ks/pkgs/$(NAME)/$(notdir $(mod_SO))
+	install -d $(TODIR)/lib/ks/kpm/$(NAME)
+	install -m 664 $(mod_SO) $(PREFIX)/lib/ks/kpm/$(NAME)/$(notdir $(mod_SO))
+	strip $(PREFIX)/lib/ks/kpm/$(NAME)/$(notdir $(mod_SO))
 
 uninstall: FORCE
-	rm -rf $(TODIR)/lib/ks/pkgs/$(NAME)
+	rm -rf $(TODIR)/lib/ks/kpm/$(NAME)
 
 FORCE:
 

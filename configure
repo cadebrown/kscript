@@ -243,6 +243,7 @@ check_header UNISTD_H "unistd.h" ""
 check_header DLFCN_H "dlfcn.h" ""
 
 check_header TIME_H "time.h" ""
+check_header GLOB_H "glob.h" ""
 
 #check_header WINDOWS_H "windows.h" ""
 
@@ -570,8 +571,12 @@ check_func() {
 #ifdef KS_HAVE_SYS_TIME_H
  #include <sys/time.h>
 #endif
-#ifdef SYS_WAIT_H
+#ifdef KS_HAVE_SYS_WAIT_H
  #include <sys/wait.h>
+#endif
+
+#ifdef KS_HAVE_GLOB_H
+ #include <glob.h>
 #endif
 
 int main(int argc, char** argv) {
@@ -725,6 +730,8 @@ check_func "remove" "i" "s"
 check_func "chdir" "i" "s"
 
 check_func "opendir" "i" "s,&st"
+
+check_func "glob" "i" "s, i, NULL, NULL"
 
 check_func "getcwd" "s" "s"
 
@@ -1014,10 +1021,15 @@ echo "install: \$(ks_BIN) \$(libks_SHARED) \$(all_H) FORCE" >> $T
 echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/include/ks" >> $T
 echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/bin" >> $T
 echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/lib" >> $T
-echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/pkgs" >> $T
+echo "	install -d \$(TODIR)/lib/ks-\$(VERS)/kpm" >> $T
 echo "	install -m 755 \$(ks_BIN) \$(TODIR)/lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN))" >> $T
 echo "	install -m 644 \$(libks_SHARED) \$(TODIR)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
 echo "	install -m 644 \$(all_H) \$(TODIR)/lib/ks-\$(VERS)/include/ks" >> $T
+
+for dir in src/extmodules/*; do
+    printf "	install -d \$(TODIR)/lib/ks-\$(VERS)/kpm/%s\n" "${dir##*/}" >> $T
+    printf "	install -m 644 ksm_%s%s \$(TODIR)/lib/ks-\$(VERS)/kpm/%s\n" "${dir##*/}" "$EXTSHARED" "${dir##*/}" >> $T
+done
 
 echo "	strip \$(TODIR)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
 echo "	strip \$(TODIR)/lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN))" >> $T

@@ -325,6 +325,20 @@ static KS_TFUNC(T, str) {
     return (kso)ksio_StringIO_getf(sio);
 }
 
+static KS_TFUNC(T, bytes) {
+    nx_array self;
+    KS_ARGS("self:*", &self, nxt_array);
+
+    /* TODO: add specifics */
+    ksio_BytesIO sio = ksio_BytesIO_new();
+
+    if (!nx_getbytes((ksio_BaseIO)sio, self->val)) {
+        KS_DECREF(sio);
+        return NULL;
+    }
+
+    return (kso)ksio_BytesIO_getf(sio);
+}
 static KS_TFUNC(T, float) {
     nx_array self;
     KS_ARGS("self:*", &self, nxt_array);
@@ -660,6 +674,7 @@ void _ksi_nx_array() {
 
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
+        {"__bytes",                ksf_wrap(T_bytes_, T_NAME ".__bytes(self)", "")},
         {"__float",                ksf_wrap(T_float_, T_NAME ".__float(self)", "")},
         {"__int",                  ksf_wrap(T_int_, T_NAME ".__int(self)", "")},
         {"__iter",                 (kso)nxt_array_iter},

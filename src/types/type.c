@@ -191,6 +191,25 @@ static KS_TFUNC(T, getelem) {
     return (kso)ks_type_template(self, nargs, args);
 }
 
+static KS_TFUNC(T, getattr) {
+    ks_type self;
+    ks_str attr;
+    KS_ARGS("self:* attr:*", &self, kst_type, &attr, kst_str);
+
+    return ks_type_get(self, attr);
+}
+static KS_TFUNC(T, setattr) {
+    ks_type self;
+    ks_str attr;
+    kso val;
+    KS_ARGS("self:* attr:* val", &self, kst_type, &attr, kst_str, &val);
+
+    if (!ks_type_set(self, attr, val)) return NULL;
+
+    return KS_NEWREF(val);
+}
+
+
 
 static bool buildgraph(ks_type self, ks_graph res) {
     if (!ks_graph_add_node(res, (kso)self, false)) {
@@ -247,6 +266,8 @@ void _ksi_type() {
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *args)", "")},
         {"__graph",                ksf_wrap(T_graph_, T_NAME ".__graph(self)", "")},
+        {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},
+        {"__setattr",              ksf_wrap(T_setattr_, T_NAME ".__setattr(self, attr, val)", "")},
 
 
     ));

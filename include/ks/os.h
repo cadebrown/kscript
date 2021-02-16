@@ -33,6 +33,9 @@
   #include <dirent.h>
 #endif
 
+#ifdef KS_HAVE_GLOB_H
+  #include <glob.h>
+#endif
 
 /** Constants **/
 
@@ -337,6 +340,11 @@ KS_API bool ksos_fstat(struct ksos_cstat* self, int fd);
  */
 KS_API bool ksos_listdir(kso path, ks_list* dirs, ks_list* files);
 
+
+/* Perform a path-glob operation, and return a list of paths that match (as strings)
+ * effectively expands 'expr'
+ */
+KS_API ks_list ksos_glob(ks_str expr);
 
 /* Convert a string path to a string. If it is already a string, a new reference
  *   is returned

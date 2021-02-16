@@ -42,20 +42,21 @@ static bool bst_has(ks_bst self, struct ks_bst_item* it, kso key, bool* out) {
     }
 
     int cmp;
-    if (!kso_cmp(key, it->key, &cmp)) {
+    if (!kso_cmp(it->key, key, &cmp)) {
         return false;
     }
 
     if (cmp == 0) {
         *out = true;
         return true;
-    } else if (cmp < 0) {
+    } else if (cmp > 0) {
         return bst_has(self, it->left, key, out);
     } else {
         return bst_has(self, it->right, key, out);
     }
-
 }
+
+
 bool ks_bst_has(ks_bst self, kso key, bool* out) {
     return bst_has(self, self->root, key, out);
 }
@@ -68,7 +69,7 @@ static bool bst_get(ks_bst self, struct ks_bst_item* it, kso key, kso* out) {
     }
 
     int cmp;
-    if (!kso_cmp(key, it->key, &cmp)) {
+    if (!kso_cmp(it->key, key, &cmp)) {
         return false;
     }
 
@@ -98,7 +99,7 @@ static bool bst_set(struct ks_bst_item** it, kso key, kso val) {
     }
 
     int cmp;
-    if (!kso_cmp(key, (*it)->key, &cmp)) {
+    if (!kso_cmp((*it)->key, key, &cmp)) {
         return false;
     }
 
@@ -108,9 +109,9 @@ static bool bst_set(struct ks_bst_item** it, kso key, kso val) {
         (*it)->val = val;
         return true;
     } else if (cmp < 0) {
-        return bst_set(&(*it)->left, key, val);
-    } else {
         return bst_set(&(*it)->right, key, val);
+    } else {
+        return bst_set(&(*it)->left, key, val);
     }
 
 }

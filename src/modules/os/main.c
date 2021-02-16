@@ -299,6 +299,29 @@ bool ksos_listdir(kso path, ks_list* dirs, ks_list* files) {
 #endif
 }
 
+ks_list ksos_glob(ks_str expr) {
+#ifdef KS_HAVE_glob
+    glob_t bufs;
+    bufs.gl_offs = 0;
+    glob(expr->data, GLOB_DOOFFS, NULL, &bufs);
+    ks_list res = ks_list_new(0, NULL);
+
+    int i;
+    for (i = 0; i < bufs.gl_pathc; ++i) {
+        ks_str vv = ks_str_new(-1, bufs.gl_pathv[i]);
+        ks_list_push(res, (kso)vv);
+        KS_DECREF(vv);
+    }
+    globfree(&bufs);
+
+    return res;
+#else
+	KS_THROW(kst_Error, "Failed to glob: platform had no 'glob()' function");
+	return false;
+#endif
+}
+
+
 bool ksos_chdir(kso path) {
     ks_str sp = ksos_path_str(path);
     if (!sp) return false;
@@ -516,8 +539,11 @@ int ksos_exec(ks_str cmd) {
         KS_THROW_ERRNO(errno, "Failed to exec %R", cmd);
         return -1;
     }
-
+  #ifdef WEXITSTATUS
+    return WEXITSTATUS(res);
+  #else
     return res;
+  #endif
 #else
     KS_THROW(kst_OSError, "Failed to exec %R: platform did not provide a 'system()' function", cmd);
     return -1;
@@ -710,6 +736,13 @@ static KS_TFUNC(M, listdir) {
     });
 }
 
+static KS_TFUNC(M, glob) {
+    ks_str path;
+    KS_ARGS("path:*", &path, kst_str);
+
+    return (kso)ksos_glob(path);
+}
+
 static KS_TFUNC(M, chdir) {
     kso self;
     KS_ARGS("self", &self);
@@ -846,14 +879,13 @@ ks_module _ksi_os() {
         {"setenv",                 ksf_wrap(M_setenv_, M_NAME ".setenv(key, val)", "Sets an environment entry to another string value")},
         {"cwd",                    ksf_wrap(M_getcwd_, M_NAME ".cwd()", "Returns current working directory")},
         {"listdir",                ksf_wrap(M_listdir_, M_NAME ".listdir(path)", "Return a tuple of '(dirs, files)' present in 'path'\n\n    Does not include '.' or '..'")},
+        {"glob",                   ksf_wrap(M_glob_, M_NAME ".glob(path)", "Return a list of matches to a glob path")},
         {"chdir",                  ksf_wrap(M_chdir_, M_NAME ".chdir(path)", "Change the current working directory to 'path'")},
         {"mkdir",                  ksf_wrap(M_mkdir_, M_NAME ".mkdir(path, mode=0o777, parents=false)", "Creates a new directory 'path', with the given mode\n\n    If 'parents' is 'true', then all parent directories required are also created, otherwise this function throws an error if a path would require multiple directories to be created")},
         {"rm",                     ksf_wrap(M_rm_, M_NAME ".rm(path, parents=false)", "Removes a file or directory from the filesystem\n\n    If 'parents' is 'true', and 'path' is a directory, then it is recursively deleted. Otherwise, if 'path' was a non-empty directory, an error is thrown")},
 
-
         {"fstat",                  ksf_wrap(M_fstat_, M_NAME ".fstat(fd)", "Query the open file descriptor 'fd' (which should be an 'int') and return an 'os.stat' object describing it")},
         {"lstat",                  ksf_wrap(M_lstat_, M_NAME ".lstat(path)", "Query the the file/directory 'path', but do not follow symbolic links\n\n    Useful if you want to get information about a link itself, rather than the file it points to")},
-
 
         {"exec",                   ksf_wrap(M_exec_, M_NAME ".exec(cmd)", "Attempts to execute a command as if typed in console - returns exit code")},
         {"fork",                   ksf_wrap(M_fork_, M_NAME ".fork()", "Creates a new process by duplicating the calling process - returns 0 in the child, PID > 0 in the parent")},

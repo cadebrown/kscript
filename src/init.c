@@ -266,10 +266,10 @@ _KS_DO_SPEC(_KSACT)
     ks_list_pushu(ksg_path, (kso)ks_str_new(-1, "."));
 
     /* Add the prefix configured */
-    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks/pkgs", KS_BUILD_PREFIX));
-    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i.%i.%i/pkgs", KS_BUILD_PREFIX, KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH));
-    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i.%i/pkgs", KS_BUILD_PREFIX, KS_VERSION_MAJOR, KS_VERSION_MINOR));
-    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i/pkgs", KS_BUILD_PREFIX, KS_VERSION_MAJOR));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks/kpm", KS_BUILD_PREFIX));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i.%i.%i/kpm", KS_BUILD_PREFIX, KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i.%i/kpm", KS_BUILD_PREFIX, KS_VERSION_MAJOR, KS_VERSION_MINOR));
+    ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks-%i/kpm", KS_BUILD_PREFIX, KS_VERSION_MAJOR));
 
     /*  */
     ks_str key = ks_str_new(-1, "KSPATH");

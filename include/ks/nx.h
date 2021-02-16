@@ -625,6 +625,11 @@ KS_API nx_t nx_getevo(nx_t self, int nargs, kso* args);
  */
 KS_API bool nx_getstr(ksio_BaseIO io, nx_t self);
 
+/* Appends the raw bytes of 'self' to an IO-like object
+ */
+KS_API bool nx_getbytes(ksio_BaseIO io, nx_t self);
+
+
 /* Get low-level string represnting 'x'
  */
 KS_API ks_str nx_getbs(nx_t x);

@@ -133,6 +133,11 @@ ks_module _ksi_gram();
 void _ksi_gram_Token();
 void _ksi_gram_Lexer();
 
+ks_module _ksi_kpm();
+ks_module _ksi_kpm_cext();
+void _ksi_kpm_cext_project();
+
+
 
 /* Initialize type */
 void _ksinit(ks_type self, ks_type base, const char* name, int sz, int attr, const char* doc, struct ks_ikv* ikv);

@@ -36,6 +36,7 @@
 /build
 
 /pkgs
+/kpm
 
 # build output
 /*.tar.*

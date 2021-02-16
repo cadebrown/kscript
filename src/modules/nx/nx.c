@@ -482,6 +482,36 @@ bool nx_getstr(ksio_BaseIO io, nx_t self) {
     return my_getstr(io, self, 0);
 }
 
+
+
+/* Internal method */
+bool my_getbytes(ksio_BaseIO bio, nx_t X, int dep) {
+
+    if (X.rank == 0) {
+
+        /* Add raw bytes */
+        return ksio_addbuf(bio, X.dtype->size, X.data);
+
+    } else {
+        /* Use recursion */
+
+        /* loop over outer dimension, adding each inner dimension*/
+        ks_size_t i;
+        nx_t inner = nx_make(X.data, X.dtype, X.rank-1, X.shape+1, X.strides+1);
+        for (i = 0; i < X.shape[0]; ++i) {
+            inner.data = (void*)(((ks_uint)X.data) + X.strides[0] * i);
+            if (!my_getbytes(bio, inner, dep+1)) return false;
+        }
+
+        return true;
+    }
+}
+
+bool nx_getbytes(ksio_BaseIO io, nx_t self) {
+    return my_getbytes(io, self, 0);
+}
+
+
 ks_str nx_getbs(nx_t x) {
     ksio_StringIO sio = ksio_StringIO_new();
 

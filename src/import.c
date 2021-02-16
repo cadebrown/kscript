@@ -170,6 +170,7 @@ ks_module ks_import(ks_str name) {
     BIMOD(net)
     BIMOD(nx)
     BIMOD(gram)
+    BIMOD(kpm)
 
 
     /* Capture thread for exception */
