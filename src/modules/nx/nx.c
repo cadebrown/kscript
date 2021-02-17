@@ -535,7 +535,7 @@ ks_str nx_getbs(nx_t x) {
 }
 
 bool nx_get(kso obj, nx_dtype dtype, nx_t* res, kso* ref) {
-    if (kso_issub(obj->type, nxt_array)) {
+    if (kso_issub(obj->type, nxt_array) && (!dtype || ((nx_array)obj)->val.dtype == dtype)) {
         /* Already exists, TODO: check if cast is needed */
         *res = ((nx_array)obj)->val;
         *ref = NULL;
