@@ -24,6 +24,28 @@
 }
 
 
+/* Template for comparisons */
+#define T_BOP_CMP(_str, _name, _attr, _cop) kso ks_bop_##_name(kso L, kso R) { \
+    kso res = NULL; \
+    if (L->type->_attr) { \
+        res = kso_call(L->type->_attr, 2, (kso[]){ L, R }); \
+        if (res == KSO_UNDEFINED) {} \
+        else return res; \
+    } \
+    if (R->type->_attr) { \
+        res = kso_call(R->type->_attr, 2, (kso[]){ L, R }); \
+        if (res == KSO_UNDEFINED) {} \
+        else return res; \
+    } \
+    int cmpres;\
+    if (!kso_cmp(L, R, &cmpres)) { \
+        kso_catch_ignore(); \
+    } else { \
+        return KSO_BOOL(((cmpres) _cop (0))); \
+    } \
+    KS_THROW(kst_Error, "Binary operator '%s' undefined for '%T' and '%T'", _str, L, R); \
+    return NULL; \
+}
 /* Instantiate */
 T_BOP("+", add, i__add)
 T_BOP("-", sub, i__sub)
@@ -38,10 +60,11 @@ T_BOP("&", binand, i__binand)
 T_BOP("^", binxor, i__binxor)
 T_BOP("<<", lsh, i__lsh)
 T_BOP(">>", rsh, i__rsh)
-T_BOP("<", lt, i__lt)
-T_BOP(">", gt, i__gt)
-T_BOP("<=", le, i__le)
-T_BOP(">=", ge, i__ge)
+
+T_BOP_CMP("<", lt, i__lt, <)
+T_BOP_CMP(">", gt, i__gt, >)
+T_BOP_CMP("<=", le, i__le, <=)
+T_BOP_CMP(">=", ge, i__ge, >=)
 
 /* Template for unary operators */
 #define T_UOP(_str, _name, _attr) kso ks_uop_##_name(kso V) { \

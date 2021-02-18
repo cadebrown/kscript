@@ -18,10 +18,12 @@ func qsort(vals) {
 
     piv = vals[0]
     L = list(filter(x -> x < piv, vals))
+    M = list(filter(x -> x == piv, vals))
     R = list(filter(x -> x > piv, vals))
 
-    ret qsort(L) + [piv] + qsort(R)
+    ret qsort(L) + M + qsort(R)
 }
 
-inp = map(float, filter(os.stdin)) as list)
-print (qsort(inp)
+inp = map(float, filter(os.stdin)) as list
+print (qsort(inp))
+

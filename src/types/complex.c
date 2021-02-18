@@ -81,10 +81,12 @@ bool ks_ccomplex_from_str(const char* str, int sz, ks_ccomplex* out) {
             KS_THROW(kst_Error, "Invalid format for complex number: '%.*s' (invalid real component)", osz, ostr);
             return false;
         }
+
         if (str[sz - 1] != 'i' && str[sz - 1] != 'I') {
             KS_THROW(kst_Error, "Invalid format for complex number: '%.*s' (imaginary component had no suffix)", osz, ostr);
             return false;
         }
+
         if (!ks_cfloat_from_str(str+i, sz - i - 1, &v_im)) {
             kso_catch_ignore();
             KS_THROW(kst_Error, "Invalid format for complex number: '%.*s' (invalid imaginary component)", osz, ostr);

@@ -663,6 +663,16 @@ static KS_TFUNC(T, mod) {
     return (kso)ksio_StringIO_getf(sio);
 }
 
+static KS_TFUNC(T, cmp) {
+    kso L, R;
+    KS_ARGS("L R", &L, &R);
+
+    if (kso_issub(L->type, kst_str) && kso_issub(R->type, kst_str)) {
+        return (kso)ks_int_new(ks_str_cmp((ks_str)L, (ks_str)R));
+    }
+
+    return KSO_UNDEFINED;
+}
 static KS_TFUNC(T, contains) {
     ks_str self;
     ks_str sub;
@@ -966,6 +976,10 @@ void _ksi_str() {
         {"__add",                ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},
         {"__mul",                ksf_wrap(T_mul_, T_NAME ".__mul(L, R)", "")},
         {"__mod",                ksf_wrap(T_mod_, T_NAME ".__mod(self, args)", "")},
+
+
+        {"__cmp",                ksf_wrap(T_cmp_, T_NAME ".__cmp(L, R)", "")},
+
 
         {"upper",                ksf_wrap(T_upper_, T_NAME ".upper(self)", "Computes an all-uppercase version of 'self'")},
         {"lower",                ksf_wrap(T_lower_, T_NAME ".lower(self)", "Computes an all-lowercase version of 'self'")},

@@ -105,6 +105,10 @@ bool ks_cfloat_from_str(const char* str, int sz, ks_cfloat* out) {
             }
         }
 
+        if (isNeg) {
+            *out = -*out;
+        }
+
         return true;
     }
 
