@@ -96,10 +96,11 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  * E2      : E2 '??' E3
  *         | E3
  * 
- * E3      : E2 '||' E3
- *         | E3
+ * E3      : E3 '||' E4
+ *         | E4
  * 
  * E4      : E4 '&&' E5
+ *         | E5
  * 
  * E5      : E5 '===' E6
  *         | E5 '==' E6
@@ -112,45 +113,47 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  *         | E5 '!in' E6
  *         | E6
  * 
+ * E6      : E6 'as' E7
  *         | E7
  * 
- * E6      : E6 '|' E7
- *         | E7
  * 
- * E7      : E7 '^' E8
+ * E7      : E7 '|' E8
  *         | E8
  * 
- * E8      : E8 '&' E9
+ * E8      : E8 '^' E9
  *         | E9
  * 
- * E9      : E9 '<<' E10
- *         | E9 '>>' E10
+ * E9      : E9 '&' E10
  *         | E10
  * 
- * E10     : E10 '+' E11
- *         | E10 '-' E11
+ * E10     : E10 '<<' E11
+ *         | E10 '>>' E11
  *         | E11
  * 
- * E11     : E11 '*' E12
- *         | E11 '@' E12
- *         | E11 '/' E12
- *         | E11 '//' E12
- *         | E11 '%' E12
+ * E11     : E11 '+' E12
+ *         | E11 '-' E12
  *         | E12
  * 
- * E12     : E13 '**' E12
+ * E12     : E12 '*' E13
+ *         | E12 '@' E13
+ *         | E12 '/' E13
+ *         | E12 '//' E13
+ *         | E12 '%' E13
  *         | E13
  * 
- * E13     : '++' E13
- *         | '--' E13
- *         | '+' E13
- *         | '-' E13
- *         | '~' E13
- *         | '!' E13
- *         | '?' E13
+ * E13     : E14 '**' E13
+ *         | E14
+ * 
+ * E14     : '++' E14
+ *         | '--' E14
+ *         | '+' E14
+ *         | '-' E14
+ *         | '~' E14
+ *         | '!' E14
+ *         | '?' E14
  *         | E15
  * 
- * E14     : ATOM
+ * E15     : ATOM
  *         | '(' ')'
  *         | '[' ']'
  *         | '{' '}'
@@ -161,11 +164,11 @@ ks_Exception ks_syntax_error(ks_str fname, ks_str src, ks_tok tok, const char* f
  *         | 'func' NAME? ('(' (PAR (',' PAR)* ','?)? ')')? B    (* Func constructor *)
  *         | 'type' NAME? ('extends' EXPR)? B                    (* Type constructor *)
  *         | 'enum' NAME? B                                      (* Enum constructor *)
- *         | E14 '.' NAME
- *         | E14 '++'
- *         | E14 '--'
- *         | E14 '(' (ARG (',' ARG)*)? ','? ')'
- *         | E14 '[' (ARG (',' ARG)*)? ','? ']'
+ *         | E15 '.' NAME
+ *         | E15 '++'
+ *         | E15 '--'
+ *         | E15 '(' (ARG (',' ARG)*)? ','? ')'
+ *         | E15 '[' (ARG (',' ARG)*)? ','? ']'
  * 
  * ATOM    : NAME
  *         | STR
@@ -251,7 +254,6 @@ RULE(ATOM);
 RULE(EXPR);
 RULE(E0);
 RULE(E1);
-RULE(E1p);
 RULE(E2);
 RULE(E3);
 RULE(E4);
@@ -265,6 +267,7 @@ RULE(E11);
 RULE(E12);
 RULE(E13);
 RULE(E14);
+RULE(E15);
 
 /* Take a break/newline and return success */
 static bool R_N(ks_str fname, ks_str src, ks_ssize_t n_toks, ks_tok* toks, int* tokip, int flags) {
@@ -783,14 +786,14 @@ RULE(E0) {
 
 
 RULE(E1) {
-    ks_ast res = SUB(E1p);
+    ks_ast res = SUB(E2);
     if (!res) return NULL;
 
     if (TOK.kind == KS_TOK_IF) {
         /* Conditional expression */
         EAT();
         SKIP_N();
-        ks_ast cond = SUB(E1p);
+        ks_ast cond = SUB(E2);
         if (!cond) {
             KS_DECREF(res);
             return NULL;
@@ -816,27 +819,6 @@ RULE(E1) {
     return res;
 }
 
-
-/* 'E2 (as E1p)* */
-RULE(E1p) {
-    ks_ast res = SUB(E2);
-    if (!res) return NULL;
-
-    while (TOK.kind == KS_TOK_AS && !(flags & PF_NO_AS)) {
-        /* Conditional expression */
-        EAT();
-        SKIP_N();
-        ks_ast other = SUB(E2);
-        if (!other) {
-            KS_DECREF(res);
-            return NULL;
-        }
-        ks_tok t = ks_tok_combo( other->tok, res->tok);
-        res = ks_ast_newn(KS_AST_CALL, 2, (ks_ast[]){ other, res }, NULL, t);
-        res->tok = t;
-    }
-    return res;
-}
 
 
 /* Macro for a left-associative rule. Varargs are the 'if/else' body selecting the type based on token */
@@ -898,7 +880,7 @@ RULE(E5) {
         /* Skip token */
         ks_tok t = EAT();
         SKIP_N();
-        ks_ast rhs = SUB(E7);
+        ks_ast rhs = SUB(E6);
         if (!rhs) {
             KS_DECREF(res);
             KS_DECREF(cmps);
@@ -940,25 +922,48 @@ RULE(E5) {
     }
 }
 
-RULE_BOP_LA(E6, E7,
+
+RULE(E6) {
+    ks_ast res = SUB(E7);
+    if (!res) return NULL;
+
+    while (TOK.kind == KS_TOK_AS && !(flags & PF_NO_AS)) {
+        /* Conditional expression */
+        EAT();
+        SKIP_N();
+        ks_ast other = SUB(E7);
+        if (!other) {
+            KS_DECREF(res);
+            return NULL;
+        }
+        ks_tok t = ks_tok_combo( other->tok, res->tok);
+        res = ks_ast_newn(KS_AST_CALL, 2, (ks_ast[]){ other, res }, NULL, t);
+        res->tok = t;
+    }
+    return res;
+}
+
+
+
+RULE_BOP_LA(E7, E8,
 /**/ if (TOK.kind == KS_TOK_IOR) k = KS_AST_BOP_IOR;
 )
-RULE_BOP_LA(E7, E8,
+RULE_BOP_LA(E8, E9,
 /**/ if (TOK.kind == KS_TOK_XOR) k = KS_AST_BOP_XOR;
 )
-RULE_BOP_LA(E8, E9,
+RULE_BOP_LA(E9, E10,
 /**/ if (TOK.kind == KS_TOK_AND) k = KS_AST_BOP_AND;
 )
 
-RULE_BOP_LA(E9, E10,
+RULE_BOP_LA(E10, E11,
 /**/ if (TOK.kind == KS_TOK_LSH) k = KS_AST_BOP_LSH;
 else if (TOK.kind == KS_TOK_RSH) k = KS_AST_BOP_RSH;
 )
-RULE_BOP_LA(E10, E11,
+RULE_BOP_LA(E11, E12,
 /**/ if (TOK.kind == KS_TOK_ADD) k = KS_AST_BOP_ADD;
 else if (TOK.kind == KS_TOK_SUB) k = KS_AST_BOP_SUB;
 )
-RULE_BOP_LA(E11, E12,
+RULE_BOP_LA(E12, E13,
 /**/ if (TOK.kind == KS_TOK_MUL) k = KS_AST_BOP_MUL;
 else if (TOK.kind == KS_TOK_AT) k = KS_AST_BOP_MATMUL;
 else if (TOK.kind == KS_TOK_DIV) k = KS_AST_BOP_DIV;
@@ -966,8 +971,8 @@ else if (TOK.kind == KS_TOK_FLOORDIV) k = KS_AST_BOP_FLOORDIV;
 else if (TOK.kind == KS_TOK_MOD) k = KS_AST_BOP_MOD;
 )
 
-RULE(E12) {
-    ks_ast res = SUB(E13);
+RULE(E13) {
+    ks_ast res = SUB(E14);
     if (!res) return NULL;
 
     int k = 0;
@@ -975,7 +980,7 @@ RULE(E12) {
     if (k != 0) {
         ks_tok t = EAT();
         SKIP_N();
-        ks_ast rhs = SUB(E12);
+        ks_ast rhs = SUB(E13);
         if (!rhs) {
             KS_DECREF(res);
             return NULL;
@@ -988,7 +993,7 @@ RULE(E12) {
 }
 
 
-RULE(E13) {
+RULE(E14) {
     int k = 0;
     /* Unary prefix operators go here */
     /**/ if (TOK.kind == KS_TOK_ADDADD) k = KS_AST_UOP_POSPOS;
@@ -1003,17 +1008,17 @@ RULE(E13) {
         /* Parse unary operator */
         ks_tok t = EAT();
         SKIP_N();
-        ks_ast sub = SUB(E13);
+        ks_ast sub = SUB(E14);
         if (!sub) return NULL;
 
         return ks_ast_newn(k, 1, (ks_ast[]){ sub }, NULL, t);
     } else {
         /* No prefix operator, so decay */
-        return SUB(E14);
+        return SUB(E15);
     }
 }
 
-RULE(E14) {
+RULE(E15) {
     /* This one's a bit tricky, we basically start with the left hand side, 
      *   and continually build on it while there is token representing a function call, index operation, or unary postfix operator.
      */
