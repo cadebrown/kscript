@@ -18,8 +18,8 @@ puts("hello, world")
 
 
 # Load 'printf', which is variadic (thus the '...')
-printf = dll_c["printf"] as ffi.func[ffi.sint, (ffi.ptr[ffi.schar], ...)]
-printf("hello, world: %i:%i, and also %5.2f\n", 3, 5, 3.2)
+c_printf = dll_c["printf"] as ffi.func[ffi.sint, (ffi.ptr[ffi.schar], ...)]
+c_printf("hello, world: %i:%i, and also %5.2f\n", 3, 5, 3.2)
 
 # Malloc/free for memory 
 malloc = dll_c.malloc as ffi.func[ffi.ptr, (ffi.size_t,)]
