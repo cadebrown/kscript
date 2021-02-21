@@ -9,28 +9,12 @@
 #define T_NAME "ffi.ptr"
 
 
-ks_type ksffi_ptr_type(ks_type of) {
-    if (!of) of = (ks_type)KSO_NONE;
+
+ks_type ksffi_ptr_make(ks_type of) {
+    if (!of) {
+        of = (ks_type)KSO_NONE;
+    }
     return ks_type_template(ksffit_ptr, 1, (kso[]){ (kso)of });
-}
-
-ksffi_ptr ksffi_ptr_make(ks_type of, void* val) {
-    ks_type tp = ksffi_ptr_type(of);
-    if (!tp) return NULL;
-
-    ksffi_ptr res = ksffi_ptr_maken(tp, val);
-    KS_DECREF(tp);
-
-    return res;
-}
-
-
-ksffi_ptr ksffi_ptr_maken(ks_type tp, void* val) {
-    ksffi_ptr self = KSO_NEW(ksffi_ptr, tp);
-
-    self->val = val;
-
-    return self;
 }
 
 /* Type definitions */
@@ -40,10 +24,8 @@ static KS_TFUNC(T, new) {
     ks_cint val = 0;
     KS_ARGS("tp:* ?val:cint", &tp, kst_type, &val);
 
-
-    return (kso)ksffi_ptr_maken(tp, (void*)val);
+    return (kso)ksffi_wrap(tp, (void*)&val);
 }
-
 
 static KS_TFUNC(T, str) {
     ksffi_ptr self;
@@ -87,7 +69,6 @@ static KS_TFUNC(T, setelem) {
     return KSO_NONE;
 }
 
-
 static KS_TFUNC(T, add) {
     kso L, R;
     KS_ARGS("L R", &L, &R);
@@ -104,7 +85,8 @@ static KS_TFUNC(T, add) {
         ks_cint ri;
         if (!kso_get_ci(R, &ri)) return NULL;
 
-        return (kso)ksffi_ptr_maken(L->type, (void*)((ks_uint)((ksffi_ptr)L)->val + sz * ri));
+        void* res = (void*)((ks_uint)((ksffi_ptr)L)->val + sz * ri);
+        return (kso)ksffi_wrap(L->type, &res);
 
     } else if (!kso_issub(L->type, ksffit_ptr) && kso_issub(R->type, ksffit_ptr)) {
         int sz = ksffi_sizeofp(R->type);
@@ -117,8 +99,9 @@ static KS_TFUNC(T, add) {
 
         ks_cint li;
         if (!kso_get_ci(L, &li)) return NULL;
-
-        return (kso)ksffi_ptr_maken(L->type, (void*)(sz * li + (ks_uint)((ksffi_ptr)R)->val));
+        
+        void* res = (void*)(sz * li + (ks_uint)((ksffi_ptr)R)->val);
+        return (kso)ksffi_wrap(L->type, &res);
 
     } else {
         KS_THROW(kst_TypeError, "Cannot add 2 pointers");
@@ -126,11 +109,11 @@ static KS_TFUNC(T, add) {
     }
 }
 
-
 /* Export */
 
 static struct ks_type_s tp;
 ks_type ksffit_ptr = &tp;
+ks_type ksffit_ptr_void;
 
 void _ksi_ffi_ptr() {
     _ksinit(ksffit_ptr, kst_number, T_NAME, sizeof(struct ksffi_ptr_s), -1, "C-style pointer", KS_IKV(
@@ -149,6 +132,6 @@ void _ksi_ffi_ptr() {
 
     ));
 
+    ksffit_ptr_void = ksffi_ptr_make(NULL);
 }
-
 

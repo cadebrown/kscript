@@ -15,18 +15,28 @@
 
 /* C-API */
 
-ks_type ksffi_func_make(ks_type restype, ks_tuple argtypes) {
-    return ks_type_template(ksffit_func, 2, (kso[]){ (kso)restype, (kso)argtypes });
+ks_type ksffi_func_make(ks_type restype, int nargtypes, ks_type* argtypes, bool isvararg) {
+    ks_type res = NULL;
+    if (isvararg) {
+        kso* targs = ks_smalloc(sizeof(*targs) * (1 + nargtypes));
+        int i;
+        for (i = 0; i < nargtypes; ++i) {
+            targs[i] = (kso)argtypes[i];
+        }
+        targs[i] = KSO_DOTDOTDOT;
+
+        ks_tuple t = ks_tuple_new(nargtypes + 1, targs);
+        res = ks_type_template(ksffit_func, 2, (kso[]){ (kso)restype, (kso)t });
+        KS_DECREF(t);
+        ks_free(targs);
+    } else {
+        ks_tuple t = ks_tuple_new(nargtypes, (kso*)argtypes);
+        res = ks_type_template(ksffit_func, 2, (kso[]){ (kso)restype, (kso)t });
+        KS_DECREF(t);
+    }
+
+    return res;
 }
-
-ksffi_func ksffi_func_new(ks_type tp, void (*val)()) {
-    ksffi_func self = KSO_NEW(ksffi_func, tp);
-
-    self->val = val;
-
-    return self;
-}
-
 
 /* Type Functions */
 
@@ -36,9 +46,7 @@ static KS_TFUNC(T, new) {
     KS_ARGS("tp:* ?val:cint", &tp, kst_type, &val);
 
     void* vv = (void*)val;
-    void (**v)() = (void(**)())&vv;
-
-    return (kso)ksffi_func_new(tp, *v);
+    return (kso)ksffi_wrap(tp, &vv);
 }
 
 static KS_TFUNC(T, str) {
@@ -48,52 +56,6 @@ static KS_TFUNC(T, str) {
     return (kso)ks_fmt("%T(%p)", self, *(void**)&self->val);
 }
 
-
-/* FFI utils */
-#ifdef KS_HAVE_ffi
-
-/* Convert type to FFI type */
-static bool my_ffi_cvt(ks_type tp, kso obj, ffi_type** otp, void** oval) {
-    if (!tp) {
-        assert(obj);
-        tp = obj->type;
-    }
-
-    if ((kso)tp == KSO_NONE || tp == kst_none) {
-        *otp = &ffi_type_void;
-        return true;
-    }
-
-    #define CASE(_tp, _ctp, _ftp) else if (kso_issub(tp, _tp)) { \
-        *otp = _ftp; \
-        if (oval) *oval = &((_ctp)obj)->val; \
-        return true; \
-    }
-    
-    if (false) {}
-
-    CASE(ksffit_schar, ksffi_schar, &ffi_type_schar)
-    CASE(ksffit_schar, ksffi_uchar, &ffi_type_uchar)
-    CASE(ksffit_sshort, ksffi_sshort, &ffi_type_sshort)
-    CASE(ksffit_ushort, ksffi_ushort, &ffi_type_ushort)
-    CASE(ksffit_sint, ksffi_sint, &ffi_type_sint)
-    CASE(ksffit_uint, ksffi_uint, &ffi_type_uint)
-    CASE(ksffit_slong, ksffi_slong, sizeof(signed long) == sizeof(signed int) ? &ffi_type_sint : &ffi_type_slong)
-    CASE(ksffit_ulong, ksffi_ulong, sizeof(unsigned long) == sizeof(unsigned int) ? &ffi_type_uint : &ffi_type_ulong)
-    CASE(ksffit_slonglong, ksffi_slonglong, &ffi_type_slong)
-    CASE(ksffit_ulonglong, ksffi_ulonglong, &ffi_type_ulong)
-
-    CASE(ksffit_float, ksffi_float, &ffi_type_float)
-    CASE(ksffit_double, ksffi_double, &ffi_type_double)
-    CASE(ksffit_longdouble, ksffi_longdouble, &ffi_type_longdouble)
-
-    CASE(ksffit_ptr, ksffi_ptr, &ffi_type_pointer)
-
-    KS_THROW(kst_TypeError, "'%R' was not a valid FFI/C-style value type", tp);
-    return false;
-}
-
-#endif
 
 static KS_TFUNC(T, call) {
     ksffi_func self;
@@ -106,7 +68,7 @@ static KS_TFUNC(T, call) {
     assert(self->type->i__template->len == 2);
     ks_tuple ta = (ks_tuple)self->type->i__template->elems[1];
     if (!kso_issub(ta->type, kst_tuple)) {
-        KS_THROW(kst_TypeError, "'%T.__template[1]' was not a tuple of argument types, but was a '%T' object", ta);
+        KS_THROW(kst_TypeError, "'%T.__template[1]' was not a tuple of argument types, but was a '%T' object", self, ta);
         return NULL;
     }
 
@@ -116,7 +78,7 @@ static KS_TFUNC(T, call) {
     if (ta->len > 0 && ta->elems[ta->len - 1] == KSO_DOTDOTDOT) {
         /* Variadic function */
         is_va = true;
-        /* Don't include that */
+        /* Don't include that in the required arguments */
         req_nargs--;
     }
 
@@ -130,74 +92,114 @@ static KS_TFUNC(T, call) {
         return NULL;
     }
 
-    /* Wrap arguments */
-    ks_list wraps = ks_list_new(0, NULL);
-    int i;
-    for (i = 0; i < nargs; ++i) {
-        kso w = ksffi_wrapo(args[i], i < req_nargs ? (ks_type)ta->elems[i] : NULL);
-        if (!w) {
-            KS_DECREF(wraps);
-            return NULL;
-        }
-        ks_list_pushu(wraps, w);
-    }
+    /* Now, convert arguments to C-style members */
 
+    /* Result type */
+    ffi_type* f_restype = NULL;
     ks_type rtp = (ks_type)self->type->i__template->elems[0];
-    /* Get types */
-    ffi_type* f_restype;
-    if (!my_ffi_cvt(rtp, NULL, &f_restype, NULL)) {
-        KS_DECREF(wraps);
+    if (!ksffi_libffi_type(rtp, &f_restype)) {
         return NULL;
     }
 
+    /* Argument types */
     ffi_type** f_argtypes = ks_zmalloc(sizeof(*f_argtypes), nargs);
-    void** f_args = ks_zmalloc(sizeof(*f_args), nargs);
+    /* Argument values */
+    void** f_argvals = ks_zmalloc(sizeof(*f_argvals), nargs);
+    
+    char* s = NULL;
+    /* Populate arrays */
+    int i, j;
     for (i = 0; i < nargs; ++i) {
-        if (!my_ffi_cvt(NULL, wraps->elems[i], &f_argtypes[i], &f_args[i])) {
+        /* Determine type to cast to */
+        ks_type ctype = NULL;
+        if (i < req_nargs) {
+            ctype = (ks_type)ta->elems[i];
+            KS_INCREF(ctype);
+        } else {
+            ctype = ksffi_typeof(args[i]);
+            if (!ctype) {
+                for (j = 0; j < i; ++j) ks_free(f_argvals[j]);
+                ks_free(f_argtypes);
+                ks_free(f_argvals);
+                return NULL;
+            }
+        }
+
+        /* Convert to FFI type */
+        if (!ksffi_libffi_type(ctype, &f_argtypes[i])) {
+            KS_DECREF(ctype);
+            for (j = 0; j < i; ++j) ks_free(f_argvals[j]);
             ks_free(f_argtypes);
-            ks_free(f_args);
-            KS_DECREF(wraps);
+            ks_free(f_argvals);
             return NULL;
         }
+
+        /* Get size */
+        int ctype_sz = ksffi_sizeof(ctype);
+        if (ctype_sz < 0) {
+            KS_DECREF(ctype);
+            for (j = 0; j < i; ++j) ks_free(f_argvals[j]);
+            ks_free(f_argtypes);
+            ks_free(f_argvals);
+            return NULL;
+        }
+
+        /* Allocate argument and unwrap object */
+        f_argvals[i] = ks_smalloc(ctype_sz);
+        if (
+            !ksffi_unwrap(ctype, args[i], f_argvals[i])
+        ) {
+            KS_DECREF(ctype);
+            ks_free(f_argvals[i]);
+            for (j = 0; j < i; ++j) ks_free(f_argvals[j]);
+            ks_free(f_argtypes);
+            ks_free(f_argvals);
+            return NULL;
+        }
+
+        KS_DECREF(ctype);
     }
+
 
     /* Prepare CIF */
     ffi_cif f_cif;
 
     /* Prepare for variadic or normal */
+
+    /* TODO: Allow different ABIs? */
     int abi = FFI_DEFAULT_ABI;
     int f_rc = is_va 
         ? ffi_prep_cif_var(&f_cif, abi, req_nargs, nargs, f_restype, f_argtypes)
         : ffi_prep_cif(&f_cif, abi, nargs, f_restype, f_argtypes);
-    
+
     if (f_rc != FFI_OK) {
         ks_free(f_argtypes);
-        ks_free(f_args);
-        KS_DECREF(wraps);
+        ks_free(f_argvals);
+        for (j = 0; j < nargs; ++j) ks_free(f_argvals[j]);
         KS_THROW(kst_Error, "Failed to create FFI structure: ffi_prep_cif() returned %i", f_rc);
         return NULL;
     }
 
+    /* Result data */
     void* res = ks_malloc(f_restype->size < 16 ? 16 : f_restype->size);
 
-    ffi_call(&f_cif, self->val, res, f_args);
+    /* Perform call */
+    ffi_call(&f_cif, self->val, res, f_argvals);
 
     /* Free temporary buffers */
+    for (j = 0; j < nargs; ++j) ks_free(f_argvals[j]);
     ks_free(f_argtypes);
-    ks_free(f_args);
-    KS_DECREF(wraps);
+    ks_free(f_argvals);
 
     bool is_ptr = kso_issub(rtp->type, kst_type) && kso_issub(rtp, ksffit_ptr);
 
-    kso rr = ((kso)rtp == KSO_NONE || rtp == kst_none) ? KSO_NONE : ksffi_wrap(rtp, is_ptr ? ((void**)res)[0] : res);
+    kso rr = f_restype == &ffi_type_void ? KSO_NONE : ksffi_wrap(rtp, res);
     ks_free(res);
     return rr;
 #else
     KS_THROW(kst_PlatformWarning, "Failed to call C-style function wrapper: Platform had no libffi support (was not compiled with '--with-ffi')");
     return NULL;
 #endif
-
-
 }
 
 

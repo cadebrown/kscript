@@ -766,7 +766,8 @@ bool ks_fmt2(ksio_BaseIO bio, const char* fmt, int nargs, kso* args) {
                     }
 
                     char* tmp = ks_malloc(mpz_sizeinbase(ia->val, 10) + 4);
-                    mpz_get_str(tmp, 10, ia->val);
+                    int base = 10;
+                    mpz_get_str(tmp, base, ia->val);
                     int rsz = strlen(tmp), i;
 
                     /* Calculate number of spaces needed */
@@ -818,9 +819,10 @@ bool ks_fmt2(ksio_BaseIO bio, const char* fmt, int nargs, kso* args) {
                     if (!ia) {
                         return false;
                     }
+
                     int base = 16;
                     char* tmp = ks_malloc(mpz_sizeinbase(ia->val, base) + 4);
-                    mpz_get_str(tmp, 10, ia->val);
+                    mpz_get_str(tmp, base, ia->val);
                     int rsz = strlen(tmp), i;
 
                     /* Calculate number of spaces needed */

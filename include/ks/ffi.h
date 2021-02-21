@@ -3,19 +3,17 @@
  * Provides wrappers for interfacing with C functions/libraries, through Foreign Function Interface
  * 
  * Builtin types:
- *   char
- *   unsigned char
- *   short
- *   unsigned short
- *   int
- *   unsigned int
- *   long
- *   unsigned long
- *   long long
- *   unsigned long long
- * 
- * 
- * Allows you to dynamically load C libraries, and then call functions from them
+ *   s8
+ *   u8
+ *   s16
+ *   u16
+ *   s32
+ *   u32
+ *   s64
+ *   u64
+ *   f
+ *   d
+ *   ld
  * 
  * @author:    Cade Brown <cade@kscript.org>
  */
@@ -40,60 +38,84 @@
 
 /* Types */
 
-/* 'ffi.DLL' - dynamically loaded library
+
+/* ffi.DLL - Dynamically loaded library
  * 
  */
 typedef struct ksffi_dll_s {
     KSO_BASE
 
-    /* Name of the source */
-    ks_str name;
+    /* Where the library was loaded from */
+    ks_str src;
 
-    /* Handle returned by 'dlopen' function */
+
+    /* Opaque handle, which is returned by 'dlopen()' or a
+     *   similar function
+     */
     void* handle;
 
 }* ksffi_dll;
 
 
-/* Do for integer types */
-#define KSFFI_DO_INTS(macro) \
-    macro(schar, signed char) \
-    macro(uchar, unsigned char) \
-    macro(sshort, signed short) \
-    macro(ushort, unsigned short) \
-    macro(sint, signed int) \
-    macro(uint, unsigned int) \
-    macro(slong, signed long) \
-    macro(ulong, unsigned long) \
-    macro(slonglong, signed long long) \
-    macro(ulonglong, unsigned long long) \
 
-#define _KSFFI_INTTYPE(_name, _ctp) \
-typedef struct ksffi_##_name##_s { \
-    KSO_BASE \
-    _ctp val; \
-}* ksffi_##_name;
+/* Paste a macro for C-style integers */
+#define KSFFI_DO_I(macro) \
+    macro(s8, int8_t) \
+    macro(u8, uint8_t) \
+    macro(s16, int16_t) \
+    macro(u16, uint16_t) \
+    macro(s32, int32_t) \
+    macro(u32, uint32_t) \
+    macro(s64, int64_t) \
+    macro(u64, uint64_t) \
 
-KSFFI_DO_INTS(_KSFFI_INTTYPE)
-
-
-
-/* Do for integer types */
-#define KSFFI_DO_FLOATS(macro) \
+/* Paste a macro for C-style floats */
+#define KSFFI_DO_F(macro) \
     macro(float, float) \
     macro(double, double) \
     macro(longdouble, long double) \
 
-#define _KSFFI_FLOATTYPE(_name, _ctp) \
+
+/** Define integer types **/
+
+#define _KSFFI_TYPE_I(_name, _type) \
 typedef struct ksffi_##_name##_s { \
     KSO_BASE \
-    _ctp val; \
+    _type val; \
 }* ksffi_##_name;
 
-KSFFI_DO_FLOATS(_KSFFI_FLOATTYPE)
+KSFFI_DO_I(_KSFFI_TYPE_I)
+
+#define _KSFFI_TYPE_F(_name, _type) \
+typedef struct ksffi_##_name##_s { \
+    KSO_BASE \
+    _type val; \
+}* ksffi_##_name;
+
+KSFFI_DO_F(_KSFFI_TYPE_F)
 
 
-/* 'ffi.ptr[T]' - pointer type
+/** Aliases **/
+
+
+#define ksffit_char ksffit_s8
+#define ksffit_uchar ksffit_u8
+#define ksffit_short ksffit_s16
+#define ksffit_ushort ksffit_u16
+#define ksffit_int ksffit_s32
+#define ksffit_uint ksffit_u32
+#define ksffit_longlong ksffit_s64
+#define ksffit_ulonglong ksffit_u64
+
+/* TODO: check platforms for longs */
+#define ksffit_long ksffit_s32
+#define ksffit_ulong ksffit_u32
+
+#define ksffit_size_t ksffit_u64
+#define ksffit_ssize_t ksffit_s64
+
+
+/* ffi.ptr[T] - pointer type to another type
  *
  */
 typedef struct ksffi_ptr_s {
@@ -102,98 +124,96 @@ typedef struct ksffi_ptr_s {
     /* Address of the value */
     void* val;
 
-
 }* ksffi_ptr;
 
-/* 'ffi.func[ResT, ArgTs]' - callable C-style function
+/* ffi.func[ResT, ArgsT] - C-style function type
  *
  */
 typedef struct ksffi_func_s {
     KSO_BASE
 
-    /* Function pointer (which can be casted) */
+    /* Function pointer (which can be casted to others) */
     void (*val)();
 
 }* ksffi_func;
 
-
-/* Open/load a library, and return it
+/* ffi.struct[MembersT] - C-style structure type
+ *
  */
-KS_API ksffi_dll ksffi_open(ks_type tp, ks_str name);
+typedef struct ksffi_struct_s {
+    KSO_BASE
 
-/* Create a new integer type
+    /* Array allocate for the structure (the size will depend
+     *   on what kind of structure)
+     */
+    char val[0];
+
+}* ksffi_struct;
+
+
+/** Functions **/
+
+#ifdef KS_HAVE_ffi
+
+/* Converts 'tp' to the compatible libffi type descriptor
  */
-KS_API kso ksffi_new_int(ks_type tp, ks_cint val);
-KS_API kso ksffi_new_intu(ks_type tp, ks_uint val);
+KS_API bool ksffi_libffi_type(ks_type tp, ffi_type** res);
+
+#endif
 
 
-/* Compute the size (in bytes) of a C-type, or return -1 if there was an error
+/* Open a DLL and return it
+ */
+KS_API ksffi_dll ksffi_open(ks_str src);
+
+/* Computes 'sizeof(tp)' (in bytes) of a C-style type
+ * Returns -1 if 'tp' was not a C-style type
+ * 'sizeofp' calculates the size of '*tp'
  */
 KS_API int ksffi_sizeof(ks_type tp);
-
-/* sizeof(*tp)
- */
 KS_API int ksffi_sizeofp(ks_type tp);
 
+/* Gets the FFI type which 'obj' should be turned into
+ */
+KS_API ks_type ksffi_typeof(kso obj);
 
-/* Wrap a generic type which should be of the 'tp's size and type
+/* Wrap a C-style type and value into an object
  */
 KS_API kso ksffi_wrap(ks_type tp, void* val);
 
-/* Unrap an object into a value
+/* Unwrap an object into a C-style type, storing in 'val', which
+ *   should be allocated to 'ksffi_sizeof(tp)'
  */
 KS_API bool ksffi_unwrap(ks_type tp, kso obj, void* val);
 
-/* Turns an object into a C-style value wrapper
+/* Make a pointer type to type 'of'
  */
-KS_API kso ksffi_wrapo(kso obj, ks_type tp);
+KS_API ks_type ksffi_ptr_make(ks_type of);
 
-/* Create a pointer type
+/* Make a structure type
+ * Each of 'members' should be a tuple of '(name, type[, offset])'
  */
-KS_API ks_type ksffi_ptr_type(ks_type of);
+KS_API ks_type ksffi_struct_make(int nmembers, kso* members);
 
-/* Create a value of a pointer type
+/* Make a function type returning 'restype', and taking a number of arguments
  */
-KS_API ksffi_ptr ksffi_ptr_make(ks_type of, void* val);
-
-/* Like above, but 'tp' has already been made
- */
-KS_API ksffi_ptr ksffi_ptr_maken(ks_type tp, void* val);
-
-
-/* Create a new floating point type
- */
-KS_API kso ksffi_new_float(ks_type tp, ks_cfloat val);
-
-#ifdef KS_HAVE_long_double
-KS_API kso ksffi_new_floatld(ks_type tp, long double val);
-#endif
-
-#ifdef KS_HAVE_float128
-KS_API kso ksffi_new_float128(ks_type tp, __float128 val);
-#endif
-
-
-/* Create a function type
- */
-KS_API ks_type ksffi_func_make(ks_type restype, ks_tuple argtypes);
-
-/* Wrap a C-style function
- */
-KS_API ksffi_func ksffi_func_new(ks_type tp, void (*val)());
+KS_API ks_type ksffi_func_make(ks_type restype, int nargtypes, ks_type* argtypes, bool isvararg);
 
 
 /* Types */
 KS_API_DATA ks_type
-#define _KSFFI_INTDECL(_name, _ctp) ksffit_##_name,
-KSFFI_DO_INTS(_KSFFI_INTDECL)
+#define _KSFFI_DECL_I(_name, _type) ksffit_##_name,
+KSFFI_DO_I(_KSFFI_DECL_I)
 
-#define _KSFFI_FLOATDECL(_name, _ctp) ksffit_##_name,
-KSFFI_DO_FLOATS(_KSFFI_FLOATDECL)
+#define _KSFFI_DECL_F(_name, _type) ksffit_##_name,
+KSFFI_DO_F(_KSFFI_DECL_F)
 
+    ksffit_ptr_void,
     ksffit_ptr,
     ksffit_func,
+    ksffit_struct,
     ksffit_dll
 ;
+
 
 #endif /* KSFFI_H__ */

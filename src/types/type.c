@@ -79,13 +79,13 @@ ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, const 
 }
 
 ks_type ks_type_template(ks_type base, int nargs, kso* args) {
-    if (base->i__template == NULL || base->i__template->len == 0) {
+    if (base->i__template == NULL) {
         KS_THROW(kst_TemplateError, "'%R' cannot be templated", base);
         return NULL;
     } else if (nargs == 0) {
         KS_THROW(kst_TemplateError, "'%R' cannot be templated, no template parameters given", base);
         return NULL;
-    } else if (base->i__template->len != nargs) {
+    } else if (base->i__template->len != 0 && base->i__template->len != nargs) {
         KS_THROW(kst_TemplateError, "'%R' cannot be templated, wrong number of parameters (expected %i, but got %i)", base, (int)base->i__template->len, nargs);
         return NULL;
     }
@@ -117,6 +117,8 @@ ks_type ks_type_template(ks_type base, int nargs, kso* args) {
     
     ks_type cv = (ks_type)ks_dict_get(my_tcache, (kso)key);
     if (cv) {
+        KS_DECREF(key);
+        KS_DECREF(ta);
         return cv;
     }
 
@@ -128,6 +130,19 @@ ks_type ks_type_template(ks_type base, int nargs, kso* args) {
         {"__template", (kso)ta},
     ));
     KS_DECREF(name);
+
+    /* Now, finalize it */
+    if (base->i__on_template != NULL) {
+
+        kso rr = kso_call(base->i__on_template, 1, (kso[]){ (kso)cv });
+        if (!rr) {
+            KS_DECREF(key);
+            KS_DECREF(cv);
+            return NULL;
+        }
+
+        KS_DECREF(rr);
+    }
 
     /* Store in cache */
     ks_dict_set(my_tcache, (kso)key, (kso)cv);

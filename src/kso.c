@@ -485,6 +485,12 @@ kso kso_getattr(kso ob, ks_str attr) {
     KS_THROW_ATTR(ob, attr);
     return NULL;
 }
+kso kso_getattr_c(kso ob, const char* attr) {
+    ks_str k = ks_str_new(-1, attr);
+    kso r = kso_getattr(ob, k);
+    KS_DECREF(k);
+    return r;
+}
 
 bool kso_setattr(kso ob, ks_str attr, kso val) {
     ksos_thread th = ksos_thread_get();

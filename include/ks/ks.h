@@ -184,6 +184,13 @@
 #endif
 
 
+/* Print a formatted message and crash the interpreter */
+#define KS_CRASH(...) do { \
+  fprintf(stderr, "(KS_CRASH): " __VA_ARGS__); \
+  exit(1); \
+} while (0)
+
+
 /* WebAssembly/Emscription ()
  *
  * Adds support for compiling for the 'web' platform
@@ -565,6 +572,10 @@ KS_API bool ks_printf(const char* fmt, ...);
  */
 KS_API void* ks_malloc(ks_size_t sz);
 
+/* Equivalent to 'ks_malloc' but crashes if it fails
+ */
+KS_API void* ks_smalloc(ks_size_t sz);
+
 /* Equivalent to 'ks_malloc(sz * num)' */
 KS_API void* ks_zmalloc(ks_size_t sz, ks_size_t num);
 
@@ -577,8 +588,13 @@ KS_API void* ks_zmalloc(ks_size_t sz, ks_size_t num);
  */
 KS_API void* ks_realloc(void* ptr, ks_size_t sz);
 
+/* Equivalent to 'ks_realloc' but crashes if it fails
+ */
+KS_API void* ks_srealloc(void* ptr, ks_size_t sz);
+
 /* Equivalent to 'ks_realloc(ptr, sz * num)' */
 KS_API void* ks_zrealloc(void* ptr, ks_size_t sz, ks_size_t num);
+
 
 /* Frees a pointer to memory allocated via 'ks_*' allocation functions
  *
@@ -1316,6 +1332,7 @@ KS_API ks_dict kso_try_getattr_dict(kso obj);
 /* Get, set, or delete an attribute from an object
  */
 KS_API kso kso_getattr(kso ob, ks_str attr);
+KS_API kso kso_getattr_c(kso ob, const char* attr);
 KS_API bool kso_setattr(kso ob, ks_str attr, kso val);
 KS_API bool kso_delattr(kso ob, ks_str attr);
 

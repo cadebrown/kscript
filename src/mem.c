@@ -12,7 +12,7 @@
  */
 #define _NEXTSIZE(_sz) (2 * (_sz) / 1)
 
-KS_API void* ks_malloc(ks_size_t sz) {
+void* ks_malloc(ks_size_t sz) {
     void* res = malloc(sz);
 
     if (!res && sz > 0) {
@@ -21,6 +21,22 @@ KS_API void* ks_malloc(ks_size_t sz) {
 
     return res;
 }
+void* ks_smalloc(ks_size_t sz) {
+    void* res = ks_malloc(sz);
+    if (!res && sz > 0) {
+        KS_CRASH("Failed to allocate memory");
+    }
+    return res;
+}
+
+void* ks_srealloc(void* ptr, ks_size_t sz) {
+    void* res = ks_realloc(ptr, sz);
+    if (!res && sz > 0) {
+        KS_CRASH("Failed to re-allocate memory");
+    }
+    return res;
+}
+
 
 KS_API void* ks_zmalloc(ks_size_t sz, ks_size_t num) {
     return ks_malloc(sz * num);

@@ -16,6 +16,7 @@
  */
 static bool my_oblk(int nidxs, ks_size_t* idxs, kso cur, int* rank, ks_size_t* shape, kso** rr, int* li, int dep) {
     bool should_iter = kso_is_iterable(cur);
+
     if (should_iter) {
         if (kso_issub(cur->type, nxt_array)) {
             if (((nx_array)cur)->val.rank == 0) {
@@ -31,6 +32,7 @@ static bool my_oblk(int nidxs, ks_size_t* idxs, kso cur, int* rank, ks_size_t* s
         }
 
         if (*rank >= 0) {
+
             /* Already reached max depth, so ensure we are of a correct length */
             if (cl->len != shape[nidxs]) {
                 KS_THROW_ATTR(kst_SizeError, "Initializing entries had differing dimensions");
@@ -49,6 +51,7 @@ static bool my_oblk(int nidxs, ks_size_t* idxs, kso cur, int* rank, ks_size_t* s
             }
         }
         KS_DECREF(cl);
+
     } else {
         /* Leaf node */
         /* Get my index */
@@ -70,7 +73,9 @@ static bool my_oblk(int nidxs, ks_size_t* idxs, kso cur, int* rank, ks_size_t* s
 
 kso* nx_objblock(kso objs, int* rank, ks_size_t* shape) {
     kso* res = NULL;
+
     if (kso_is_iterable(objs)) {
+
         /* Needs a shape */
         ks_size_t idxs[NX_MAXRANK];
         int li = 0;
@@ -79,6 +84,21 @@ kso* nx_objblock(kso objs, int* rank, ks_size_t* shape) {
             ks_free(res);
             return NULL;
         }
+
+        bool isempty = false;
+        int i;
+        for (i = 0; i < *rank; ++i) {
+            if (shape[i] == 0) {
+                isempty = true;
+                break;
+            }
+        }
+        if (isempty) {
+            if (!res) res = ks_malloc(1);
+            *rank = 1;
+            shape[0] = 0;
+        }
+
 
     } else {
         /* Single scalar value */

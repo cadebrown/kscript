@@ -270,6 +270,34 @@ nx_t nx_getevo(nx_t self, int nargs, kso* args) {
 
             data += self.strides[p] * v;
             p++;
+        } else if (kso_issub(args[i]->type, nxt_array)) {
+            nx_t ia = ((nx_array)args[i])->val;
+            if (ia.rank == 0 && ia.dtype->kind == NX_DTYPE_INT) {
+                    
+                ks_cint v;
+                if (!kso_get_ci(args[i], &v)) {
+                    res.rank = -1;
+                    return res;
+                }
+                ks_cint dim = self.shape[p];
+
+                if (v < 0) {
+                    v = ((v % dim) + dim) % dim;
+                } else if (v >= self.shape[p]) {
+                    KS_THROW(kst_IndexError, "Index #%i out of range (value: %i)", i, (int)v);
+                    res.rank = -1;
+                    return res;
+                }
+
+                data += self.strides[p] * v;
+                p++;
+
+            } else {
+                KS_THROW(kst_IndexError, "Only scalar arrays of integer types are allowed (index #%i)", i);
+                res.rank = -1;
+                return res;
+            }
+
         } else if (kso_issub(args[i]->type, kst_slice)) {
             ks_cint start, stop, delta;
             if (!ks_slice_get_citer((ks_slice)args[i], self.shape[p], &start, &stop, &delta)) {
@@ -374,7 +402,10 @@ static bool my_getstr_addelem(ksio_BaseIO bio, nx_dtype dtype, void* ptr) {
         TYPE v = *(TYPE*)ptr; \
         my_getstr_addelem(bio, TYPE##rdtype, &v.re); \
         if (v.im >= 0 || v.im != v.im || v.im == TYPE##rINF) { ksio_add(bio, "+"); } \
-        my_getstr_addelem(bio, TYPE##rdtype, &v.im); \
+        else { ksio_add(bio, "-"); } \
+        TYPE##r vvv = v.im < 0 ? -v.im : v.im; \
+        if (vvv == 0) vvv = 0.0; \
+        my_getstr_addelem(bio, TYPE##rdtype, &vvv); \
         ksio_add(bio, "i"); \
     }
     NXT_PASTE_C(LOOP)

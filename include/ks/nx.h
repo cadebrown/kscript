@@ -786,6 +786,12 @@ KS_API bool nx_one(nx_t R);
  */
 KS_API bool nx_onehot(nx_t X, nx_t R);
 
+/* Pads 'X' to 'R's dimensions, adding '0's in empty entries
+ *
+ */
+KS_API bool nx_pad(nx_t X, nx_t R);
+
+
 /* R[:] = sum(X)
  * 
  */
@@ -852,6 +858,8 @@ KS_API bool nx_abs(nx_t X, nx_t R);
 /* R = ~X (conjugation) */
 KS_API bool nx_conj(nx_t X, nx_t R);
 
+/* R = cross(X, Y) (cross product) */
+KS_API bool nx_cross(nx_t X, nx_t Y, nx_t R);
 
 
 /* R = fmin(X, Y) */

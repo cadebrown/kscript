@@ -466,11 +466,40 @@
     return (kso)res; \
 }
 
+/* Array and shape */
+#define T_AS(_name, _func) static KS_TFUNC(M, _name) { \
+    kso ax; \
+    kso ashape = KSO_NONE; \
+    KS_ARGS("x shape", &ax, &ashape); \
+    int rank; \
+    ks_size_t shape[NX_MAXRANK]; \
+    if (!nx_getshape(ashape, &rank, shape)) { \
+        return NULL; \
+    } \
+    nx_t x; \
+    kso xr; \
+    if (!nx_get(ax, NULL, &x, &xr)) { \
+        return NULL; \
+    } \
+    nx_array res = nx_array_newc(nxt_array, NULL, x.dtype, rank, shape, NULL); \
+    if (!nx_##_name(x, res->val)) { \
+        KS_NDECREF(xr); \
+        KS_DECREF(res); \
+        return NULL; \
+    } \
+    KS_NDECREF(xr); \
+    return (kso)res; \
+}
+
 T_SD(zeros, zero)
 T_SD(ones, one)
+T_AS(pad, pad)
 
 T_C2(cast)
 T_C2(fpcast)
+
+T_A2(cross)
+
 
 T_A2(add)
 T_A2(sub)
@@ -582,11 +611,17 @@ ks_module _ksi_nx() {
         {"zeros",                  ksf_wrap(M_zeros_, M_NAME ".zeros(shape=none, dtype=nx.double)", "Create an array of zeros")},
         {"ones",                   ksf_wrap(M_ones_, M_NAME ".zeros(shape=none, dtype=nx.double)", "Create an array of ones")},
 
+        {"pad",                    ksf_wrap(M_pad_, M_NAME ".pad(x, shape)", "Pads 'x' to the shape 'shape', either adding zeros or omitting entries that don't fit")},
+
+
         {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim=none, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to (default: last dimension of 'x')\n\n    Indices in 'x' are taken modulo 'newdim'")},
 
         {"abs",                    ksf_wrap(M_abs_, M_NAME ".abs(x, r=none)", "Computes elementwise absolute value")},
         {"conj",                   ksf_wrap(M_conj_, M_NAME ".conj(x, r=none)", "Computes elementwise conjugation")},
         {"neg",                    ksf_wrap(M_neg_, M_NAME ".neg(x, r=none)", "Computes elementwise negation")},
+
+        {"cross",                  ksf_wrap(M_cross_, M_NAME ".cross(x, y, r=none)", "Computes elementwise cross product")},
+
 
         {"add",                    ksf_wrap(M_add_, M_NAME ".add(x, y, r=none)", "Computes elementwise addition")},
         {"sub",                    ksf_wrap(M_sub_, M_NAME ".sub(x, y, r=none)", "Computes elementwise subtraction")},

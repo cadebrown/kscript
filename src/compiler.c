@@ -1316,7 +1316,8 @@ static bool compile(struct compiler* co, ks_str fname, ks_str src, ks_code code,
 /* Export */
 
 ks_code ks_compile(ks_str fname, ks_str src, ks_ast prog, ks_code from) {
-    ks_code res = from ? ks_code_from(from) : ks_code_new(fname, src);
+    //ks_code res = from ? ks_code_from(from) : ks_code_new(fname, src);
+    ks_code res = ks_code_new(fname, src);
     if (!res) return NULL;
 
     struct compiler co;

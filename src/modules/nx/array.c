@@ -685,7 +685,7 @@ void _ksi_nx_array() {
         {"__setelem",              ksf_wrap(T_setelem_, T_NAME ".__setelem(self, *keys, val)", "")},
 
         {"__abs",                  ksf_wrap(T_abs_, T_NAME ".__abs(self)", "")},
-        {"__neg",                  ksf_wrap(T_abs_, T_NAME ".__neg(self)", "")},
+        {"__neg",                  ksf_wrap(T_neg_, T_NAME ".__neg(self)", "")},
         {"__sqig",                 ksf_wrap(T_conj_, T_NAME ".__sqig(self)", "")},
 
         {"__add",                  ksf_wrap(T_add_, T_NAME ".__add(L, R)", "")},

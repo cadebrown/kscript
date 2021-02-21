@@ -93,11 +93,13 @@ void _ksi_net_http_resp();
 void _ksi_net_http_server();
 
 ks_module _ksi_ffi();
-void _ksi_ffi_dll();
-void _ksi_ffi_func();
+void _ksi_ffi_int();
+void _ksi_ffi_float();
 void _ksi_ffi_ptr();
-void _ksi_ffi_ints();
-void _ksi_ffi_floats();
+void _ksi_ffi_func();
+void _ksi_ffi_struct();
+void _ksi_ffi_dll();
+
 
 ks_module _ksi_nx();
 void _ksi_nx_dtype();

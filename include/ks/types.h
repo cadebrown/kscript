@@ -830,8 +830,12 @@ struct ks_type_s {
      * 
      */
 
-    /* __new__(tp, *args), __init__(self, *args), __free__(self), __call__(self, *args) */
+    /* __new(tp, *args), __init(self, *args), __free(self), __call(self, *args) */
     kso i__new, i__init, i__free, i__call;
+
+    /* __on_template(tp) */
+    kso i__on_template;
+
 
     /* iter(A), next(A), call(A, *args) */
     kso i__iter, i__next;
@@ -885,6 +889,7 @@ struct ks_type_s {
     m(__name) \
     m(__fullname) \
     m(__template) \
+    m(__on_template) \
     m(__new) \
     m(__init) \
     m(__free) \
