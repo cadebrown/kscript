@@ -257,6 +257,13 @@ static KS_TFUNC(T, on_template) {
 
     int nargs = tp->i__template->len;
     kso* args = tp->i__template->elems;
+    ks_dict map = ks_dict_new(NULL);
+    ks_type_set_c(tp, "__members_map", (kso)map);
+    KS_DECREF(map);
+
+    size_t* offsets = ks_malloc(sizeof(*offsets) * nargs);
+
+#ifdef KS_HAVE_ffi
 
     int f_abi = FFI_DEFAULT_ABI;
 
@@ -266,11 +273,6 @@ static KS_TFUNC(T, on_template) {
     f_tp.alignment = 0;
     f_tp.type = FFI_TYPE_STRUCT;
     f_tp.elements = ks_malloc(sizeof(*f_tp.elements) * (nargs + 1));
-    size_t* offsets = ks_malloc(sizeof(*offsets) * nargs);
-
-    ks_dict map = ks_dict_new(NULL);
-    ks_type_set_c(tp, "__members_map", (kso)map);
-    KS_DECREF(map);
 
     /* Add structure members */
     int i;
@@ -320,30 +322,6 @@ static KS_TFUNC(T, on_template) {
     ks_type_set_c(tp, "__sizeof", (kso)vsz);
     KS_DECREF(vsz);
 
-    /* Create list of members */
-    ks_list vmems = ks_list_new(0, NULL);
-    for (i = 0; i < nargs; ++i) {
-        ks_tuple mem = ks_tuple_newn(2, (kso[]){ 
-            KS_NEWREF(((ks_tuple)args[i])->elems[0]),
-            (kso)ks_int_new(offsets[i])
-        });
-        ks_list_pushu(vmems, (kso)mem);
-    }
-
-
-    ks_type_set_c(tp, "__members", (kso)vmems);
-    KS_DECREF(vmems);
-
-
-    ks_list voffs = ks_list_new(0, NULL);
-    for (i = 0; i < nargs; ++i) {
-        ks_list_pushu(voffs, (kso)ks_int_new(offsets[i]));
-    }
-
-    ks_type_set_c(tp, "__offsets", (kso)voffs);
-    KS_DECREF(voffs);
-
-    ks_free(offsets);
 
     if (tp->ob_sz < f_tp.size + sizeof(*((kso)NULL))) {
         tp->ob_sz = f_tp.size + sizeof(*((kso)NULL));
@@ -354,6 +332,65 @@ static KS_TFUNC(T, on_template) {
     kso f_desco = ksffi_wrap(ksffit_ptr_void, (void*)&f_desca);
     ks_type_set_c(tp, "__ffi_desc", (kso)f_desco);
     KS_DECREF(f_desco);
+
+#else
+
+    int sz = 0;
+
+    /* Add structure members */
+    int i;
+    for (i = 0; i < nargs; ++i) {
+        ks_tuple a = (ks_tuple)args[i];
+        if (!kso_issub(a->type, kst_tuple)) {
+            ks_free(offsets);
+            KS_THROW(kst_TypeError, "Expected template parameters to be a tuple of the form '(type, name)', but instead got '%T' object", a);
+            return NULL;
+        }
+
+        if (a->len != 2) {
+            ks_free(offsets);
+            KS_THROW(kst_TypeError, "Expected template parameters to be a tuple of the form '(type, name)', but instead got one of length %i", (int)a->len);
+            return NULL;
+        }
+        ks_int vi = ks_int_new(i);
+        if (!ks_dict_set(map, a->elems[1], (kso)vi)) {
+            ks_free(offsets);
+            KS_DECREF(vi);
+            return NULL;
+        }
+        KS_DECREF(vi);
+
+        offsets[i] = sz;
+        int szof = ksffi_sizeof((ks_type)a->elems[0]);
+        if (szof < 0) {
+            ks_free(offsets);
+            return NULL;
+        }
+        sz += szof;
+    }
+    ks_int vsz = ks_int_new(sz);
+    ks_type_set_c(tp, "__sizeof", (kso)vsz);
+    KS_DECREF(vsz);
+
+
+#endif
+
+    /* Create list of members */
+    ks_list vmems = ks_list_new(0, NULL);
+    for (i = 0; i < nargs; ++i) {
+        ks_tuple mem = ks_tuple_newn(2, (kso[]){ 
+            KS_NEWREF(((ks_tuple)args[i])->elems[0]),
+            (kso)ks_int_new(offsets[i])
+        });
+        ks_list_pushu(vmems, (kso)mem);
+    }
+
+    ks_type_set_c(tp, "__members", (kso)vmems);
+    KS_DECREF(vmems);
+
+
+    ks_free(offsets);
+
 
     return KSO_NONE;
 }
