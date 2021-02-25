@@ -5,7 +5,6 @@
  */
 #include <ks/impl.h>
 
-
 /* Computes the next size in the reallocation scheme
  * 
  * By having a ratio, we reduce repeated resizing to an amortized constant time operation
@@ -38,7 +37,7 @@ void* ks_srealloc(void* ptr, ks_size_t sz) {
 }
 
 
-KS_API void* ks_zmalloc(ks_size_t sz, ks_size_t num) {
+void* ks_zmalloc(ks_size_t sz, ks_size_t num) {
     return ks_malloc(sz * num);
 }
 

@@ -1,7 +1,17 @@
 #!/usr/bin/env ks
 """ vecadd.ks - Adds vectors using a C library
 
+This references the code writtein in 'vecadd.c'. So, you'll have to compile that before running this
 
+Here's how to run this example:
+
+```
+$ make
+cc -fPIC -c vecadd.c -o vecadd.o
+cc -shared vecadd.o -o libvecadd.so
+$ ks vecadd.ks
+success!
+```
 
 @author: Cade Brown <cade@kscript.org>
 """

@@ -236,16 +236,18 @@ bool ksos_listdir(kso path, ks_list* dirs, ks_list* files) {
 	}
 	return true;
 #elif defined(KS_HAVE_opendir)
+
 	ks_str sp = ksos_path_str(path);
     if (!sp) return false;
 
     /* TODO: check OS encoding */
     DIR* dp = opendir(sp->data);
-    KS_DECREF(sp);
     if (!dp) {
         KS_THROW_ERRNO(errno, "Failed to open directory %R", sp);
+        KS_DECREF(sp);
 		return false;
     }
+    KS_DECREF(sp);
 
     /* Collect Entries */
     if (*dirs) {
