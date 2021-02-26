@@ -764,6 +764,7 @@ check_func "nanosleep" "i" "&ts,&ts"
 check_func "usleep" "i" "i"
 check_func "sleep" "i" "i"
 check_func "clock_nanosleep" "i" "i,i,&ts,&ts"
+check_func "ffi_get_struct_offsets" "i" "i,NULL,NULL"
 
 echo ""
 echo " -- Names -- "

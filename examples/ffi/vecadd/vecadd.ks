@@ -28,16 +28,15 @@ libvecadd = ffi.open('libvecadd.so')
 
 # vec3f - Vector type (defined in 'vecadd.c')
 type vec3f extends ffi.struct[
-        (ffi.float, 'x'),
-        (ffi.float, 'y'),
-        (ffi.float, 'z'),
+        ('x', ffi.float),
+        ('y', ffi.float),
+        ('z', ffi.float),
     ] {
 
 }
 
 # Load the vecadd function
 cvecadd = libvecadd.load('vecadd', ffi.func[none, (ffi.int, ffi.ptr[vec3f], ffi.ptr[vec3f], ffi.ptr[vec3f])])
-
 
 
 # Number of elements

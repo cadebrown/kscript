@@ -431,7 +431,7 @@ bool ksos_mkdir(kso path, int mode, bool parents) {
     }
 
     if (rc != 0) {
-        KS_THROW_ERRNO(rc, "Failed to mkdir %R", sp);
+        KS_THROW_ERRNO(rcerr, "Failed to mkdir %R", sp);
         KS_DECREF(sp);
         return false;
     }

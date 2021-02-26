@@ -195,8 +195,6 @@ ks_cfloat ksm_zeta(ks_cfloat x) {
 }
 
 
-
-
 ks_ccomplex ksm_czeta(ks_ccomplex x) {
     if (x.im == 0.0) return KS_CC_MAKE(ksm_zeta(x.re), 0);
 
@@ -204,7 +202,7 @@ ks_ccomplex ksm_czeta(ks_ccomplex x) {
         /* Reflect: Zeta(x) = 2 * (2*pi)^(x-1) * sin(x*pi/2) * Gamma(x-1) * Zeta(1-x) */
         ks_ccomplex t0 = ksm_cpow(KS_CC_MAKE(2 * KSM_PI, 0), KS_CC_MAKE(x.re-1, x.im)) /* (2*pi)^(x-1) */;
         ks_ccomplex t1 = ksm_csin(KS_CC_MAKE((KSM_PI / 2.0) * x.re, (KSM_PI / 2.0) * x.im)) /* sin(x*pi/2) */;
-        ks_ccomplex t2 = ksm_cgamma(KS_CC_MAKE(x.re-1, x.im)), t3 = ksm_czeta(KS_CC_MAKE(x.re-1, x.im)) /* {Gamma,Zeta}(1-x) */;
+        ks_ccomplex t2 = ksm_cgamma(KS_CC_MAKE(1-x.re, x.im)), t3 = ksm_czeta(KS_CC_MAKE(1-x.re, x.im)) /* {Gamma,Zeta}(1-x) */;
 
         return ksm_cmul(KS_CC_MAKE(2, 0), ksm_cmul(t0, ksm_cmul(t1, ksm_cmul(t2, t3))));
 

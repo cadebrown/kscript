@@ -66,12 +66,15 @@ static KS_TFUNC(T, new) {
     int i;
     for (i = 0; i < members->len && i < nargs; ++i) {
         ks_tuple mem = (ks_tuple)members->elems[i];
+        kso obj_tp = mem->elems[1];
+        kso obj_off = mem->elems[2];
+
         ks_cint off;
-        if (!kso_get_ci(mem->elems[1], &off)) {
+        if (!kso_get_ci(obj_off, &off)) {
             KS_DECREF(members);
             return NULL;
         }
-        if (!ksffi_unwrap((ks_type)mem->elems[0], args[i], self->val + off)) {
+        if (!ksffi_unwrap((ks_type)obj_tp, args[i], self->val + off)) {
             KS_DECREF(members);
             return NULL;
         }
@@ -102,9 +105,12 @@ static KS_TFUNC(T, str) {
         if (i > 0) {
             ksio_add(io, ", ");
         }
-        ks_type tp = (ks_type)((ks_tuple)members->elems[i])->elems[0];
+        ks_tuple mem = (ks_tuple)members->elems[i];
+        kso obj_tp = mem->elems[1];
+        kso obj_off = mem->elems[2];
+
         ks_cint off;
-        if (!kso_get_ci(((ks_tuple)members->elems[i])->elems[1], &off)) {
+        if (!kso_get_ci(obj_off, &off)) {
             KS_DECREF(io);
             KS_DECREF(members);
             return NULL;
@@ -113,14 +119,14 @@ static KS_TFUNC(T, str) {
 
     if (false) {}
 
-    #define CASE(_tp, _ctp) else if (kso_issub(tp, ksffit_##_tp)) { \
+    #define CASE(_tp, _ctp) else if (kso_issub((ks_type)obj_tp, ksffit_##_tp)) { \
         ksio_add(io, "%l", (ks_cint)*(_ctp*)ptr); \
     } \
 
     KSFFI_DO_I(CASE)
     #undef CASE
 
-    #define CASE(_tp, _ctp) else if (kso_issub(tp, ksffit_##_tp)) { \
+    #define CASE(_tp, _ctp) else if (kso_issub((ks_type)obj_tp, ksffit_##_tp)) { \
         ksio_add(io, "%f", (ks_cfloat)*(_ctp*)ptr); \
     } \
 
@@ -129,7 +135,7 @@ static KS_TFUNC(T, str) {
 
         else {
             /* Convert completely to string representation */
-            kso r = ksffi_wrap(tp, self->val + off);
+            kso r = ksffi_wrap((ks_type)obj_tp, self->val + off);
             if (!r) {
                 KS_DECREF(io);
                 KS_DECREF(members);
@@ -175,12 +181,12 @@ static KS_TFUNC(T, getattr) {
         return NULL;
     }
     ks_cint off;
-    if (!kso_get_ci(((ks_tuple)members->elems[idx])->elems[1], &off)) {
+    if (!kso_get_ci(((ks_tuple)members->elems[idx])->elems[2], &off)) {
         KS_DECREF(members);
         return NULL;
     }
 
-    kso r = ksffi_wrap((ks_type)((ks_tuple)members->elems[idx])->elems[0], self->val + off);
+    kso r = ksffi_wrap((ks_type)((ks_tuple)members->elems[idx])->elems[1], self->val + off);
     if (!r) {
         KS_DECREF(members);
         return NULL;
@@ -207,12 +213,12 @@ static KS_TFUNC(T, setattr) {
         return NULL;
     }
     ks_cint off;
-    if (!kso_get_ci(((ks_tuple)members->elems[idx])->elems[1], &off)) {
+    if (!kso_get_ci(((ks_tuple)members->elems[idx])->elems[2], &off)) {
         KS_DECREF(members);
         return NULL;
     }
 
-    if (!ksffi_unwrap((ks_type)((ks_tuple)members->elems[idx])->elems[0], val, self->val + off)) {
+    if (!ksffi_unwrap((ks_type)((ks_tuple)members->elems[idx])->elems[1], val, self->val + off)) {
         KS_DECREF(members);
         return NULL;
     }
@@ -291,8 +297,11 @@ static KS_TFUNC(T, on_template) {
             KS_THROW(kst_TypeError, "Expected template parameters to be a tuple of the form '(type, name)', but instead got one of length %i", (int)a->len);
             return NULL;
         }
+
+        kso name = a->elems[0];
+        kso obj_tp = a->elems[1];
         ks_int vi = ks_int_new(i);
-        if (!ks_dict_set(map, a->elems[1], (kso)vi)) {
+        if (!ks_dict_set(map, a->elems[0], (kso)vi)) {
             ks_free(offsets);
             ks_free(f_tp.elements);
             KS_DECREF(vi);
@@ -300,7 +309,7 @@ static KS_TFUNC(T, on_template) {
         }
         KS_DECREF(vi);
 
-        if (!ksffi_libffi_type((ks_type)a->elems[0], &f_tp.elements[i])) {
+        if (!ksffi_libffi_type((ks_type)obj_tp, &f_tp.elements[i])) {
             ks_free(offsets);
             ks_free(f_tp.elements);
             return NULL;
@@ -308,6 +317,7 @@ static KS_TFUNC(T, on_template) {
     }
     f_tp.elements[nargs] = NULL;
 
+#ifdef KS_HAVE_ffi_get_struct_offsets
     /* Get structure offsets */
     if (ffi_get_struct_offsets(f_abi, &f_tp, offsets) != FFI_OK) {
         ks_free(offsets);
@@ -315,13 +325,28 @@ static KS_TFUNC(T, on_template) {
         KS_THROW(kst_Error, "Failure from libffi: failed to get structure offsets");
         return NULL;
     }
+#else
+    ffi_cif f_cif;
+    if (ffi_prep_cif(&f_cif, f_abi, 0, &f_tp, NULL) != FFI_OK) {
+        ks_free(offsets);
+        ks_free(f_tp.elements);
+        KS_THROW(kst_Error, "Failure from libffi: failed to prep CIF");
+        return NULL;
+    }
+
+    int c = 0;
+    for (i = 0; i < nargs; ++i) {
+        offsets[i] = c;
+        c += f_tp.elements[i]->size;
+    }
+
+#endif
 
     assert(f_tp.size != 0);
 
     ks_int vsz = ks_int_new(f_tp.size);
     ks_type_set_c(tp, "__sizeof", (kso)vsz);
     KS_DECREF(vsz);
-
 
     if (tp->ob_sz < f_tp.size + sizeof(*((kso)NULL))) {
         tp->ob_sz = f_tp.size + sizeof(*((kso)NULL));
@@ -353,7 +378,7 @@ static KS_TFUNC(T, on_template) {
             return NULL;
         }
         ks_int vi = ks_int_new(i);
-        if (!ks_dict_set(map, a->elems[1], (kso)vi)) {
+        if (!ks_dict_set(map, a->elems[0], (kso)vi)) {
             ks_free(offsets);
             KS_DECREF(vi);
             return NULL;
@@ -361,7 +386,7 @@ static KS_TFUNC(T, on_template) {
         KS_DECREF(vi);
 
         offsets[i] = sz;
-        int szof = ksffi_sizeof((ks_type)a->elems[0]);
+        int szof = ksffi_sizeof((ks_type)a->elems[1]);
         if (szof < 0) {
             ks_free(offsets);
             return NULL;
@@ -378,8 +403,9 @@ static KS_TFUNC(T, on_template) {
     /* Create list of members */
     ks_list vmems = ks_list_new(0, NULL);
     for (i = 0; i < nargs; ++i) {
-        ks_tuple mem = ks_tuple_newn(2, (kso[]){ 
+        ks_tuple mem = ks_tuple_newn(3, (kso[]){ 
             KS_NEWREF(((ks_tuple)args[i])->elems[0]),
+            KS_NEWREF(((ks_tuple)args[i])->elems[1]),
             (kso)ks_int_new(offsets[i])
         });
         ks_list_pushu(vmems, (kso)mem);
@@ -414,7 +440,7 @@ static int my_iseq(ks_type tp, void* a, void* b) {
 
         int i;
         for (i = 0; i < members->len; ++i) {
-            ks_type mt = (ks_type)((ks_tuple)members->elems[i])->elems[0];
+            ks_type mt = (ks_type)((ks_tuple)members->elems[i])->elems[1];
             ks_cint off;
             if (!kso_get_ci(((ks_tuple)members->elems[i])->elems[1], &off)) {
                 KS_DECREF(members);
