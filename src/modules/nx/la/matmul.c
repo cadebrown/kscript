@@ -30,6 +30,12 @@ struct extra_data {
 #include <ks/nxk.h>
 
 bool nxla_matmul(nx_t X, nx_t Y, nx_t R) {
+    if (X.rank == 1) {
+        X = nx_newaxis(X, 1);
+    }
+    if (Y.rank == 1) {
+        Y = nx_newaxis(Y, 1);
+    }
     if (X.rank < 2 || Y.rank < 2 || R.rank < 2) {
         KS_THROW(kst_SizeError, "Unsupported ranks for kernel '%s': %i, %i, %i (expected matrices to have rank >= 2)", K_NAME, X.rank, Y.rank, R.rank);
         return false;

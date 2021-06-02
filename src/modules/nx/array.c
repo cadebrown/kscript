@@ -591,6 +591,74 @@ static KS_TFUNC(T, setelem) {
 }
 
 
+/* Matrix-Matrix function (i.e. matmul) */
+#define T_A2_mm(_name) static KS_TFUNC(T, _name) { \
+    kso ax, ay, ar = KSO_NONE; \
+    KS_ARGS("x y", &ax, &ay); \
+    nx_t x, y, r; \
+    kso xr, yr, rr; \
+    if (!nx_get(ax, NULL, &x, &xr)) { \
+        return NULL; \
+    } \
+    if (!nx_get(ay, NULL, &y, &yr)) { \
+        KS_NDECREF(xr); \
+        return NULL; \
+    } \
+    if (x.rank == 1) { x = nx_newaxis(x, 1); } \
+    if (y.rank == 1) { y = nx_newaxis(y, 1); } \
+    if (x.rank < 2 || y.rank < 2) { \
+        KS_THROW(kst_SizeError, "Expected matrix to have rank >= 1"); \
+        KS_NDECREF(xr); \
+        KS_NDECREF(yr); \
+        return NULL; \
+    } \
+    if (ar == KSO_NONE) { \
+        nx_dtype dtype = nx_resnum(x.dtype, y.dtype); \
+        if (!dtype) { \
+            KS_NDECREF(xr); \
+            KS_NDECREF(yr); \
+            return NULL; \
+        } \
+        int rank; \
+        ks_size_t shape[NX_MAXRANK]; \
+        nx_t lx = nx_make(NULL, NULL, x.rank - 2, x.shape, x.strides); \
+        nx_t ly = nx_make(NULL, NULL, y.rank - 2, y.shape, y.strides); \
+        if (!nx_getbc(2, (nx_t[]) { lx, ly }, &rank, shape)) { \
+            KS_NDECREF(xr); \
+            KS_NDECREF(yr); \
+            return NULL; \
+        } \
+        shape[rank++] = x.shape[x.rank - 2]; \
+        shape[rank++] = y.shape[y.rank - 1]; \
+        ar = (kso)nx_array_newc(nxt_array, NULL, dtype, rank, shape, NULL); \
+        if (!ar) { \
+            KS_NDECREF(xr); \
+            KS_NDECREF(yr); \
+            return NULL; \
+        } \
+    } else { \
+        KS_INCREF(ar); \
+    } \
+    if (!nx_get(ar, NULL, &r, &rr)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(yr); \
+        KS_DECREF(ar); \
+        return NULL; \
+    } \
+    if (!nxla_##_name(x, y, r)) { \
+        KS_NDECREF(xr); \
+        KS_NDECREF(yr); \
+        KS_NDECREF(rr); \
+        KS_DECREF(ar); \
+        return NULL; \
+    } \
+    KS_NDECREF(xr); \
+    KS_NDECREF(yr); \
+    KS_NDECREF(rr); \
+    return ar; \
+}
+
+
 T_A2(add)
 T_A2(sub)
 T_A2(mul)
@@ -598,7 +666,7 @@ T_A2(div)
 T_A2(floordiv)
 T_A2(mod)
 T_A2(pow)
-T_A2v(matmul, nxla_matmul)
+T_A2_mm(matmul)
 
 
 T_A1(neg)

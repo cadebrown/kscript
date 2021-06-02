@@ -1,7 +1,11 @@
+""" gmres.ks - GMRES implementation in kscript, using the 'nx' package
 
+TODO: Implement some more methods
+
+@author: Cade Brown <cade@kscript.org>
+"""
 
 import nx
-
 
 func gmres(A, b, x0, niter=10) {
     r = b - A @ x0
@@ -37,7 +41,5 @@ func gmres(A, b, x0, niter=10) {
     ret x
 }
 
-
-
-print (gmres([[1, 0], [0, 1]] as nx.array, [0, 1], [0, 1]))
+print (gmres([[1, 0], [0, 1]] as nx.array, [0, 1] as nx.array, [0, 1] as nx.array))
 
