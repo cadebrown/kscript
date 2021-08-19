@@ -188,6 +188,30 @@ _MT_F(rad, "x", my_rad, { })
 _MT_F(deg, "x", my_deg, { })
 
 
+
+static KS_TFUNC(m, agm) {
+    kso x, y;
+    ks_cfloat err = KS_CFLOAT_EPS;
+    KS_ARGS("x y ?err:cfloat", &x, &y, &err);
+
+    ks_cfloat fx, fy;
+    if (!kso_get_cf(x, &fx) || !kso_get_cf(y, &fy)) return NULL;
+
+    if (fx * fy < 0) {
+        KS_THROW(kst_MathError, "AGM undefined when x*y<0");
+    }
+    ks_cfloat a = fx, g = fy;
+    int ct = 0;
+    while (fabs(a - g) > err && ct++ < 20) {
+        ks_cfloat ag = (a + g) / 2;
+        g = sqrt(a * g);
+        a = ag;
+    }
+
+    return (kso)ks_float_new((a + g) / 2);
+}
+
+
 _MT_FC(sin, "x", sin, ksm_csin, { })
 _MT_FC(cos, "x", cos, ksm_ccos, { })
 _MT_FC(tan, "x", tan, ksm_ctan, { })
@@ -617,6 +641,9 @@ ks_module _ksi_m() {
         
         {"zeta",                   ksf_wrap(m_zeta_, M_NAME ".zeta(x)", "Calculate the Riemann Zeta function evaluated at 'x'\n\n    At 'x=0' (a pole), the returned value is non-finite\n\n    More information: https://en.wikipedia.org/wiki/Riemann_zeta_function")},
         {"gamma",                  ksf_wrap(m_gamma_, M_NAME ".gamma(x)", "Calculate the Gamma function at 'x'\n\n    At non-positive integers (i.e. 0, -1, -2, -3, ...), `nan` is returned\n\n    More information: https://en.wikipedia.org/wiki/Gamma_function")},
+
+        {"agm",                    ksf_wrap(m_agm_, M_NAME ".agm(x, y, err=float.EPS)", "Calculates the arithmetic-geometric mean of 'x' and 'y'")},
+
 
         /** Integral/Number Theory **/
 

@@ -41,6 +41,7 @@ p = getarg.Parser("greet", "0.1.0", "Prints a personalized greeting", ["Cade Bro
 # opt(name, opts, doc, trans=str, defa=none)
 p.opt("greeting", ["-g", "--greeting"], "The greeting message to use", str, "hello,")
 # pos(name, doc, num=1, trans=str, defa=none)
+# NOTE: num=-1 means variable number
 p.pos("names", "List of names to greet", -1)
 
 # parse the args, throwing an error if something incorrect was given

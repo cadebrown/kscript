@@ -10,6 +10,7 @@
 
 /* Internals */
 
+/* Utility function to allocate item */
 static struct ks_bst_item* make_item(kso key, kso val) {
     struct ks_bst_item* it = ks_malloc(sizeof(*it));
 
@@ -24,17 +25,8 @@ static struct ks_bst_item* make_item(kso key, kso val) {
 }
 
 
-/* C-API */
 
-ks_bst ks_bst_new(ks_type tp) {
-    ks_bst self = KSO_NEW(ks_bst, tp);
-
-    self->root = NULL;
-
-    return self;
-}
-
-
+/* Utility function to determine whether the binary search tree contains a key */
 static bool bst_has(ks_bst self, struct ks_bst_item* it, kso key, bool* out) {
     if (!it) {
         *out = false;
@@ -54,11 +46,6 @@ static bool bst_has(ks_bst self, struct ks_bst_item* it, kso key, bool* out) {
     } else {
         return bst_has(self, it->right, key, out);
     }
-}
-
-
-bool ks_bst_has(ks_bst self, kso key, bool* out) {
-    return bst_has(self, self->root, key, out);
 }
 
 
@@ -82,8 +69,24 @@ static bool bst_get(ks_bst self, struct ks_bst_item* it, kso key, kso* out) {
     } else {
         return bst_get(self, it->right, key, out);
     }
-
 }
+
+
+/* C-API */
+
+ks_bst ks_bst_new(ks_type tp) {
+    ks_bst self = KSO_NEW(ks_bst, tp);
+
+    self->root = NULL;
+
+    return self;
+}
+
+
+bool ks_bst_has(ks_bst self, kso key, bool* out) {
+    return bst_has(self, self->root, key, out);
+}
+
 
 kso ks_bst_get(ks_bst self, kso key) {
     kso res;
