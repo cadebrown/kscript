@@ -5,16 +5,16 @@
 
 # -*- COMPILING  -*-
 
-# C Objects
+# C
 *.o
-
-# C targets
 *.a
 *.so
 *.lib
 *.la
 *.dll
 
+
+# JS/WASM
 *.js
 *.wasm
 
@@ -26,32 +26,16 @@
 /include/ks/config.h
 
 # misc. folders for targets
+/.tmp/
 /lib/
 /bin/
-
-# extra library things
-/.tmp/
-
-# other directories
-/build
-
-/pkgs
-/kpm
 
 # build output
 /*.tar.*
 /*.tar
 
-/deps
-
-configure-test.c
-configure-test.o
-configure-check.c
-configure-check.o
-
 
 # TeXinfo
-
 *.aux
 *.cp
 *.cps
@@ -60,6 +44,9 @@ configure-check.o
 *.html
 *.pdf
 *.log
+
+
+
 
 
 ## Ignore Visual Studio temporary files, build results, and

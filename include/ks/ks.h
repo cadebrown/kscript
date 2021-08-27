@@ -1,61 +1,27 @@
-/* ks/ks.h - kscript C API definitions
+/* ks/ks.h - Main header file for the kscript C-API
  *
- * kscript is a dynamic programming language, and this is the header for the default implementation (written in C).
- * 
- * Here are the rule(s) of thumb regarding exported functions/symbols/globals:
+ * This file defines types, functions, and global variables relevant to the kscript interpreter
+ *   and C-API interface
  *
- *   - kst_*: A standard/builtin type
- *   - ksf_*: A standard/builtin func
- *   - ksm_*: A standard/builtin module
- *   - ksg_*: A builtin global value
- *   - ks_*: full public support, guaranteed to be backwards compatible in the major version
- *   - _ks*: internal function, not guaranteed to be backwards compatible (DO NOT USE THIS!)
- * 
- * To access builtin modules, include that specific header. For example, for the 'os' module, make sure '#include <ks/os.h>'
- *   is being included in your program.
- * 
- * As far as return values, if a function returns a 'kso' or other object type, it will return a new reference (unless otherwise
- *   stated in the documentation), or a NULL pointer if there was an exception thrown. Otherwise, if it returns a 'bool' (boolean),
- *   that typically means it returns whether the operation was successful, or 'false' if an error was thrown. 
- * 
- * In the case that a function you have called has thrown an error (i.e. returned 'NULL' or 'false'), you have a few ways to proceed:
- *   - You may propogate that error by first freeing any resources you have allocated in your scope, and then return 'NULL' or 'false'
- *       yourself (and so on up the chain, assuming everyone is playing nice) 
- *   - You may 'catch' the exception and then perform some action (i.e. inspect it, print it, or ignore it). See the 'ks_catch_*' functions
- *       for more information. Once you call 'ks_catch' or some similar function, there is no longer an exception and you can return whatever
- *       valid object you like.
- * 
- * Whenever using machine-specific types, it is recommended to use types like 'ks_cint', 'ks_uint', 'ks_cfloat', and 'ks_ccomplex'. These
- *   are typedef'd to the type specific for this build, and standard types can be created from them.
- * 
- * 
- * 
- * SEE: https://kscript.org
- * SEE: https://github.com/ChemicalDevelopment/kscript
- * 
- * @author:    Cade Brown <cade@kscript.org>
- * @license:   GPLv3
+ *
+ * @author: Cade Brown <cade@kscript.org>
  */
 
 #pragma once
-#ifndef KS_H__
-#define KS_H__
+#ifndef KS_KS_H
+#define KS_KS_H
 
 
-/* Version Information  
- * 
- * This is the header API version. The actual distributed version of kscript may be different (although,
- *   if you get a warning about this, its a good sign your package manager has messed up).
- * 
- * Developers: If you change this, change it in './configure' also
- * 
- */
-#define KS_VERSION_MAJOR 0
-#define KS_VERSION_MINOR 2
-#define KS_VERSION_PATCH 2
+/** Configuration / Headers **/
 
+/* Select the configuration */
+#ifdef KS_NO_CONFIG
+  /* No config file, assume everything is good */
+#else
+  /* Config file, which may define platform specific values */
+  #include <ks/config.h>
+#endif
 
-/** Platform detection **/
 
 /* On Emscripten, allow 'dead' code to remain (because it may be called dynamically) */
 #if defined(__EMSCRIPTEN__)
@@ -64,12 +30,8 @@
   #define KS_EMSCRIPTEN_API
 #endif
 
-#if defined(_WIN32) && !defined(WIN32)
-  #define WIN32
-#endif
-
 /* On Windows, import/export must be defined explicitly */
-#if defined(WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)
+#if defined(_WIN32) || defined(__CYGWIN__) || defined(__MINGW32__)
   #define KS_API_IMPORT __declspec(dllimport)
   #define KS_API_EXPORT __declspec(dllexport)
 #else
@@ -77,62 +39,30 @@
   #define KS_API_EXPORT 
 #endif
 
-/* Select whether we are importing or exporting */
 #ifdef KS_BUILD
+  /* We are building, so we are exporting the API */
   #ifdef __cplusplus
     #define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API extern "C"
   #else
     #define KS_API KS_API_EXPORT KS_EMSCRIPTEN_API
   #endif
+
+  #define KS_API_DATA KS_API_EXPORT extern 
+
 #else
+  /* We are NOT building, so we are importing the API */
   #ifdef __cplusplus
     #define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API extern "C"
   #else
     #define KS_API KS_API_IMPORT KS_EMSCRIPTEN_API
   #endif
-#endif
 
-
-/* KS_API_DATA is for data symbols, not functions */
-#ifdef KS_BUILD
-  #define KS_API_DATA KS_API_EXPORT extern 
-#else
   #define KS_API_DATA KS_API_IMPORT extern
+
 #endif
 
 
-/* Use GNU and specific POSIX source, whenever possible */
-#define _GNU_SOURCE
-#define _POSIX_C_SOURCE 200112L
-
-
-#ifndef KS_NO_CONFIG
- #include <ks/config.h>
-#else
- #ifdef WIN32
-  #define KS_PLATFORM "windows"
-  #define KS_PLATFORM_PATHSEP "\\"
-  #define KS_PLATFORM_EXTSHARED ".dll"
-  #define KS_PLATFORM_EXTSTATIC ".lib"
-  #define KS_PLATFORM_EXTBINARY ".exe"
- #else
-  #define KS_PLATFORM "unix"
-  #define KS_PLATFORM_PATHSEP "/"
-  #define KS_PLATFORM_EXTSHARED ".so"
-  #define KS_PLATFORM_EXTSTATIC ".a"
-  #define KS_PLATFORM_EXTBINARY ""
- #endif
-#endif
-
-
-/** Headers **/
-
-/* Windows headers */
-#ifdef WIN32
-  #define WIN32_LEAN_AND_MEAN
-  #include <Windows.h>
-#endif
-
+/* C std headers */
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -143,125 +73,991 @@
 #include <stdbool.h>
 
 #include <errno.h>
+#include <limits.h>
 #include <assert.h>
 
 #include <string.h>
 #include <float.h>
 
-#include <limits.h>
+/* C math library, -lm */
 #include <math.h>
 
 
-/* Platform-specific headers (detected) */
-#ifdef KS_HAVE_UNISTD_H
-  #include <unistd.h>
-#endif
-
-#ifdef KS_HAVE_DLFCN_H
-  #include <dlfcn.h>
-#endif
-
-
-#if 0
-
-#define bool int
-#ifdef true
-#undef true
-#endif
-#ifdef false
-#undef false
-#endif
-#define true 1
-#define false 0
-
-#endif
-
-#if 0
- #define assert(_x) do { if (!(_x)) { \
-    fprintf(stderr, "assertion failed: '%s' (%s:%i)", #_x, __FILE__, __LINE__); \
-    exit(1); \
- } } while (0)
-#endif
-
-
-/* Print a formatted message and crash the interpreter */
-#define KS_CRASH(...) do { \
-  fprintf(stderr, "(KS_CRASH): " __VA_ARGS__); \
-  exit(1); \
-} while (0)
-
-
-/* WebAssembly/Emscription ()
- *
- * Adds support for compiling for the 'web' platform
- *
- */
-#ifdef __EMSCRIPTEN__
- #include <emscripten.h>
-#endif
-
-/* pthreads (--with-pthreads) 
- *
- * Adds support for true threads, mutexes, and so forth
- *
- */
-#ifdef KS_HAVE_pthreads
- #include <pthread.h>
-#endif
-
-/* GMP (--with-gmp) 
- *
- * Adds support for (faster) large integer components
- *
- */
-#ifdef KS_HAVE_gmp
+#ifdef KS_HAVE_GMP
+ /* We have GMP, so use that library */
  #define KS_INT_GMP
- #define KS_INT_FULLGMP
  #include <gmp.h>
 #else
- #define KS_INT_GMP
+ /* Don't have GMP, so use our version of minigmp */
  #define KS_INT_MINIGMP
- #include <ks/iminigmp.h>
+ #include <ks/minigmp.h>
 #endif
 
 
-/** Constants **/
 
-#include <ks/const.h>
-#include <ks/colors.h>
-
-
-/** Type Definitions **/
-
-#include <ks/types.h>
+/* Set to 0 to turn off strided string offsets */
+/* #define KS_STR_OFF_STRIDE 0 */
+#define KS_STR_OFF_STRIDE 64
 
 
-/** Always Included Modules **/
+/** C-types/machine-types **/
 
-#include <ks/io.h>
-#include <ks/os.h>
-#include <ks/util.h>
+/* Specific sized integers, useful for data structures (such as 'set' and 'dict') that can
+ *   save memory for specifically sized inputs
+ */
+typedef int8_t     ks_s8;
+typedef uint8_t    ks_u8;
+typedef int16_t    ks_s16;
+typedef uint16_t   ks_u16;
+typedef int32_t    ks_s32;
+typedef uint32_t   ks_u32;
+typedef int64_t    ks_s64;
+typedef uint64_t   ks_u64;
+
+/* Machine-sized floating-point value
+ */
+typedef double     ks_cf;
+
+/* Machine-size floating-point complex value
+ */
+typedef struct {
+    double re, im;
+} ks_cc;
+
+/* Machine-sized integer (should be large enough to hold pointer value/pointer-size)
+ */
+typedef intptr_t   ks_sint;
+typedef uintptr_t  ks_uint;
+
+typedef ks_u8      ks_cp1;
+typedef ks_u16     ks_cp2;
+typedef ks_u32     ks_cp4;
+
+#define KS_S8_MIN         ((ks_s8)INT8_MIN)
+#define KS_S8_MAX         ((ks_s8)INT8_MAX)
+#define KS_U8_MIN         ((ks_u8)UINT8_MIN)
+#define KS_U8_MAX         ((ks_u8)UINT8_MAX)
+#define KS_S16_MIN        ((ks_s16)INT16_MIN)
+#define KS_S16_MAX        ((ks_s16)INT16_MAX)
+#define KS_U16_MIN        ((ks_u16)UINT16_MIN)
+#define KS_U16_MAX        ((ks_u16)UINT16_MAX)
+#define KS_S32_MIN        ((ks_s32)INT32_MIN)
+#define KS_S32_MAX        ((ks_s32)INT32_MAX)
+#define KS_U32_MIN        ((ks_u32)UINT32_MIN)
+#define KS_U32_MAX        ((ks_u32)UINT32_MAX)
+#define KS_S64_MIN        ((ks_s64)INT64_MIN)
+#define KS_S64_MAX        ((ks_s64)INT64_MAX)
+#define KS_U64_MIN        ((ks_u64)UINT64_MIN)
+#define KS_U64_MAX        ((ks_u64)UINT64_MAX)
+
+#define ks_cf_MAX         ((ks_cf)DBL_MAX)
+#define ks_cf_MIN         ((ks_cf)DBL_MIN)
+#define ks_cf_EPS         ((ks_cf)DBL_EPSILON)
+#define ks_cf_DIG         ((int)DBL_DIG)
+#define ks_cf_INF         ((ks_cf)INFINITY)
+#define ks_cf_NAN         ((ks_cf)NAN)
+
+#define KS_sint_MAX       INTPTR_MAX
+#define KS_sint_MIN       INTPTR_MIN
+
+#define KS_UINT_MAX       UINTPTR_MAX
+#define KS_UINT_MIN       ((ks_uint)0)
 
 
-/** Globals **/
+/* C-style function signature */
+typedef kso (*ks_cfunc)(int nargs_, kso* args_);
 
-#define KSO_NONE ((kso)ksg_none)
-#define KSO_UNDEFINED ((kso)ksg_undefined)
-#define KSO_DOTDOTDOT ((kso)ksg_dotdotdot)
 
-#define KSO_TRUE ((kso)ksg_true)
-#define KSO_FALSE ((kso)ksg_false)
-#define KSO_INF ((kso)ksg_inf)
-#define KSO_NEGINF ((kso)ksg_neginf)
-#define KSO_NAN ((kso)ksg_nan)
 
-#define KSO_BOOL(_cond) ((_cond) ? KSO_TRUE : KSO_FALSE)
+/** Types **/
+
+/* Include this macro at the beginning of structures describing kscript objects */
+#define KSO_BASE ks_sint refs; ks_type type;
+
+/* type - a type/class in OOP, which defines a set of attributes and functions for objects 
+ *            which adhere to it
+ *
+ * For a lot of objects, their type does not say which attributes are present (they have an '__attr__'
+ *   dict per instance which can hold any attribute), but specific methods on a type may be overriden
+ *   such that this behavior is changed. 
+ *
+ */
+typedef struct ks_type_s* ks_type;
+
+/* str - String type, represents an immutable piece of text
+ *
+ */
+typedef struct ks_str_s* ks_str;
+
+
+/* object - the base type which all other types inherit from
+ *
+ * All kscript objects have a type which derives from 'object'
+ * 
+ * You can cast any valid kscript object to a 'kso', like: '(kso)X' and it will be valid
+ *
+ */
+typedef struct kso_s {
+    KSO_BASE
+}* kso;
+
+
+/* int - (immutable) a whole number, not limited by machine precision
+ * 
+ */
+typedef struct ks_int_s {
+    KSO_BASE
+
+#if defined(KS_INT_GMP)
+
+    /* Internal integer for GMP */
+    mpz_t val;
+
+#elif defined(KS_INT_MINIGMP)
+
+    /* Internal integer for MINIGMP */
+    mpz_t val;
+
+#endif
+
+}* ks_int;
+
+/* enum - base class of all enumerations
+ *
+ */
+typedef struct ks_enum_s {
+    struct ks_int_s s_int;
+
+    /* Name of the enumeration member */
+    ks_str name;
+
+}* ks_enum;
+
+/* bool - (immutable) represents either true or false, yes/no
+ *
+ * This is a subtype of 'enum' and 'int', so it behaves exactly as expected
+ * 
+ */
+typedef ks_enum ks_bool;
+
+
+/* float - floating point, real number
+ *
+ */
+typedef struct ks_float_s {
+    KSO_BASE
+
+    ks_cf val;
+
+}* ks_float;
+
+/* complex - floating point, complex number with a 'real' and 'imaginary' part
+ * 
+ */
+typedef struct ks_complex_s {
+    KSO_BASE
+
+    ks_cc val;
+
+}* ks_complex;
+
+struct ks_str_s {
+    KSO_BASE
+
+    /* Length, in characters/bytes, of the string */
+    ks_uint len_c, len_b;
+
+    /* Hash of the string contents*/
+    ks_uint v_hash;
+
+    /* NUL-terminated UTF8 stream
+     */
+    ks_u8* data;
+
+#if KS_STR_OFF_STRIDE
+
+    /* Stride array, wheres 'strides_[i]' gives the byte position of the 
+     * (KS_STR_OFF_STRIDE * i)th character in the string. If len_c==len_b (i.e.
+     * an ASCII string), this may be NULL, INTERNAL USE ONLY */
+    ks_uint* strides_;
+
+#else
+    /* No offsets, save the storage */
+#endif
+
+};
+
+/* bytes - (immutable) string of bytes
+ * 
+ * 
+ */
+typedef struct ks_bytes_s {
+    KSO_BASE
+
+    /* Length of the data */
+    ks_uint len_b;
+
+    /* Hash of the bytes contents */
+    ks_uint v_hash;
+
+    /* Array of byte data */
+    ks_u8* data;
+
+}* ks_bytes;
+
+/* slice - Slice indexer
+ *
+ */
+typedef struct ks_slice_s {
+    KSO_BASE
+
+    kso start, end, step;
+
+}* ks_slice;
+
+
+/** Collection/Structure Types **/
+
+/* range - (immutable) integral range
+ *
+ * Represents all numbers from 'start' (including 'start'), up to but not including 'end',
+ *   and includes every 'step'th number (if step==1, all integers that fit the description
+ *   are in the range)
+ * 
+ * TODO: add 'rangex' type for support with floating point numbers
+ */
+typedef struct ks_range_s {
+    KSO_BASE
+
+    /* The start (inclusive), end (exclusive), and step (default: 1)
+     */
+    ks_int start, end, step;
+
+}* ks_range;
+
+
+/* list - collection of objects
+ *
+ */
+typedef struct ks_list_s {
+    KSO_BASE
+
+    /* Length, in elements, of the list */
+    ks_uint len;
+
+    /* Array of elements */
+    kso* elems;
+
+    /* Maximum size allocated (via 'ks_nextsize()') */
+    ks_uint _max_len;
+
+}* ks_list;
+
+/* tuple - (immutable) collection of objects
+ */
+typedef struct ks_tuple_s {
+    KSO_BASE
+
+    /* Length, in elements, of the tuple */
+    ks_uint len;
+
+    /* Array of elements */
+    kso* elems;
+
+}* ks_tuple;
+
+/* set - collection of unique objects
+ *
+ * Ordered by insertion order, but sets with objects in a different order are still treated equally
+ */
+typedef struct ks_set_s {
+    KSO_BASE
+
+    /* Length, in elements, of the set */
+    ks_uint len_real;
+
+    /* Length of the 'ents' array, which may included deleted entries */
+    ks_uint len_ents;
+
+    /* Array of entries, ordered by first insertion */
+    struct ks_set_ent {
+
+        /* hash(key) */
+        ks_uint hash;
+
+        /* The entries key (keeps reference), or NULL if this entry has been deleted */
+        kso key;
+
+    }* ents;
+
+
+    /* Length of the array of buckets, which is one of 'buks*' members */
+    ks_uint len_buks;
+
+    /* Union of different bucket arrays, discriminated based on size */
+    union {
+
+        /* when 'len_buks - 1 <= KS_S8_MAX' */ 
+        ks_s8*  buks8;
+        /* when 'len_buks - 1 <= KS_S16_MAX' */
+        ks_s16* buks16;
+        /* when 'len_buks - 1 <= KS_S32_MAX' */
+        ks_s32* buks32;
+        /* when 'len_buks - 1 <= KS_S64_MAX' */
+        ks_s64* buks64;
+
+    };
+
+    /* Maximum size allocated (via 'ks_nextsize()') */
+    ks_uint _max_len_ents, _max_len_buk;
+
+}* ks_set;
+
+/* dict - collection of unique key-value pairs
+ *
+ * Ordered by insertion order
+ */
+typedef struct ks_dict_s {
+    KSO_BASE
+
+    /* Length, in elements, of the dict */
+    ks_uint len_real;
+
+    /* Length of the 'ents' array, which may included deleted entries */
+    ks_uint len_ents;
+
+    /* Array of entries, ordered by first insertion */
+    struct ks_dict_ent {
+
+        /* hash(key) */
+        ks_uint hash;
+
+        /* The entries key (keeps reference), or NULL if this entry has been deleted */
+        kso key;
+
+        /* The entries value (keeps reference), or NULL */
+        kso val;
+
+    }* ents;
+
+
+    /* Length of the array of buckets, which is one of 'buks*' members */
+    ks_uint len_buks;
+
+    /* Union of different bucket arrays, discriminated based on size */
+    union {
+
+        /* when 'len_buks - 1 <= KS_S8_MAX' */ 
+        ks_s8*  buks8;
+        /* when 'len_buks - 1 <= KS_S16_MAX' */
+        ks_s16* buks16;
+        /* when 'len_buks - 1 <= KS_S32_MAX' */
+        ks_s32* buks32;
+        /* when 'len_buks - 1 <= KS_S64_MAX' */
+        ks_s64* buks64;
+
+    };
+
+    /* Maximum size allocated (via 'ks_nextsize()') */
+    ks_uint _max_len_ents, _max_len_buks;
+
+}* ks_dict;
+
+
+/* graph - Directed graph structure
+ *
+ * The list of all nodes is given by 'nodes.keys()', and to get a dictionary of edges from
+ *   a node 'key', you can use 'nodes[key]'. For example, to get the edge value from 'A'
+ *   to 'B', use 'nodes[A][B]'
+ */
+typedef struct ks_graph_s {
+    KSO_BASE
+
+    /* main dictionary, of node mappings */
+    ks_dict nodes;
+
+}* ks_graph;
+
+/* bst - Binary Search Tree
+ *
+ * A sorted (by key) tree
+ *
+ */
+typedef struct ks_bst_s {
+    KSO_BASE
+    
+    /* Structure describing a single node within the BST */
+    struct ks_bst_node {
+
+        /* Pointer to child nodes, L (less than this node), and R (greater than this node) */
+        struct ks_bst_node *L, *R;
+
+        /* Key and value of this node */
+        kso key, val;
+    };
+
+    /* Root node of the BST */
+    struct ks_bst_node* root;
+
+}* ks_bst;
+
+
+/* queue - Queue structure, more efficient than using a list
+ *
+ */
+typedef struct ks_queue_s {
+    KSO_BASE
+
+    /* Structure describing a single node within the queue */
+    struct ks_queue_node {
+
+        /* Pointer to other nodes in the linked list, L (prev), and R (next) */
+        struct ks_queue_node *L, *R;
+
+        /* Value of this node */
+        kso val;
+    };
+
+    /* Pointer to the first (L) and last (R) nodes in the queue */
+    struct ks_queue_node *L, *R;
+
+}* ks_queue;
+
+/* ast - Abstract Syntax Tree representing program structure
+ *
+ * Sub-types of AST (i.e. AddAST) should be used for specific operations. 
+ * Some methods that need to be defined:
+ * 
+ * TODO: document these
+ */
+typedef struct ks_ast_s {
+    KSO_BASE
+
+    /* Sub-nodes (should be a list of ASTs) */
+    ks_list sub;
+
+}* ks_ast;
+
+
+/* func - represents an executable function object in the kscript VM
+ *
+ */
+typedef struct ks_func_s {
+    KSO_BASE
+
+    /* Generic attribute dictionary */
+    ks_dict attr;
+
+
+    /* Number of formal parameters to the function, and the number that is always required */
+    int n_pars, n_pars_req;
+
+    /* Index of the spread parameter (or -1 if there is none) */
+    int idx_vararg;
+
+    /* Function describing a single function parameter */
+    struct ks_func_par {
+
+        /* Name of the parameter, for debugging */
+        ks_str name;
+
+        /* The default value for the parameter, or NULL if the parameter is always required 
+         *
+         */
+        kso defa;
+
+    }* pars;
+
+    /* Tells whether this function is a C-style function, or a bytecode function */
+    bool is_cfunc;
+
+    union {
+        /* C-style function pointer that can be called (only valid if is_cfunc==true) */
+        ks_cfunc cfunc;
+
+        /* kscript bytecode function structure (only valid if is_cfunc==false) */
+        struct {
+            /* Bytecode object attached */
+            kso bc;
+
+            /* Closure it is attached to (or NULL if none)
+             * type: os.frame
+             */
+            kso closure;
+
+        } kfunc;
+    }
+}* ks_func;
+
+
+
+struct ks_type_s {
+    KSO_BASE
+
+    /* Attribute dictionary (.__attr__)
+     *
+     * A dictionary of all (local) attributes to the type
+     * 
+     */
+    ks_dict attr;
+
+    /* Types which are children of this type
+     * (no reference is held to these, since it is a weak reference)
+     */
+    ks_sint n_subs;
+    ks_type* subs;
+
+    /* Integer (byte)size and attribute dictionary offsets of instances */
+    ks_sint ob_size, ob_attr;
+
+    /* Number of objects created and deleted */
+    ks_sint n_obs_new, n_obs_del;
+
+
+    /** Special Values (saved as variables here, but also in 'attr') **/
+    
+    /* Base type of this type */
+    ks_type i__base;
+
+    /* Strings representing the shallow name and full name (including modules, subtypes, etc) */
+    ks_str i__name, i__fullname;
+
+    /* Template arguments for the type */
+    ks_tuple i__template;
+
+    /** Constructors/Destructors **/
+
+    /* In kscript, types are their own constructor; you call them like a function to create a value of that type.
+     *
+     * For example, 'int("42")'. This is done via the following rules:
+     *   * First, an instance is generated via 'tmp = T.__new(T, *args)'
+     *   * If 'T.__init' is present, then: 'T.__init(T, *args)' is called as well 
+     * 
+     */
+
+    /* __new(tp, *args), __init(self, *args), __free(self), __call(self, *args) */
+    kso i__new, i__init, i__free, i__call;
+
+    /* __on_template(tp) */
+    kso i__on_template;
+
+
+    /* iter(A), next(A), call(A, *args) */
+    kso i__iter, i__next;
+
+    /** Special Methods **/
+
+    /* Builtin Conversions (Numeric) */
+    kso i__number, i__integral, i__bool, i__int, i__float, i__complex;
+    
+    /* Builtin Conversions (Misc) */
+    kso i__str, i__bytes, i__set, i__dict;
+
+    /* Attributes */
+    kso i__getattr, i__setattr, i__delattr;
+    
+    /* Elements */
+    kso i__getelem, i__setelem, i__delelem;
+
+    /* Contains */
+    kso i__contains;
+
+    /* Misc. Properties */
+    kso i__hash, i__abs, i__len, i__repr;
+
+    /** Binary Operator Overloads **/
+
+    /* A+B, A-B, A*B, A@B, A/B, A//B, A%B, A**B */
+    kso i__add, i__sub, i__mul, i__matmul, i__div, i__floordiv, i__mod, i__pow;
+
+    /* A<=>B, A==B, A!=B, A<B, A<=B, A>B, A>=B */
+    kso i__cmp, i__eq, i__ne, i__lt, i__le, i__gt, i__ge;
+    
+    /* A<<B, A>>B, A|B, A^B, A&B */
+    kso i__lsh, i__rsh, i__binior, i__binxor, i__binand;
+
+
+    /** Unary Operator Overloads **/
+
+    /* +A, -A, ~A */
+    kso i__pos, i__neg, i__sqig;
+
+};
+
+
+/* func.partial - Partial application of a function, which contains arguments that should be 'filled in'
+ *
+ */
+typedef struct ks_partial_s {
+    KSO_BASE
+
+    /* The base function/callable */
+    kso of;
+
+    /* Number of arguments to be filled in */
+    int n_args;
+
+    /* Argument fill in */
+    struct {
+        /* Index being filled in */
+        int idx;
+
+        /* Value used as argument */
+        kso val;
+
+    }* args;
+
+}* ks_partial;
+
+/* map - Represents an iterable, async mapping of a function applied to an iterable
+ *
+ */
+typedef struct ks_map_s {
+    KSO_BASE
+
+    /* Function/callable being applied to each item */
+    kso fn;
+
+    /* Iterable being iterated over */
+    kso it;
+
+}* ks_map;
+
+
+/* filter - Represents a filtered iterable, which only emits elements that pass a filter
+ *
+ */
+typedef struct ks_filter_s {
+    KSO_BASE
+
+    /* Function/callable being applied to each item, if it returns a truthy value
+     *   then the object is emitted
+     */
+    kso fn;
+
+    /* Iterable being iterated over */
+    kso it;
+
+}* ks_filter;
+
+
+/* zip - Represents a zipped iterable, which takes a list of iterables and returns tuples
+ *         of 1 from each iterable
+ *
+ * Default behavior is to stop once any of the iterables have stopped. However, if 
+ */
+typedef struct ks_zip_s {
+    KSO_BASE
+
+    /* Number of iterables being zipped through
+     */
+    int n_its;
+
+    /* List of iterables, may contain NULL if 'extend' is true
+     */
+    kso* its;
+
+    /* Whether or not to 'extend' the other iterables (with 'none') once they run out
+     */
+    bool extend;
+
+}* ks_zip;
+
+/* batch - Batches iterators into tuples
+ *
+ * Default behavior is to exhaust the iterator, and have the last batch output
+ *   with whatever is left (for example len(x)==26, and size=10 means that the
+ *   batch iterator outputs 2 10-len and 1 6-len result)
+ */
+typedef struct ks_batch_s {
+    KSO_BASE
+
+    /* Function/callable being applied to each item, if it returns a truthy value
+     *   then the object is emitted
+     */
+    kso fn;
+
+    /* Iterable being iterated over */
+    kso it;
+
+    /* The max size of a batch */
+    int size;
+
+    /* Whether or not to 'extend' the last batch with 'none' to fill to length 'size' */
+    bool extend;
+
+}* ks_batch;
+
+
+
+
+/* logger - Represents a utility object for logging
+ *
+ */
+typedef struct ks_logger_s {
+    KSO_BASE
+
+    /* The (writeable) IO object to output messages to */
+    kso io;
+
+    /* The full name of the logger */
+    ks_str name;
+
+    /* Current verbosity level */
+    ks_sint level;
+
+}* ks_logger;
+
+/* Exception - base type used to capture information about an exception breakpoint
+ *
+ */
+typedef struct ks_exc_s {
+    KSO_BASE
+
+    /* The inner exception (or NULL if there was none). This is relevant if an exception
+     *   is thrown during the handling of another exception
+     */
+    struct ks_exc_s* inner;
+
+    /* Arguments to the constructor, relevant for inspecting */
+    ks_list args;
+
+    /* String description of what went wrong (if relevant) */
+    ks_str what;
+
+}* ks_exc;
+
+/** C-API Functions **/
+
+/*** High Level Utilities ***/
+
+/* Initialize the kscript API/runtime */
+KS_API void ks_init();
+
+/*** Low Level Utilities ***/
+
+/* Allocate a pointer to at least 'sz' bytes, or NULL if it can't be allocated
+ * NOTE: You can realloc/free with ks_realloc/ks_free
+ */
+KS_API void* ks_malloc(ks_uint sz);
+
+/* Re-allocate a pointer to hold at least 'sz' bytes
+ */
+KS_API void* ks_realloc(void* ptr, ks_uint sz);
+
+/* Free a pointer allocated from 'ks_malloc'
+ */
+
+KS_API void ks_free(void* ptr);
+
+/* Returns the next prime > x
+ */
+KS_API ks_uint ks_nextprime(ks_uint x);
+
+/* Returns the hash of a byte array
+ */
+KS_API ks_uint ks_hash_bytes(ks_uint len, ks_u8* data);
+
+/* Returns the hash of C-style values
+ */
+KS_API ks_uint ks_hash_cf(ks_cf val);
+KS_API ks_uint ks_hash_cc(ks_cc val);
+
+/* Computes the next size in the default kscript reallocation scheme. Given 'cur' current size,
+ *   and 'req' required size
+ *
+ * The main use of this function is in mutable containers that need to amortize their internal
+ *   reallocation to O(1) instead of O(n). For example, if a list called 'realloc' every append,
+ *   it would be O(n). This function uses an exponential function tuned for best performance/memory tradeoff
+ */
+KS_API ks_sint ks_nextsize(ks_sint cur, ks_sint req);
+
+/* Parse a string and convert to a C-style float 
+ * If len<0, len = strlen(str)
+ * Success or error is returned
+ */
+KS_API bool ks_cf_fromstr(int len, const char* str, ks_cf* res);
+
+/* Convert a C-style float into a C-style string buffer
+ * Writes a maximum of 'len' bytes into 'str', returns number of bytes required. If 'result > len',
+ *   then output was truncated and NOT accurate. If that happens, you should allocate a larger buffer
+ *   and call the function again
+ * sci: Whether or not to use scientific format
+ * base: Numeric base to output (2, 8, 10, or 16)
+ * prec: Number of places after the decimal point
+ */
+KS_API int ks_cf_tostr(ks_cf val, int len, char* str, bool sci, int base, int prec);
+
+/* Parse a string and convert to a C-style complex
+ * See ks_cf_fromstr
+ */
+KS_API bool ks_cc_fromstr(int len, const char* str, ks_cc* res);
+
+/* Convert a C-style complex to a C-style string buffer
+ * See ks_cf_tostr
+ */
+KS_API int ks_cc_tostr(ks_cc val, int len, char* str, bool sci, int base, int prec);
+
+/*** Object Manipulation ***/
+
+/* Test whether 'L' is a subtype of R (or L is an instance of R)
+ */
+KS_API bool ks_issub(ks_type L, ks_type R);
+KS_API bool ks_isinst(kso L, ks_type R);
+
+/* Attempt 'hash(L)' (and store in '*res')
+ * Returns success or error
+ */
+KS_API bool ks_hash(kso L, ks_uint* res);
+
+/* Attempt to convert 'L' to a truth value (and store in '*res')
+ * Returns success or error
+ */
+KS_API bool ks_truth(kso L, bool* res);
+
+/* Attempt 'L==R' (and store in '*res')
+ * Returns success or error
+ */
+KS_API bool ks_eq(kso L, kso R, bool* res);
+
+/* Attempt 'L<=>R' (and store in '*res')
+ * Returns success or error
+ */
+KS_API bool ks_cmp(kso L, kso R, int* res);
+
+/* Attempt 'iter(L)', which creates an iterable from an object
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_iter(kso L);
+
+/* Attempt 'next(L)', which returns the next iterable from an object
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_next(kso L);
+
+/* Attempt 'L.key'
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_getattr(kso L, kso key);
+
+/* Attempt 'L.key = val'
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_setattr(kso L, kso key, kso val);
+
+/* Attempt 'del L.key'
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_delattr(kso L, kso key);
+
+/* Attempt 'L[key]'
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_getelem(kso L, kso key);
+
+/* Attempt 'L[key] = val'
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_setelem(kso L, kso key, kso val);
+
+/* Attempt 'del L[key]'
+ * Returns result, or NULL for error
+ */
+KS_API kso ks_delelem(kso L, kso key);
+
+/* Attempts to convert 'L' into a specific C-type
+ * Returns success or error
+ */
+KS_API bool ks_get_si(kso L, ks_sint* res);
+KS_API bool ks_get_ui(kso L, ks_uint* res);
+KS_API bool ks_get_cf(kso L, ks_cf* res);
+KS_API bool ks_get_cc(kso L, ks_cc* res);
+
+
+/*** Higher Level Utilities ***/
+
+/* Apply C-style printf-like formatting, and return as a string
+ *
+ * Format specifiers:
+ *   %i: C-style 'int' 
+ *   %c: 'char', or 'ks_ucp'
+ *   %l: 'ks_sint' (+aliases)
+ *   %u: 'ks_uint' (+aliases)
+ *   %f: 'ks_cfloat'
+ *   %p: 'void*': (+pointer types)
+ *   %s: 'char*': (NUL-terminated string, or use '%.*s' for string of a given length (in bytes))
+ *   %O: 'kso': formats object in raw mode, which never calls anything else
+ *   %T: 'kso': formats the type name
+ *   %S: 'kso': formats 'str(ob)'
+ *   %R: 'kso': formats 'repr(ob)'
+ *   %J: char*, int, kso*: formats 's.join(objs)'
+ * 
+ */
+KS_API ks_str ks_fmt(const char* fmt, ...);
+KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
+
+/* Formatting with purely kscript objects --
+ *
+ * TODO: document format specifiers
+ */
+KS_API bool ks_fmto(kso io, const char* fmt, int nargs, kso* args);
+
+
+/** Type Utilities **/
+
+/* Constructors for 'int' */
+KS_API ks_int ks_int_new(ks_type tp, int len, const char* src, int base);
+KS_API ks_int ks_int_news(ks_type tp, ks_sint val);
+KS_API ks_int ks_int_newu(ks_type tp, ks_uint val);
+KS_API ks_int ks_int_newz(ks_type tp, mpz_t val);
+
+/* Constructors for 'float' */
+KS_API ks_float ks_float_new(ks_type tp, int len, const char* src, int base);
+KS_API ks_float ks_float_newf(ks_type tp, ks_cf val);
+
+/* Constructors for 'complex' */
+KS_API ks_complex ks_complex_new(ks_type tp, int len, const char* src, int base);
+KS_API ks_complex ks_complex_newf(ks_type tp, ks_cf re, ks_cf im);
+
+/* Constructors for 'str' */
+KS_API ks_str ks_str_new_cp1(ks_type tp, ks_uint len, const ks_cp1* data);
+KS_API ks_str ks_str_new_cp2(ks_type tp, ks_uint len, const ks_cp2* data);
+KS_API ks_str ks_str_new_cp4(ks_type tp, ks_uint len, const ks_cp4* data);
+KS_API ks_str ks_str_new_utf8(ks_type tp, ks_uint len_b, const ks_cp1* data);
+
+/* String conversion routines, which convert a range of string into
+ *   a C-style buffer of appropriate length. The number returned is the number
+ *   of *bytes* written to 'data' or '*data'
+ * For cp1, cp2, and cp4, the 'data' buffer is assumed to be fully allocated
+ * For utf8, '*data' should be NULL or allocated via 'ks_malloc', and must be freed
+ *   with 'ks_free' only
+ */
+KS_API int ks_str_cvt_cp1(ks_str L, ks_uint start, ks_uint len, ks_cp1* data);
+KS_API int ks_str_cvt_cp2(ks_str L, ks_uint start, ks_uint len, ks_cp2* data);
+KS_API int ks_str_cvt_cp4(ks_str L, ks_uint start, ks_uint len, ks_cp4* data);
+KS_API int ks_str_cvt_utf8(ks_str L, ks_uint start, ks_uint len, ks_cp1** data);
+
+/* Constructors for 'bytes' */
+KS_API ks_bytes ks_bytes_new(ks_type tp, ks_uint len, const ks_cp1* data);
+
+/* Constructors for collections */
+KS_API ks_list ks_list_new(ks_type tp, ks_uint len, kso* elems);
+
+KS_API ks_tuple ks_tuple_new(ks_type tp, ks_uint len, kso* elems);
+
+KS_API ks_set ks_set_new(ks_type tp, ks_uint len, kso* elems);
+
+
+
+/** Global Variables **/
+
 
 KS_API_DATA kso
     ksg_none,
-    ksg_undefined,
-    ksg_dotdotdot
+    ksg_dotdotdot,
+    ksg_undefined
 ;
+
 KS_API_DATA ks_bool
     ksg_true,
     ksg_false
@@ -273,22 +1069,14 @@ KS_API_DATA ks_float
     ksg_nan
 ;
 
-KS_API_DATA ksos_mutex
-    ksg_GIL
+KS_API_DATA ks_list
+    ksg_path
 ;
 
-KS_API_DATA ksos_thread
-    ksg_main_thread
-;
-
-KS_API_DATA ks_dict
+KS_API_DATA ks_dict 
     ksg_globals,
     ksg_config,
     ksg_inter_vars
-;
-
-KS_API_DATA ks_list
-    ksg_path
 ;
 
 KS_API_DATA ks_type
@@ -301,49 +1089,38 @@ KS_API_DATA ks_type
         kst_enum,
           kst_bool,
       kst_float,
-      kst_rational,
       kst_complex,
     kst_str,
     kst_bytes,
     kst_regex,
     kst_range,
     kst_slice,
-    kst_list,
     kst_tuple,
-    kst_attrtuple,
+    kst_list,
     kst_set,
     kst_dict,
-    kst_names,
     kst_map,
     kst_filter,
-    kst_enumerate,
-
-    kst_str_iter,
-    kst_bytes_iter,
-    kst_range_iter,
-    kst_list_iter,
-    kst_tuple_iter,
-    kst_set_iter,
-    kst_dict_iter,
+    kst_zip,
 
     kst_type,
     kst_func,
     kst_partial,
-    kst_module,
-
+    
     kst_logger,
-
+    kst_queue,
+    kst_bst,
+    kst_graph,
+    
     kst_ast,
     kst_code,
 
-    kst_Exception,
-      kst_OutOfIterException,
+    kst_exc,
+      kst_StopIter,
       kst_Error,
         kst_InternalError,
-
         kst_SyntaxError,
         kst_ImportError,
-
         kst_TypeError,
           kst_TemplateError,
         kst_NameError,
@@ -354,1138 +1131,15 @@ KS_API_DATA ks_type
           kst_AssertError,
           kst_MathError,
             kst_OverflowError,
-        kst_ArgError,
-        kst_SizeError,
-        kst_IOError,
+            kst_DivError,
+          kst_ArgError,
+          kst_SizeError,
         kst_OSError,
       kst_Warning,
         kst_PlatformWarning,
         kst_SyntaxWarning
+
 ;
 
-KS_API_DATA ks_func
-    ksf_any,
-    ksf_all,
-    ksf_min,
-    ksf_max,
-    ksf_sum,
-    ksf_pow,
 
-    ksf_open,
-
-    ksf_eval,
-    ksf_exec,
-    ksf_exit,
-
-    ksf_print,
-    ksf_printf,
-
-    ksf_hash,
-    ksf_abs,
-    ksf_len,
-    ksf_repr,
-    ksf_id,
-    
-    ksf_bin,
-    ksf_oct,
-    ksf_hex,
-
-    ksf_ord,
-    ksf_chr,
-
-    ksf_issub,
-    ksf_isinst,
-    ksf_input,
-    
-    ksf_iter,
-    ksf_next
-;
-
-KS_API_DATA int ksg_logger_level_default;
-
-
-
-/** C-style helpers **/
-
-struct ks_ikv {
-
-    /* NUL-terminated C-style string */
-    const char* key;
-
-    /* Value */
-    kso val;
-
-};
-
-struct ks_eikv {
-
-    /* NUL-terminated C-style string */
-    const char* key;
-
-    /* Value */
-    ks_cint val;
-
-};
-
-/* Creates a list of NULL-terminated initializers for a (key, val) entry */
-#define KS_IKV(...) ((struct ks_ikv[]){ __VA_ARGS__ { NULL, NULL} })
-
-/* Creates a list of NULL-terminated initializers for an enumeration creation */
-#define KS_EIKV(...) ((struct ks_eikv[]){ __VA_ARGS__ { NULL, 0} })
-
-
-/* Creates a new object (via standard allocation methods), and initializes the basic fields (type, refs, and attribute dict if available)
- */
-#define KSO_NEW(_ctp, _tp) ((_ctp)_kso_new(_tp))
-
-/* Deletes an object allocated with 'KSO_NEW'
- */
-#define KSO_DEL(_ob) (_kso_del((kso)(_ob)))
-
-/* Record a new reference to a given object */
-#define KS_INCREF(_obj) do { ++(_obj)->refs; } while(0)
-
-/* NULL-safe increment */
-#define KS_NINCREF(_obj) do { if ((_obj)) { ++(_obj)->refs; } } while(0)
-
-/* Delete a reference to a given object, and then free the object if the object has become unreachable */
-#define KS_DECREF(_obj) do {                                           \
-    kso _kso_obj = (kso)(_obj);                                        \
-    if (--_kso_obj->refs <= 0) {                                       \
-        _kso_free(_kso_obj, __FILE__, __func__, __LINE__);             \
-    }                                                                  \
-} while (0)
-
-
-/* Decref, NULL-safe version */
-#define KS_NDECREF(_obj) do { \
-    kso _to = (kso)(_obj); \
-    if (_to != NULL) KS_DECREF(_to); \
-} while (0)
-
-/* Yield a value representing a new reference of an object, downcasted to 'kso' */
-#define KS_NEWREF(_obj) (_ks_newref((kso)(_obj)))
-
-
-/* Throws an exception type, generated with a C-style format string (see 'ks_fmt()') 
- * After doing this, you should return NULL or otherwise indicate something was thrown
- */
-#define KS_THROW(_tp, ...) do { \
-    kso_throw_c(_tp, __FILE__, __func__, __LINE__, __VA_ARGS__); \
-} while (0)
-
-/* Throws a key error for an object, and a key that was missing */
-#define KS_THROW_KEY(_obj, _key) KS_THROW(kst_KeyError, "%R", _key)
-
-#define KS_THROW_VAL(_obj, _key) KS_THROW(kst_ValError, "%R", _key)
-
-/* Throws a attr error for an object, and a key that was missing */
-#define KS_THROW_ATTR(_obj, _attr) KS_THROW(kst_AttrError, "'%T' object had no attribute %R", _obj, _attr)
-
-/* Generic index error */
-#define KS_THROW_INDEX(_obj, _idx) KS_THROW(kst_IndexError, "Index out of range")
-
-/* Throws a type conversion error */
-#define KS_THROW_CONV(_from_type, _to_type) KS_THROW(kst_TypeError, "Could not convert '%s' object to '%s'", (_from_type)->i__name->data, (_to_type)->i__name->data)
-
-/* Missing method (typically a '__' method) */
-#define KS_THROW_METH(_obj, _meth) KS_THROW(kst_TypeError, "'%T' object had no '%s' method", _obj, _meth)
-
-/* Throws a return status given by 'errno'
- */
-#define KS_THROW_ERRNO(_errno_val, ...) do { \
-    /* Get a template of 'OSError', for a specific errno */ \
-    int _errno_valc = _errno_val; \
-    ks_int _errno_valo = ks_int_new(_errno_valc); \
-    ks_type _tet = ks_type_template(kst_OSError, 1, (kso[]){ (kso)_errno_valo }); \
-    assert(_tet != NULL); \
-    KS_DECREF(_errno_valo); \
-    /* Format the requirements */ \
-    ks_str _msgval = ks_fmt(__VA_ARGS__); \
-    ks_str _genmsgval = ksos_strerr(_errno_valc); \
-    KS_THROW(_tet, "%S (%S)", _msgval, _genmsgval); \
-    KS_DECREF(_msgval); \
-    KS_DECREF(_genmsgval); \
-    KS_DECREF(_tet); \
-} while (0)
-
-
-/* Throw an 'OutOfIter' Exception
- */
-#define KS_OUTOFITER() do { \
-    KS_THROW(kst_OutOfIterException, ""); \
-} while (0)
-
-
-/* Define a C function which can be wrapped into a kscript function. Appends an '_' after the name
- */
-#define KS_FUNC(_name) kso _name##_(int _nargs, kso* _args)
-
-/* Define a C function which can be wrapped into a kscript function. Allows a type and function name
- */
-#define KS_TFUNC(_type, _name) kso _type##_##_name##_(int _nargs, kso* _args)
-
-/* Parse function args, and returns 'NULL' from the current function if they did not parse correctly */
-#define KS_ARGS(...) do { \
-    if (!_ks_args(_nargs, _args, __VA_ARGS__)) return NULL; \
-} while(0)
-
-/* Lock the GIL (blocking until the lock is acquired) */
-#define KS_GIL_LOCK() do { \
-    ksos_mutex_lock(ksg_GIL); \
-} while (0)
-
-/* Unlock the GIL (assumes the GIL is held by the current thread) */
-#define KS_GIL_UNLOCK() do { \
-    ksos_mutex_unlock(ksg_GIL); \
-} while (0)
-
-
-/** Functions **/
-
-/* Initialize kscript, returns success
- */
-KS_API bool ks_init();
-
-/* Return true if kscript has been fully initialized
- */
-KS_API bool ks_has_init();
-
-/* Get a static version string describing the kscript implementation
- */
-KS_API const char* ks_get_verstr();
-
-/* Print a formatted string to 'stdout'
- * See 'ks_fmt()' for format strings
- */
-KS_API bool ks_printf(const char* fmt, ...);
-
-
-
-/*** Memory ***/
-
-/* Allocate a block of 'sz' bytes
- *
- * This should only be reallocated or freed by other kscript memory functions
- * 
- * DONT USE MALLOC AND FREE WITH THIS
- */
-KS_API void* ks_malloc(ks_size_t sz);
-
-/* Equivalent to 'ks_malloc' but crashes if it fails
- */
-KS_API void* ks_smalloc(ks_size_t sz);
-
-/* Equivalent to 'ks_malloc(sz * num)' */
-KS_API void* ks_zmalloc(ks_size_t sz, ks_size_t num);
-
-/* Reallocate 'ptr' to have at least 'sz' bytes, which may internally
- *   return the pointer if it already has enough space, or it may duplicate and extend the memory
- * 
- * 'ks_realloc(NULL, sz)' is always equivalent to 'ks_malloc(sz)'
- * 
- * ONLY USE THIS FUNCTION with pointers generated from 'ks_*' 
- */
-KS_API void* ks_realloc(void* ptr, ks_size_t sz);
-
-/* Equivalent to 'ks_realloc' but crashes if it fails
- */
-KS_API void* ks_srealloc(void* ptr, ks_size_t sz);
-
-/* Equivalent to 'ks_realloc(ptr, sz * num)' */
-KS_API void* ks_zrealloc(void* ptr, ks_size_t sz, ks_size_t num);
-
-
-/* Frees a pointer to memory allocated via 'ks_*' allocation functions
- *
- * Guaranteed to be a no-op when 'ptr==NULL'
- */
-KS_API void ks_free(void* ptr);
-
-/* Calculate the next size in the default kscript reallocation scheme
- *
- * The main purpose is for mutable collections and arrays to resize and keep a max length
- *   (typically as '_max_len' or some private variable) which may be longer than the actual contents.
- *   This function is typically tuned to give good performing sequences, i.e. which typically allow
- *   appending to an array to be amortized to O(1). You can use it with anything:
- * 
- * ```c
- * int len = 0, _max_len = 0;
- * char* data = NULL;
- * while (true) {
- *   char* line = ...;
- *   int line_len = ...;
- *   
- *   len += line_len;
- *   if (len >= _max_len) {
- *     _max_len = ks_nextsize(_max_len, len);
- *     data = ks_realloc(data, _max_len);
- *   }
- *   ...
- * }
- * 
- * ```
- */
-KS_API ks_ssize_t ks_nextsize(ks_ssize_t cur_sz, ks_ssize_t req);
-
-
-/** Util **/
-
-/* Returns the next prime > x
- * 
- */
-KS_API ks_ssize_t ks_nextprime(ks_ssize_t x);
-
-/* hash a sequence of bytes
- */
-KS_API ks_hash_t ks_hash_bytes(ks_ssize_t len_b, const unsigned char* data);
-
-
-
-/* Converts a string (in 'str', size of 'sz', or if '-1', then it is NUL-terminated) to a 'ks_cfloat' 
- *   (in full precision), and stores in 'out'
- *
- * 'str' may have a prefix:
- *   0b: base 2
- *         0[bB][01]*\.?[01]*([pP][\+\-]?[0-9]+)
- *   0o: base 8
- *         0[bB][0-7]*\.?[0-7]*([pP][\+\-]?[0-9]+)
- *   0x: base 16
- *         0[xX][0-9a-fA-F]*\.?[0-9a-fA-F]*([pP][\+\-]?[0-9]+)
- *   0d: base 10 (default)
- *         (0[dD])?[0-9]*\.?[0-9]*([eE][\+\-]?[0-9]+)
- * 
- * NOTE: If 'false' is returned, then an error was thrown 
- */
-KS_API bool ks_cfloat_from_str(const char* str, int sz, ks_cfloat* out);
-
-/* Converts a 'ks_cfloat' to a string (in 'str', writing a maximum number of 'sz' bytes)
- *
- * If 'sci', then the output is in scientific format, otherwise it is always in normal format with no
- *   exponent.
- * 
- * This function returns the total number of bytes required. If 'result > sz', then the output has been truncated,
- *   and may not be correct. Therefore, you should allocate a buffer of at least 'sz', and then call this function
- *   again with the same inputs, but with the new buffer
- */
-KS_API int ks_cfloat_to_str(char* str, int sz, ks_cfloat val, bool sci, int prec, int base);
-
-/* strfromd-like wrapper
- */
-KS_API int ks_strfromd(char* str, size_t n, char* fmt, ks_cfloat val);
-
-/* Return whether 'x' is a regular floating point number (not inf, -inf, or nan)
- */
-KS_API bool ks_cfloat_isreg(ks_cfloat x);
-
-/* Converts a string (in 'str', of 'sz', or if '-1', it is NUL-terminated) to a 'ks_ccomplex', stored in '*out'
- */
-KS_API bool ks_ccomplex_from_str(const char* str, int sz, ks_ccomplex* out);
-
-/* Converts a 'ks_ccomplex' to a string
- */
-KS_API int ks_ccomplex_to_str(char* str, int sz, ks_ccomplex val, bool sci_re, bool sci_im, int prec_re, int prec_im);
-
-/** Object API **/
-
-/* Tell whether something is a subtype (or equal to the type)
- */
-KS_API bool kso_issub(ks_type a, ks_type b);
-KS_API bool kso_isinst(kso a, ks_type b);
-
-
-/*** Execution ***/
-
-/* Throws an exception up the call stack.
- * This function always returns 'NULL' for convenience
- */
-KS_API void* kso_throw(ks_Exception exc);
-KS_API void* kso_throw_c(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, ...);
-
-
-/* Catches and returns the exception on the current thread
- * If it returns NULL, no exception is thrown
- */
-KS_API ks_Exception kso_catch();
-
-/* Catch and ignore any error
- */
-KS_API bool kso_catch_ignore();
-
-/* Catch and ignore any error, printing out if there was one
- */
-KS_API bool kso_catch_ignore_print();
-
-/* If there was something thrown, print it out and abort the process
- */
-KS_API void kso_exit_if_err();
-
-
-/*** Importing Modules ***/
-
-/* Import a base module (i.e. should not have any '.' in the name)
- */
-KS_API ks_module ks_import(ks_str name);
-
-/* Import submodule of another module
- */
-KS_API ks_module ks_import_sub(ks_module of, ks_str sub);
-
-
-/* Run the interactive shell
- */
-KS_API bool ks_inter();
-
-/*** Conversions ***/
-
-/* Attempt to convert 'ob' to the specified C-style value
- */
-KS_API bool kso_get_ci(kso ob, ks_cint* val);
-KS_API bool kso_get_ui(kso ob, ks_uint* val);
-KS_API bool kso_get_cf(kso ob, ks_cfloat* val);
-KS_API bool kso_get_cc(kso ob, ks_ccomplex* val);
-
-/* Convert 'obj' to a boolean
- */
-KS_API bool kso_truthy(kso obj, bool* out);
-
-/* Computes comparison sign (-1, 0, or +1) and stores in '*out'
- */
-KS_API bool kso_cmp(kso L, kso R, int* out);
-
-/* Calculate whether 'L == R'
- */
-KS_API bool kso_eq(kso L, kso R, bool* out);
-
-/* Get the hash of an object
- */
-KS_API bool kso_hash(kso ob, ks_hash_t* val);
-
-/* Get the length of an object
- */
-KS_API bool kso_len(kso ob, ks_ssize_t* val);
-
-/* Conversions to common types (and repr())
- */
-KS_API ks_str kso_str(kso ob);
-KS_API ks_bytes kso_bytes(kso ob);
-KS_API ks_str kso_repr(kso ob);
-KS_API ks_number kso_number(kso ob);
-KS_API ks_int kso_int(kso ob);
-
-
-/* Return whether an object is numeric */
-KS_API bool kso_is_num(kso obj);
-
-/* Return whether an object is integral */
-KS_API bool kso_is_int(kso obj);
-
-/* Return whether an object is floating-point (not including integral)*/
-KS_API bool kso_is_float(kso obj);
-
-/* Return whether an object is complex (not including reals) */
-KS_API bool kso_is_complex(kso obj);
-
-/* Return whether an object is considered iterable */
-KS_API bool kso_is_iterable(kso obj);
-
-/* Return whether an object is considered callable */
-KS_API bool kso_is_callable(kso obj);
-
-
-/* Apply C-style printf-like formatting, and return as a string
- *
- * Format specifiers:
- *   %i: C-style 'int' 
- *   %c: 'char', or 'ks_ucp'
- *   %l: 'ks_cint' (+aliases)
- *   %u: 'ks_uint' (+aliases)
- *   %f: 'ks_cfloat'
- *   %p: 'void*' (+pointer types)
- *   %s: 'char*' (NUL-terminated string, or use '%.*s' for string of a given length (in bytes))
- *   %O: 'kso', formats object in raw mode, which never calls anything else
- *   %T: 'kso', formats the type name
- *   %S: 'kso', formats 'str(ob)'
- *   %R: 'kso', formats 'repr(ob)'
- *   %J: char*, int, 'kso', formats 's.join(objs)'
- * 
- */
-KS_API ks_str ks_fmt(const char* fmt, ...);
-KS_API ks_str ks_fmtv(const char* fmt, va_list ap);
-
-/* Formatting with purely kscript objects --
- *
- * TODO: document format specifiers
- */
-KS_API bool ks_fmt2(ksio_BaseIO bio, const char* fmt, int nargs, kso* args);
-
-
-/*** Type Functions ***/
-
-/* Create a new type (extending 'base') with a given name, C-size, and position of an '__attr' dictionary
- *
- * Use 'sz=0' or 'attr_pos=0' to just use base's without modification
- */
-KS_API ks_type ks_type_new(const char* name, ks_type base, int sz, int attr_pos, const char* doc, struct ks_ikv* ikv);
-
-/* Template a type, with the given arguments
- */
-KS_API ks_type ks_type_template(ks_type base, int nargs, kso* args);
-
-/* Return a type attribute
- */
-KS_API kso ks_type_get(ks_type self, ks_str attr);
-
-/* Sets an attribute of the type
- */
-KS_API bool ks_type_set(ks_type self, ks_str attr, kso val);
-KS_API bool ks_type_set_c(ks_type self, const char* attr, kso val);
-
-
-/* Construct a new 'number' object from a C-style string
- *
- * This will construct an 'int', 'float', or 'complex' (with precedence in that order)
- */
-KS_API ks_number ks_number_news(const char* src, ks_ssize_t len_b, int base);
-
-
-/* Create a new integer
- */
-KS_API ks_int ks_int_new(ks_cint val);
-KS_API ks_int ks_int_newu(ks_uint val);
-
-/* Create a new integer from flooring a C-style float
- */
-KS_API ks_int ks_int_newf(ks_cfloat val);
-
-/* Create a new integer from a string representation
- * Give 'base==0' for default/detected
- */
-KS_API ks_int ks_int_news(ks_ssize_t sz, const char* src, int base);
-
-/* Create from 'mpz_t', with 'zn' absorbing the reference
- */
-KS_API ks_int ks_int_newz(mpz_t val);
-KS_API ks_int ks_int_newzn(mpz_t val);
-KS_API ks_int ks_int_newznt(ks_type tp, mpz_t val);
-
-/* Compare two kscript integers, returning a comparator
- */
-KS_API int ks_int_cmp(ks_int L, ks_int R);
-
-/* Compare a kscript int to a C-style integer, return a sign indicating the comparison
- */
-KS_API int ks_int_cmp_c(ks_int L, ks_cint r);
-
-
-/* Create a new float
- */
-KS_API ks_float ks_float_new(ks_cfloat val);
-
-/* Create a new complex
- */
-KS_API ks_complex ks_complex_new(ks_ccomplex val);
-KS_API ks_complex ks_complex_newre(ks_cfloat re, ks_cfloat im);
-
-
-/* Create an enumeration type
- */
-KS_API ks_type ks_enum_make(const char* name, struct ks_eikv* eikv);
-
-/* Retrieve an element of an enumeration
- * (by value, and name)
- */
-KS_API ks_enum ks_enum_get(ks_type tp, ks_cint val);
-
-/* Create a new string from UTF-8 data (also works for ASCII)
- * If 'len_b < 0', it is assumed to be NUL-terminated, otherwise that is the length in bytes
- */
-KS_API ks_str ks_str_new(ks_ssize_t len_b, const char* data);
-
-/* Create a new string from 'data', which should be the *root* of 'ks_malloc()'/friends,
- *   and the newly created string object will own that data (i.e. you should NOT free it)
- * 'data' should have space for a NUL-terminator after it
- */
-KS_API ks_str ks_str_newn(ks_ssize_t len_b, char* data);
-
-/* Calculate the length, in characters, of a UTF-8 string
- */
-KS_API ks_ssize_t ks_str_lenc(ks_ssize_t len_b, const char* data);
-
-/* Compare 'L' and 'R', returning either a comparator, or a boolean telling equality
- */
-KS_API int ks_str_cmp(ks_str L, ks_str R);
-KS_API bool ks_str_eq(ks_str L, ks_str R);
-KS_API bool ks_str_eq_c(ks_str L, const char* data, ks_ssize_t len_b);
-
-
-/* Attempts to find 'substr' in 'self' (within 'min_c' and 'max_c', inclusive and exclusive, respectively)
- *
- * 
- * Returns -1 if not found
- */
-KS_API ks_ssize_t ks_str_find(ks_str self, ks_str substr, ks_ssize_t min_c, ks_ssize_t max_c, ks_ssize_t* idx_b);
-
-
-/* Convert between strings of length 1 and ordinal codepoints
- */
-KS_API ks_str ks_str_chr(ks_ucp ord);
-KS_API ks_ucp ks_str_ord(ks_str chr);
-
-/* Split a string
- */
-KS_API ks_list ks_str_split(ks_str self, ks_str by);
-KS_API ks_list ks_str_split_c(const char* self, const char* by);
-KS_API ks_list ks_str_split_any(ks_str self, int nby, ks_str* by);
-
-/* Convert a string to all upper-case, using 'ucd'
- */
-KS_API ks_str ks_str_upper(ks_str self);
-
-/* Convert a string to all lower-case, using 'ucd'
- */
-KS_API ks_str ks_str_lower(ks_str self);
-
-/* Calculate whether all characters are space
- */
-KS_API bool ks_str_isspace(ks_str self);
-
-/* Calculate whether all characters are printable
- */
-KS_API bool ks_str_isprint(ks_str self);
-
-/* Calculate whether all characters are numeric
- */
-KS_API bool ks_str_isnum(ks_str self);
-
-/* Calculate whether all characters are letters
- */
-KS_API bool ks_str_isalpha(ks_str self);
-
-/* Calculate whether all characters are letters or numeric
- */
-KS_API bool ks_str_isalnum(ks_str self);
-
-/* Calculate whether 'self' is a valid identifier
- */
-KS_API bool ks_str_isident(ks_str self);
-
-
-
-/* Create a new 'bytes'
- */
-KS_API ks_bytes ks_bytes_new(ks_ssize_t len_b, const char* data);
-
-/* Creates a new 'bytes' object, which should absorb the data pointer passed to it
- *   (which should be allocated via 'ks_malloc()'). Do not free the data after calling this
- */
-KS_API ks_bytes ks_bytes_newn(ks_ssize_t len_b, char* data);
-
-/* Creates a new bytes from an object
- */
-KS_API ks_bytes ks_bytes_newo(ks_type tp, kso obj);
-
-
-/* Create a new regular-expression from a descriptor string
- */
-KS_API ks_regex ks_regex_new(ks_str expr);
-
-/* Create a new regular-expression to match a string literal
- */
-KS_API ks_regex ks_regex_newlit(ks_str expr);
-
-
-/* Initialize a 'sim0'
- */
-KS_API void ks_regex_sim0_init(ks_regex_sim0* sim, int n_states, struct ks_regex_nfa* states);
-
-/* Free resources created by a 'sim0'
- */
-KS_API void ks_regex_sim0_free(ks_regex_sim0* sim);
-
-/* Add a state to the simulator
- */
-KS_API void ks_regex_sim0_addcur(ks_regex_sim0* sim, int s);
-KS_API void ks_regex_sim0_addnext(ks_regex_sim0* sim, int s);
-
-/* Apply a single character to the simulator
- * Returns the number of states it is in now
- */
-KS_API int ks_regex_sim0_step(ks_regex_sim0* sim, ks_ucp c);
-
-/* Special steppers for epsilon transitions */
-KS_API int ks_regex_sim0_step_linestart(ks_regex_sim0* sim);
-KS_API int ks_regex_sim0_step_lineend(ks_regex_sim0* sim);
-
-
-/* Returns whether the regex matches exactly
- */
-KS_API bool ks_regex_exact(ks_regex self, ks_str str);
-
-/* Returns whether the regex matched anywhere
- */
-KS_API bool ks_regex_matches(ks_regex self, ks_str str);
-
-
-
-
-/* Create new 'slice'
- */
-KS_API ks_slice ks_slice_new(ks_type tp, kso start, kso end, kso step);
-
-
-/* Get C-style iterator indices
- *
- * if (!ks_slice_getci(slice, array_len, &first, &last, &delta)
- * for (i = first; i != last; i += delta) { ... do operation ... }
- */
-KS_API bool ks_slice_get_citer_c(ks_cint start, ks_cint end, ks_cint step, ks_cint len, ks_cint* first, ks_cint* last, ks_cint* delta);
-KS_API bool ks_slice_get_citer(ks_slice self, ks_cint len, ks_cint* first, ks_cint* last, ks_cint* delta);
-
-/* Create new 'range'
- */
-KS_API ks_range ks_range_new(ks_type tp, ks_int start, ks_int end, ks_int step);
-
-
-/* Create a new 'tuple' from elements
- * 'newn' absorbs references
- */
-KS_API ks_list ks_list_new(ks_ssize_t len, kso* elems);
-KS_API ks_list ks_list_newn(ks_ssize_t len, kso* elems);
-
-/* Create a new list from an iterable
- */
-KS_API ks_list ks_list_newit(ks_type tp, kso objs);
-KS_API ks_list ks_list_newi(kso objs);
-
-
-/* Clears a list
- */
-KS_API void ks_list_clear(ks_list self);
-
-/* Ensures a list can hold 'cap' number of elements
- */
-KS_API bool ks_list_reserve(ks_list self, int cap);
-
-
-/* Add element to list
- */
-KS_API bool ks_list_push(ks_list self, kso ob);
-KS_API bool ks_list_pushu(ks_list self, kso ob);
-
-/* Push array
- */
-KS_API bool ks_list_pusha(ks_list self, ks_cint len, kso* objs);
-KS_API bool ks_list_pushan(ks_list self, ks_cint len, kso* objs);
-
-/* Push all elements of an iterable onto a list
- */
-KS_API bool ks_list_pushall(ks_list self, kso objs);
-
-/* Inserts an object at a given position
- */
-KS_API bool ks_list_insert(ks_list self, ks_cint idx, kso ob);
-KS_API bool ks_list_insertu(ks_list self, ks_cint idx, kso ob);
-
-/* Pop an item and return a reference
- */
-KS_API kso ks_list_pop(ks_list self);
-
-/* Pop an unused reference from a list
- */
-KS_API void ks_list_popu(ks_list self);
-
-/* Delete a given index
- */
-KS_API bool ks_list_del(ks_list self, ks_cint idx);
-
-/* Create a new 'attrtuple' subtype
- */
-KS_API ks_type ks_attrtuple_newtype(ks_str name, int nmem, kso* mem);
-
-/* Create a new 'tuple' from elements
- * newn absorbs references
- */
-KS_API ks_tuple ks_tuple_new(ks_ssize_t len, kso* elems);
-KS_API ks_tuple ks_tuple_newn(ks_ssize_t len, kso* elems);
-
-
-/* Create empty, uninitialize tuple: WARNING: only internal use
- */
-KS_API ks_tuple ks_tuple_newe(ks_ssize_t len);
-
-/* Creates a tuple from an iterable, converting all elements
- * NOTE: if the object is already a tuple, a new reference is returned
- */
-KS_API ks_tuple ks_tuple_newi(kso objs);
-
-/* Create a new C-style function wrapper
- */
-KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
-
-/* Create a new kscript bytecode function
- * 'args' is the tuple of (str) names of all parameters
- * 'n_defa' is the number of default arguments (on the right side of 'args')
- * 'vararg_idx' is the index of the vararg (or -1 if none exists)
- */
-KS_API ks_func ks_func_new_k(kso bc, ks_tuple args, int n_defa, kso* defa, int vararg_idx, ks_str sig, ks_str doc);
-
-/* Set defaults for a function (last 'n_defa' parameters)
- */
-KS_API void ks_func_setdefa(ks_func self, int n_defa, kso* defa);
-
-
-/* Create a new partial function with index '0' filled in
- */
-KS_API ks_partial ks_partial_new(kso of, kso arg0);
-
-
-/* Construct a new 'set' object from a list of elements
- */
-KS_API ks_set ks_set_new(ks_cint len, kso* elems);
-
-/* Clear a set
- */
-void ks_set_clear(ks_set self);
-
-
-/* Add an object to the set
- */
-KS_API bool ks_set_add(ks_set self, kso obj);
-KS_API bool ks_set_add_h(ks_set self, kso obj, ks_hash_t hash);
-
-/* Delete an object from the set, and set '*found' to whether or not the item
- *   was in the set
- */
-KS_API bool ks_set_del(ks_set self, kso obj, bool* found);
-KS_API bool ks_set_del_h(ks_set self, kso obj, ks_hash_t hash, bool* found);
-
-/* Returns whether an object is in the set
- */
-KS_API bool ks_set_has(ks_set self, kso obj, bool* out);
-KS_API bool ks_set_has_h(ks_set self, kso obj, ks_hash_t hash, bool* out);
-
-
-/* Add every element of the iterable to the set
- */
-KS_API bool ks_set_addall(ks_set self, kso objs);
-KS_API bool ks_set_addn(ks_set self, ks_cint len, kso* objs);
-
-/* Delete every element of the iterable from the set
- */
-KS_API bool ks_set_delall(ks_set self, kso objs);
-
-
-/* Return a list of the entries array
- */
-KS_API ks_list ks_set_calc_ents(ks_set self);
-
-/* Return a list of the buckets array
- */
-KS_API ks_list ks_set_calc_buckets(ks_set self);
-
-
-
-/* Create a new dictionary
- * newn absorbs references to the values given
- */
-KS_API ks_dict ks_dict_new(struct ks_ikv* ikv);
-KS_API ks_dict ks_dict_newn(struct ks_ikv* ikv);
-
-/* Create a new dictionary from key, val interleaved
- */
-KS_API ks_dict ks_dict_newkv(int nargs, kso* args);
-
-/* Empty the dictionary
- */
-KS_API void ks_dict_clear(ks_dict self);
-
-/* Merge entries from 'from' into 'self'
- */
-KS_API bool ks_dict_merge(ks_dict self, ks_dict from);
-
-/* Merge in entries that are in 'ikv'
- */
-KS_API bool ks_dict_merge_ikv(ks_dict self, struct ks_ikv* ikv);
-
-
-/* Look up a key in the dictionary, returning a new reference to it
- * '_ih' ignores lookup errors
- */
-KS_API kso ks_dict_get(ks_dict self, kso key);
-KS_API kso ks_dict_get_h(ks_dict self, kso key, ks_hash_t hash);
-KS_API kso ks_dict_get_ih(ks_dict self, kso key, ks_hash_t hash);
-KS_API kso ks_dict_get_c(ks_dict self, const char* ckey);
-
-/* Set a given key to a given value, or update the existing value for that key if it already existed
- *
- */
-KS_API bool ks_dict_set(ks_dict self, kso key, kso val);
-KS_API bool ks_dict_set_h(ks_dict self, kso key, ks_hash_t hash, kso val);
-KS_API bool ks_dict_set_c(ks_dict self, const char* ckey, kso val);
-
-/* Set value, and absorb reference from 'val' */
-KS_API bool ks_dict_set_c1(ks_dict self, const char* ckey, kso val);
-
-/* Calculate whether a dictionary contains a given key
- *
- */
-KS_API bool ks_dict_has(ks_dict self, kso key, bool* exists);
-KS_API bool ks_dict_has_h(ks_dict self, kso key, ks_hash_t hash, bool* exists);
-KS_API bool ks_dict_has_c(ks_dict self, const char* key, bool* exists);
-
-/* Delete a given key (and its value) from 'self', if it existed.
- *
- * Attempting to delete a key that didn't exist will not throw an error; if you want to, you should
- *   pass in a reference to a boolean to '*existed' and check that
- * 
- */
-KS_API bool ks_dict_del(ks_dict self, kso key, bool* existed);
-KS_API bool ks_dict_del_h(ks_dict self, kso key, ks_hash_t hash, bool* existed);
-
-
-/* Return a list of the entries array
- */
-KS_API ks_list ks_dict_calc_ents(ks_dict self);
-
-/* Return a list of the buckets array
- */
-KS_API ks_list ks_dict_calc_buckets(ks_dict self);
-
-
-/* Create a new 'names' object, which wraps a dictionary
- */
-KS_API ks_names ks_names_new(ks_dict of, bool copy);
-
-
-/* Return the logger for a given name
- */
-KS_API ks_logger ks_logger_get(ks_str name);
-KS_API ks_logger ks_logger_get_c(const char* name);
-
-/* C-style logging functions
- */
-KS_API bool ks_logger_clogv(ks_logger self, int level, const char* file, const char* func, int line, const char* fmt, va_list ap);
-KS_API bool ks_logger_clog(ks_logger self, int level, const char* file, const char* func, int line, const char* fmt, ...);
-
-
-/* Template */
-#define _ks_logT(_name, _level, ...) do { \
-    ks_logger _log = ks_logger_get_c(_name); \
-    assert(_log != NULL); \
-    bool _haderr = !ks_logger_clog(_log, _level, __FILE__, __func__, __LINE__, __VA_ARGS__); \
-    KS_DECREF(_log); \
-    assert(!_haderr); \
-} while (0);
-
-#define ks_trace(_name, ...) _ks_logT(_name, KS_LOGGER_TRACE, __VA_ARGS__)
-#define ks_debug(_name, ...) _ks_logT(_name, KS_LOGGER_DEBUG, __VA_ARGS__)
-#define ks_info(_name, ...) _ks_logT(_name, KS_LOGGER_INFO, __VA_ARGS__)
-#define ks_warn(_name, ...) _ks_logT(_name, KS_LOGGER_WARN, __VA_ARGS__)
-#define ks_error(_name, ...) _ks_logT(_name, KS_LOGGER_ERROR, __VA_ARGS__)
-#define ks_fatal(_name, ...) _ks_logT(_name, KS_LOGGER_FATAL, __VA_ARGS__)
-
-
-
-/* Create an exception (for returning exceptions from C code)
- */
-KS_API ks_Exception ks_Exception_new_c(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, ...);
-KS_API ks_Exception ks_Exception_new_cv(ks_type tp, const char* cfile, const char* cfunc, int cline, const char* fmt, va_list ap);
-
-/* Create a new module
- */
-KS_API ks_module ks_module_new(const char* name, const char* source, const char* doc, struct ks_ikv* ikv);
-
-
-/*** Misc. Functions ***/
-
-/* Call a a function or function-like object
- */
-KS_API kso kso_call(kso func, int nargs, kso* args);
-
-/* Extended calling method which allows you to pass in locals to forward to it
- */
-KS_API kso kso_call_ext(kso func, int nargs, kso* args, ks_dict locals, ksos_frame closure);
-
-/* Evaluate a string with a given source name, returning the result
- */
-KS_API kso kso_eval(ks_str src, ks_str fname, ks_dict locals);
-
-
-/* Create an iterable from 'ob'
- */
-KS_API kso kso_iter(kso ob);
-
-/* Get the next item in an iterable
- */
-KS_API kso kso_next(kso ob);
-
-/* Parse a format string and values, similar to 'KS_ARGS', but for any list of argu
- */
-KS_API bool kso_parse(int nargs, kso* args, const char* fmt, ...);
-
-/* Attempt to get the '__attr__' dict from an object, returning NULL if it couldn't be determined
- * NOTE: this does NOT throw an error if it wasn't found
- */
-KS_API ks_dict kso_try_getattr_dict(kso obj);
-
-/* Get, set, or delete an attribute from an object
- */
-KS_API kso kso_getattr(kso ob, ks_str attr);
-KS_API kso kso_getattr_c(kso ob, const char* attr);
-KS_API bool kso_setattr(kso ob, ks_str attr, kso val);
-KS_API bool kso_delattr(kso ob, ks_str attr);
-
-/* Get, set, or delete an element from an object
- *
- * Variations that take extra parameters are for supporting index operations that take
- *   multiple indices. For 'kso_setelems', the last object in 'keys' is assumed to be the value
- *   it is being set to, and the first is the item itself
- */
-KS_API kso kso_getelem(kso ob, kso key);
-KS_API bool kso_setelem(kso ob, kso key, kso val);
-KS_API bool kso_delelem(kso ob, kso key);
-KS_API kso kso_getelems(int n_keys, kso* keys);
-KS_API bool kso_setelems(int n_keys, kso* keys);
-KS_API bool kso_delelems(int n_keys, kso* keys);
-
-
-/* Declare that the object is in the 'repr' stack, and return whether it was already in the repr stack,
- *   otherwise, add it
- */
-KS_API bool kso_inrepr(kso obj);
-
-/* Stop repr'ing 
- */
-KS_API void kso_outrepr();
-
-/* Specific sort types
- */
-KS_API bool ks_sort_merge(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
-KS_API bool ks_sort_insertion(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
-
-
-/* Sorts 'elems' in place according to 'keys' (may be '==elems'), according to 'cmpfunc'
- *
- * If `cmpfunc` is not `NULL`, then it should be a callable object which has the signature:
- *   (L, R) -> L <= R
- * And returns whether its first argument is less than or equal to its second argument
- */
-KS_API bool ks_sort(ks_size_t n, kso* elems, kso* keys, kso cmpfunc);
-
-
-
-
-/** C Iterator API  **/
-
-/* ks_cit - C-iterator type, for quick iteration in C
- *
- * Here's how you use it:
- * ```c
- * kso over;
- * ks_cit it = ks_cit_new(over);
- * kso ob;
- * while (ob = ks_cit_next(&it)) {
- *   ... do stuff with 'ob' ...
- *   KS_DECREF(ob);
- * }
- * ks_cit_done(&it);
- * if (it.exc) {
- *   ... there is an exception, you should probably return 'NULL'
- * }
- * 
- * ```
- * 
- */
-typedef struct {
-
-    /* Iterator being iterated over, generated from 'iter(obj)' when the struct
-     *   was created
-     */
-    kso it;
-
-    /* If true, there was an unhandled exception that you must now handle
-     * NOTE: This will not be set if the exception was 'OutOfIterException'; that is swallowed
-     */
-    bool exc;
-
-} ks_cit;
-
-/* Create a new C-style iterator from 'obj'
- */
-KS_API ks_cit ks_cit_make(kso obj);
-
-/* Finalize all resources in 'cit', but keep 'exc' as it was
- */
-KS_API void ks_cit_done(ks_cit* cit);
-
-/* Return a new reference to the next object in 'cit'
- */
-KS_API kso ks_cit_next(ks_cit* cit);
-
-
-
-/*** Operators ***/
-
-/* Compute 'L <op> R' */
-KS_API kso ks_bop_add(kso L, kso R);
-KS_API kso ks_bop_sub(kso L, kso R);
-KS_API kso ks_bop_mul(kso L, kso R);
-KS_API kso ks_bop_matmul(kso L, kso R);
-KS_API kso ks_bop_div(kso L, kso R);
-KS_API kso ks_bop_floordiv(kso L, kso R);
-KS_API kso ks_bop_mod(kso L, kso R);
-KS_API kso ks_bop_pow(kso L, kso R);
-KS_API kso ks_bop_binior(kso L, kso R);
-KS_API kso ks_bop_binand(kso L, kso R);
-KS_API kso ks_bop_binxor(kso L, kso R);
-KS_API kso ks_bop_lsh(kso L, kso R);
-KS_API kso ks_bop_rsh(kso L, kso R);
-KS_API kso ks_bop_lt(kso L, kso R);
-KS_API kso ks_bop_gt(kso L, kso R);
-KS_API kso ks_bop_le(kso L, kso R);
-KS_API kso ks_bop_ge(kso L, kso R);
-
-/* Compute '<op> V' */
-KS_API kso ks_uop_pos(kso V);
-KS_API kso ks_uop_neg(kso V);
-KS_API kso ks_uop_sqig(kso V);
-
-/*  */
-KS_API kso ks_contains(kso L, kso R);
-
-
-/*** C-style string iterator ***/
-
-
-KS_API struct ks_str_citer ks_str_citer_make(ks_str self);
-KS_API ks_ucp ks_str_citer_next(struct ks_str_citer* cit);
-KS_API ks_ucp ks_str_citer_peek(struct ks_str_citer* cit);
-KS_API ks_ucp ks_str_citer_peek_n(struct ks_str_citer* cit, int n);
-KS_API bool ks_str_citer_seek(struct ks_str_citer* cit, ks_ssize_t idx);
-
-/*** Internal Functions ***/
-
-/* Allocation/deallocation */
-KS_API kso _kso_new(ks_type tp);
-KS_API void _kso_del(kso ob);
-KS_API kso _ks_newref(kso ob);
-KS_API void _kso_free(kso obj, const char* file, const char* func, int line);
-
-/* For emscripten */
-KS_API void _ksem_incref_(kso obj);
-KS_API void _ksem_decref_(kso obj);
-KS_API char* _ksem_str_c_(kso obj);
-KS_API char* _ksem_repr_c_(kso obj);
-KS_API ks_cint _ksem_refs_c_(kso obj);
-KS_API ks_type _ksem_type_c_(kso obj);
-KS_API ks_cint _ksem_iohash_c_();
-
-/* Parse 'args' into a list of addresses, with optionally specifying types. Use the 'KS_ARGS' macros
- */
-KS_API bool _ks_argsv(int kk, int nargs, kso* args, const char* fmt, va_list ap);
-KS_API bool _ks_args(int nargs, kso* args, const char* fmt, ...);
-
-
-
-#endif /* KS_H__ */
+#endif /* KS_CONFIG_H */

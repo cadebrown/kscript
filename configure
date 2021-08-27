@@ -5,6 +5,8 @@
 # $ ./configure
 # $ ./configure --help
 #
+# Then, run `make` to build the library
+#
 # @author: Cade Brown <cade@kscript.org>
 #          Gregory Croisdale <greg@kscript.org>
 

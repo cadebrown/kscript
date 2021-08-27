@@ -1,8 +1,0 @@
-
-node_modules/
-*.vsix
-
-*.log*
-
-syntaxes/*.tmLanguage.json
-!.vscode
