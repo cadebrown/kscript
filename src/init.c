@@ -6,14 +6,10 @@
 #include <ks/impl.h>
 
 
-
-
-
 void ks_init() {
     static bool has_init = false;
     if (has_init) return;
     has_init = true;
-
 
     /* Some initialization is needed for the objects created within types */
     kst_func->ob_size = sizeof(struct ks_func_s);
