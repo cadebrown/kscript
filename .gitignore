@@ -22,8 +22,8 @@
 # -*- GENERATED -*-
 
 # by ./configure
-/makefile
-/include/ks/config.h
+#/makefile
+#/include/ks/config.h
 
 # misc. folders for targets
 /.tmp/
