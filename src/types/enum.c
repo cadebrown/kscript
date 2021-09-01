@@ -16,7 +16,7 @@
 
 /* C-API */
 
-/* Methods */
+/* Functions */
 
 
 /* Export */

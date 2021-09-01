@@ -16,7 +16,7 @@
 
 /* C-API */
 
-/* Methods */
+/* Functions */
 
 static KS_TFUNC(T, free) {
     T self;

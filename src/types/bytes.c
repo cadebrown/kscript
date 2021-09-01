@@ -47,7 +47,7 @@ ks_bytes ks_bytes_newn(ks_type tp, ks_uint len_b, ks_u8* data) {
 }
 
 
-/* Methods */
+/* Functions */
 
 static KS_TFUNC(T, free) {
     T self;

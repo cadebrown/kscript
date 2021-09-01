@@ -42,7 +42,7 @@ ks_list ks_list_new(ks_type tp, ks_uint len, kso* elems) {
 }
 
 
-/* Methods */
+/* Functions */
 
 static KS_TFUNC(T, free) {
     T self;

@@ -59,9 +59,9 @@ void ks_init() {
     /* Now, initialize all the standard functions */
 
 
-
     /* Now, initialize all the standard modules */
 
+    ksi_os();
 
     /* Now, set up the global dictionary */
 

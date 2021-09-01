@@ -659,6 +659,16 @@ typedef struct ks_func_s {
 }* ks_func;
 
 
+/* module - Basic unit of code organization
+ *
+ */
+typedef struct ks_module_s {
+    KSO_BASE
+
+
+
+
+}* ks_module;
 
 struct ks_type_s {
     KSO_BASE
@@ -714,7 +724,7 @@ struct ks_type_s {
     /* iter(A), next(A), call(A, *args) */
     kso i__iter, i__next;
 
-    /** Special Methods **/
+    /** Special Functions **/
 
     /* Builtin Conversions (Numeric) */
     kso i__number, i__integral, i__bool, i__int, i__float, i__complex;
@@ -915,6 +925,10 @@ typedef struct ks_exc_s {
  */
 #define KS_DECL_TYPE(_name) static struct ks_type_s _name##_ss; ks_type _name = &_name##_ss;
 
+/* Declare a module in C, using static declaration
+ */
+#define KS_DECL_MODULE(_name) static struct ks_module_s _name##_ss; ks_module _name = &_name##_ss;
+
 
 /* Parse function args, and returns 'NULL' from the current function if they did not parse correctly */
 #define KS_ARGS(...) do { \
@@ -959,7 +973,6 @@ typedef struct ks_exc_s {
 
 
 
-
 /* Creates a new object (via standard allocation methods), and initializes the basic fields (type, refs, and attribute dict if available)
  */
 #define KS_NEW(_ctp, _tp) ((_ctp)_ks_new(_tp))
@@ -999,8 +1012,15 @@ typedef struct ks_exc_s {
 KS_API void ks_init();
 
 /* Initializes a type (typically used in a C-style pattern, see `types/object.c`) given initializer list
+ * NOTE: Expects allocated 'tp', see 'KS_DECL_TYPE' macro
  */
 KS_API void ks_init_type(ks_type tp, ks_type base, int sz, const char* name, const char* doc, struct ks_ikv* ikv);
+
+
+/* Initializes a type (typically used in a C-style pattern, see `types/object.c`) given initializer list
+ */
+KS_API void ks_init_module(ks_module self, ks_module base, const char* name, const char* doc, struct ks_ikv* ikv);
+
 
 /*** Low Level Utilities ***/
 
@@ -1266,17 +1286,17 @@ KS_API void _ks_free(kso obj, const char* file, const char* func, int line);
 
 /** Global Variables **/
 
-
 #define KS_NONE                    (ksg_none)
-#define KS_TRUE                    (ksg_true)
-#define KS_FALSE                   (ksg_false)
 #define KS_DOTDOTDOT               (ksg_dotdotdot)
 #define KS_UNDEFINED               (ksg_undefined)
-#define KS_NAN                     (ksg_nan)
+#define KS_TRUE                    (ksg_true)
+#define KS_FALSE                   (ksg_false)
 #define KS_INF                     (ksg_inf)
 #define KS_NEGINF                  (ksg_neginf)
+#define KS_NAN                     (ksg_nan)
 
 #define KS_BOOL(_cond)             ((kso)((_cond) ? KS_TRUE : KS_FALSE))
+
 
 KS_API_DATA kso
     ksg_none,
@@ -1305,6 +1325,13 @@ KS_API_DATA ks_dict
     ksg_inter_vars
 ;
 
+/* Modules */
+KS_API_DATA ks_module
+    ksg_os,
+    ksg_m
+;
+
+/* Types */
 KS_API_DATA ks_type
     kst_object,
     kst_none,
