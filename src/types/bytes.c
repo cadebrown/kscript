@@ -72,7 +72,7 @@ static KS_TFUNC(T, len) {
     T self;
     KS_ARGS("self:*", &self, T_TYPE);
 
-    return (kso)ks_int_newu(NULL, self->len_b);
+    return (kso)ks_int_newu(self->len_b);
 }
 
 
@@ -91,7 +91,7 @@ KS_DECL_TYPE(T_TYPE)
 
 void ksi_bytes() {
 
-    ks_init_type(T_TYPE, NULL, sizeof(*(T)NULL), T_NAME, T_DOC, KS_IKV(
+    ks_init_type(T_TYPE, kst_bytes, sizeof(*(T)NULL), T_NAME, T_DOC, KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__hash(self)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},
         {"__len",                  ksf_wrap(T_len_, T_NAME ".__len(self)", "")},

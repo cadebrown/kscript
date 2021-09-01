@@ -10,7 +10,7 @@
 #define KS_IMPL_H
 
 /* kscript C-API */
-#include <ks.h>
+#include <ks/ks.h>
 
 
 

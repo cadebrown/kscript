@@ -12,7 +12,7 @@
  *   - _ks*: internal function, not guaranteed to be backwards compatible (DO NOT USE THIS!)
  * 
  * To access builtin modules, include that specific header. For example, for the 'os' module, make sure '#include <ks/os.h>'
- *   is being included in your program.
+ *   is being incluksded in your program.
  * 
  * As far as return values, if a function returns a 'kso' or other object type, it will return a new reference (unless otherwise
  *   stated in the documentation), or a NULL pointer if there was an exception thrown. Otherwise, if it returns a 'bool' (boolean),
@@ -91,7 +91,7 @@
 #endif
 
 
-/* C std headers */
+/** C Standard Headers **/
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -101,16 +101,18 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include <string.h>
+#include <float.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <assert.h>
 
-#include <string.h>
-#include <float.h>
-
-/* C math library, -lm */
 #include <math.h>
 
+
+
+/** Optional Requirements **/
 
 #ifdef KS_HAVE_GMP
  /* We have GMP, so use that library */
@@ -179,36 +181,18 @@ typedef ks_u32     ks_cp4;
 #define KS_U64_MIN        ((ks_u64)UINT64_MIN)
 #define KS_U64_MAX        ((ks_u64)UINT64_MAX)
 
-#define ks_cf_MAX         ((ks_cf)DBL_MAX)
-#define ks_cf_MIN         ((ks_cf)DBL_MIN)
-#define ks_cf_EPS         ((ks_cf)DBL_EPSILON)
-#define ks_cf_DIG         ((int)DBL_DIG)
-#define ks_cf_INF         ((ks_cf)INFINITY)
-#define ks_cf_NAN         ((ks_cf)NAN)
+#define KS_CF_MAX         ((ks_cf)DBL_MAX)
+#define KS_CF_MIN         ((ks_cf)DBL_MIN)
+#define KS_CF_EPS         ((ks_cf)DBL_EPSILON)
+#define KS_CF_DIG         ((int)DBL_DIG)
+#define KS_CF_INF         ((ks_cf)INFINITY)
+#define KS_CF_NAN         ((ks_cf)NAN)
 
-#define KS_sint_MAX       INTPTR_MAX
-#define KS_sint_MIN       INTPTR_MIN
+#define KS_SINT_MAX       INTPTR_MAX
+#define KS_SINT_MIN       INTPTR_MIN
 
 #define KS_UINT_MAX       UINTPTR_MAX
 #define KS_UINT_MIN       ((ks_uint)0)
-
-
-/* C-style function signature */
-typedef kso (*ks_cfunc)(int nargs_, kso* args_);
-
-
-/* C-style initializers for string key, and values 
- * See 'KS_IKV'
- */
-struct ks_ikv {
-
-    /* NUL-terminated C-style string */
-    const char* key;
-
-    /* Value */
-    kso val;
-
-};
 
 /* Creates a list of NULL-terminated initializers for a (key, val) entry */
 #define KS_IKV(...) ((struct ks_ikv[]){ __VA_ARGS__ { NULL, NULL} })
@@ -264,6 +248,25 @@ typedef struct kso_s {
 }* kso;
 
 
+
+
+/* C-style initializers for string key, and values 
+ * See 'KS_IKV'
+ */
+struct ks_ikv {
+
+    /* NUL-terminated C-style string */
+    const char* key;
+
+    /* Value */
+    kso val;
+
+};
+
+/* C-style function signature */
+typedef kso (*ks_cfunc)(int nargs_, kso* args_);
+
+
 /* int - (immutable) a whole number, not limited by machine precision
  * 
  */
@@ -272,13 +275,17 @@ typedef struct ks_int_s {
 
 #if defined(KS_INT_GMP)
 
-    /* Internal integer for GMP */
+    /* Internal integer structure for GMP */
     mpz_t val;
 
 #elif defined(KS_INT_MINIGMP)
 
-    /* Internal integer for MINIGMP */
+    /* Internal integer structure for MINIGMP */
     mpz_t val;
+
+#else
+
+    #error No KS_INT_XXX defined (no implementation found)
 
 #endif
 
@@ -301,7 +308,6 @@ typedef struct ks_enum_s {
  * 
  */
 typedef ks_enum ks_bool;
-
 
 /* float - floating point, real number
  *
@@ -344,7 +350,9 @@ struct ks_str_s {
     ks_uint* strides_;
 
 #else
-    /* No offsets, save the storage */
+
+    /* No offsets, save the storage. But, some string operations will be expensive for non-ASCII strings */
+
 #endif
 
 };
@@ -548,7 +556,9 @@ typedef struct ks_graph_s {
 typedef struct ks_bst_s {
     KSO_BASE
     
-    /* Structure describing a single node within the BST */
+    /* Structure describing a single node within the BST
+     * 'root' is the top of the tree
+     */
     struct ks_bst_node {
 
         /* Pointer to child nodes, L (less than this node), and R (greater than this node) */
@@ -556,10 +566,7 @@ typedef struct ks_bst_s {
 
         /* Key and value of this node */
         kso key, val;
-    };
-
-    /* Root node of the BST */
-    struct ks_bst_node* root;
+    } *root;
 
 }* ks_bst;
 
@@ -570,7 +577,9 @@ typedef struct ks_bst_s {
 typedef struct ks_queue_s {
     KSO_BASE
 
-    /* Structure describing a single node within the queue */
+    /* Structure describing a single node within the queue 
+     * 'L' and 'R' are pointers to the first and last nodes in the queue
+     */
     struct ks_queue_node {
 
         /* Pointer to other nodes in the linked list, L (prev), and R (next) */
@@ -578,10 +587,7 @@ typedef struct ks_queue_s {
 
         /* Value of this node */
         kso val;
-    };
-
-    /* Pointer to the first (L) and last (R) nodes in the queue */
-    struct ks_queue_node *L, *R;
+    } *L, *R;
 
 }* ks_queue;
 
@@ -648,7 +654,7 @@ typedef struct ks_func_s {
             kso closure;
 
         } kfunc;
-    }
+    };
 
 }* ks_func;
 
@@ -923,7 +929,6 @@ typedef struct ks_exc_s {
     ks_throw_c(_tp, __FILE__, __func__, __LINE__, __VA_ARGS__); \
 } while (0)
 
-
 /* Throw an 'StopIter' Exception
  */
 #define KS_THROW_STOPITER() do { \
@@ -971,9 +976,9 @@ typedef struct ks_exc_s {
 
 /* Delete a reference to a given object, and then free the object if the object has become unreachable */
 #define KS_DECREF(_obj) do {                                           \
-    kso _kso_obj = (kso)(_obj);                                        \
-    if (--_kso_obj->refs <= 0) {                                       \
-        _kso_free(_kso_obj, __FILE__, __func__, __LINE__);             \
+    kso _ks_obj = (kso)(_obj);                                        \
+    if (--_ks_obj->refs <= 0) {                                       \
+        _ks_free(_ks_obj, __FILE__, __func__, __LINE__);             \
     }                                                                  \
 } while (0)
 
@@ -986,15 +991,16 @@ typedef struct ks_exc_s {
 
 
 
-
-
-
 /** C-API Functions **/
 
 /*** High Level Utilities ***/
 
 /* Initialize the kscript API/runtime */
 KS_API void ks_init();
+
+/* Initializes a type (typically used in a C-style pattern, see `types/object.c`) given initializer list
+ */
+KS_API void ks_init_type(ks_type tp, ks_type base, int sz, const char* name, const char* doc, struct ks_ikv* ikv);
 
 /*** Low Level Utilities ***/
 
@@ -1179,9 +1185,9 @@ KS_API kso ksf_wrap(ks_cfunc cfunc, const char* sig, const char* doc);
 
 /* Constructors for 'int' */
 KS_API ks_int ks_int_new(ks_type tp, int len, const char* src, int base);
-KS_API ks_int ks_int_news(ks_type tp, ks_sint val);
-KS_API ks_int ks_int_newu(ks_type tp, ks_uint val);
 KS_API ks_int ks_int_newz(ks_type tp, mpz_t val);
+KS_API ks_int ks_int_news(ks_sint val);
+KS_API ks_int ks_int_newu(ks_uint val);
 
 /* Constructors for 'float' */
 KS_API ks_float ks_float_new(ks_type tp, int len, const char* src, int base);
@@ -1227,7 +1233,9 @@ KS_API ks_list ks_list_new(ks_type tp, ks_uint len, kso* elems);
 
 KS_API ks_set ks_set_new(ks_type tp, ks_uint len, kso* elems);
 
-KS_API ks_dict ks_dict_new(ks_type tp, ks_uint len, kso* keys, kso* vals);
+/* Create a new dictionary from a C-style key-value initializer
+ */
+KS_API ks_dict ks_dict_new(ks_type tp, struct ks_ikv* ikv);
 
 
 /* Creates a new 'zip' */
@@ -1248,10 +1256,10 @@ KS_API ks_ast ks_ast_new(ks_type tp, int n_sub, kso* sub);
 
 /** Internal Utilities **/
 
-KS_API kso _kso_new(ks_type tp);
-KS_API void _kso_del(kso ob);
+KS_API kso _ks_new(ks_type tp);
+KS_API void _ks_del(kso ob);
 KS_API kso _ks_newref(kso ob);
-KS_API void _kso_free(kso obj, const char* file, const char* func, int line);
+KS_API void _ks_free(kso obj, const char* file, const char* func, int line);
 
 
 
@@ -1268,7 +1276,7 @@ KS_API void _kso_free(kso obj, const char* file, const char* func, int line);
 #define KS_INF                     (ksg_inf)
 #define KS_NEGINF                  (ksg_neginf)
 
-#define KS_BOOL(_cond)             ((_cond) ? KS_TRUE : KS_FALSE)
+#define KS_BOOL(_cond)             ((kso)((_cond) ? KS_TRUE : KS_FALSE))
 
 KS_API_DATA kso
     ksg_none,

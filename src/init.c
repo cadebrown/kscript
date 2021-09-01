@@ -56,5 +56,14 @@ void ks_init() {
     ksi_ast();
     ksi_code();
 
+    /* Now, initialize all the standard functions */
+
+
+
+    /* Now, initialize all the standard modules */
+
+
+    /* Now, set up the global dictionary */
+
 }
 

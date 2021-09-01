@@ -24,7 +24,7 @@ static KS_TFUNC(T, hash) {
     KS_ARGS("self", &self);
 
     /* hash(self) = address of self */
-    return (kso)ks_int_newu(NULL, (ks_uint)self);
+    return (kso)ks_int_newu((ks_uint)self);
 }
 
 

@@ -24,7 +24,7 @@ static KS_TFUNC(T, hash) {
     KS_ARGS("self", &self);
 
     /* hash(self) = address of self */
-    return (kso)ks_int_newu(NULL, (ks_uint)self);
+    return (kso)ks_int_newu((ks_uint)self);
 }
 
 
@@ -46,9 +46,9 @@ static KS_TFUNC(T, free) {
 
 KS_DECL_TYPE(T_TYPE)
 
-void ksi_object() {
+void ksi_ast() {
 
-    ks_init_type(T_TYPE, NULL, sizeof(*(T)NULL), T_NAME, T_DOC, KS_IKV(
+    ks_init_type(T_TYPE, kst_object, sizeof(*(T)NULL), T_NAME, T_DOC, KS_IKV(
         {"__hash",                 ksf_wrap(T_hash_, T_NAME ".__hash(self)", "")},
     ));
 
