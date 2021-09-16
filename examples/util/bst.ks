@@ -12,6 +12,9 @@ x = bst({
     "cade": 1,
 })
 
+# 'util.bst()' is a dict-like object, so it's considered a dict
+assert x is dict
+
 # Or, equivalently, a key-val notation
 x = bitset(("greg", 0), ("cade", 1))
 
@@ -19,7 +22,6 @@ x = bitset(("greg", 0), ("cade", 1))
 print(len(x))
 
 # Loops over the entries
-for k, v in x {
-    print('{k}: {v}')
+for key, val in x {
+    print('{key}: {val}')
 }
-

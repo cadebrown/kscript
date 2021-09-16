@@ -8,6 +8,8 @@ import { tau, sin, cos, tan } from m
 
 # How many iterations per loop (evenly around a circle)
 N = 8
+
+# Print some basic trig values
 for theta in map(range(N), x -> x * (tau / N)) {
     print(
         'sin({theta}) == {sin(theta)}', 
