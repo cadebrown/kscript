@@ -53,6 +53,10 @@
 #endif
 
 
+/* If defined, we assume that the Riemann Hypothesis is true */
+#define KS_ASSUME_RH
+
+
 /* On Emscripten, allow 'dead' code to remain (because it may be called dynamically) */
 #if defined(__EMSCRIPTEN__)
   #define KS_EMSCRIPTEN_API EMSCRIPTEN_KEEPALIVE
@@ -104,16 +108,31 @@
 #include <string.h>
 #include <float.h>
 
+#include <math.h>
+
 #include <errno.h>
 #include <limits.h>
 #include <assert.h>
 
-#include <math.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <dirent.h>
+#include <glob.h>
+
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
 
 
 
 /** Optional Requirements **/
 
+/* GMP (--with-gmp) 
+ *
+ * Adds support for GNU-Multi-Precision integers & arithmetic
+ *   (otherwise, use a version of minigmp)
+ *
+ */
 #ifdef KS_HAVE_GMP
  /* We have GMP, so use that library */
  #define KS_INT_GMP
@@ -870,25 +889,20 @@ typedef struct ks_batch_s {
 
 }* ks_batch;
 
-
-
-
-/* logger - Represents a utility object for logging
+/* every - Takes every 'n'th entry
  *
  */
-typedef struct ks_logger_s {
+typedef struct ks_every_s {
     KSO_BASE
 
-    /* The (writeable) IO object to output messages to */
-    kso io;
+    /* Iterable being iterated over */
+    kso it;
 
-    /* The full name of the logger */
-    ks_str name;
+    /* Size of the selection buffer */
+    int size;
 
-    /* Current verbosity level */
-    ks_sint level;
+}* ks_every;
 
-}* ks_logger;
 
 /* Exception - base type used to capture information about an exception breakpoint
  *
@@ -908,6 +922,25 @@ typedef struct ks_exc_s {
     ks_str what;
 
 }* ks_exc;
+
+
+
+/* logger - Represents a utility object for logging
+ *
+ */
+typedef struct ks_logger_s {
+    KSO_BASE
+
+    /* The (writeable) IO object to output messages to */
+    kso io;
+
+    /* The full name of the logger */
+    ks_str name;
+
+    /* Current verbosity level */
+    ks_sint level;
+
+}* ks_logger;
 
 
 /** Macros **/
@@ -981,6 +1014,7 @@ typedef struct ks_exc_s {
  */
 #define KS_DEL(_ob) (_ks_del((kso)(_ob)))
 
+
 /* Record a new reference to a given object */
 #define KS_INCREF(_obj) do { ++(_obj)->refs; } while(0)
 
@@ -994,7 +1028,6 @@ typedef struct ks_exc_s {
         _ks_free(_ks_obj, __FILE__, __func__, __LINE__);             \
     }                                                                  \
 } while (0)
-
 
 /* Decref, NULL-safe version */
 #define KS_NDECREF(_obj) do { \
@@ -1012,12 +1045,12 @@ typedef struct ks_exc_s {
 KS_API void ks_init();
 
 /* Initializes a type (typically used in a C-style pattern, see `types/object.c`) given initializer list
- * NOTE: Expects allocated 'tp', see 'KS_DECL_TYPE' macro
+ * NOTE: Expects allocated 'self', see 'KS_DECL_TYPE' macro
  */
-KS_API void ks_init_type(ks_type tp, ks_type base, int sz, const char* name, const char* doc, struct ks_ikv* ikv);
+KS_API void ks_init_type(ks_type self, ks_type base, int sz, const char* name, const char* doc, struct ks_ikv* ikv);
 
-
-/* Initializes a type (typically used in a C-style pattern, see `types/object.c`) given initializer list
+/* Initializes a module (typically used in a C-style pattern, see `modules/os/module.c`) given initializer list
+ * NOTE: Expects allocated 'self', see 'KS_DECL_MODULE' macro
  */
 KS_API void ks_init_module(ks_module self, ks_module base, const char* name, const char* doc, struct ks_ikv* ikv);
 
@@ -1035,8 +1068,9 @@ KS_API void* ks_realloc(void* ptr, ks_uint sz);
 
 /* Free a pointer allocated from 'ks_malloc'
  */
-
 KS_API void ks_free(void* ptr);
+
+
 
 /* Returns the next prime > x
  */
@@ -1335,36 +1369,42 @@ KS_API_DATA ks_module
 KS_API_DATA ks_type
     kst_object,
     kst_none,
+
     kst_undefined,
     kst_dotdotdot,
+    
     kst_number,
       kst_int,
         kst_enum,
           kst_bool,
       kst_float,
       kst_complex,
+    
     kst_str,
     kst_bytes,
+    
     kst_regex,
     kst_range,
     kst_slice,
+    
     kst_tuple,
     kst_list,
     kst_set,
     kst_dict,
-    kst_map,
-    kst_filter,
-    kst_zip,
 
     kst_type,
     kst_func,
+    kst_module,
+
     kst_partial,
-    
     kst_logger,
-    kst_queue,
-    kst_bst,
-    kst_graph,
     
+    kst_filter,
+    kst_map,
+    kst_zip,
+    kst_batch,
+    kst_unbatch,
+
     kst_ast,
     kst_code,
 
@@ -1393,4 +1433,11 @@ KS_API_DATA ks_type
         kst_SyntaxWarning
 ;
 
-#endif /* KS_CONFIG_H */
+
+
+/** Standard Modules **/
+
+#include <ks/os.h>
+#include <ks/m.h>
+
+#endif /* KS_KS_H */

@@ -1,5 +1,9 @@
 /* ks/os.h - kscript 'os' module C-API
  *
+ * The 'os' module is meant to be a cross-platform interface to your computer, that
+ *   works the same on Unix, Linux, Windows, etc... Some platform-specific functionality
+ *   is available, but those start with an `_` and are not recommended
+ * 
  * 
  * @author: Cade Brown <cade@kscript.org>
  */
@@ -25,7 +29,7 @@ typedef struct ksos_proc_s {
 
 }* ksos_proc;
 
-/* os.thread - Represents a thread of execution, which is normally an OS-level thread
+/* os.thread - Represents a thread of execution,to the kscript VM
  *
  */
 typedef struct ksos_thread_s {
@@ -60,7 +64,29 @@ typedef struct ksos_thread_s {
 
 }* ksos_thread;
 
+/* 'os.frame' - Single execution frame
+ *
+ * TODO: Create datastructure for declared variables with 'let' and 'const'
+ */
+typedef struct ksos_frame_s {
+    KSO_BASE
 
+    /* Function being called */
+    kso fn;
+
+    /* Arguments given to the function */
+    ks_tuple args;
+
+    /* Dictionary of local variables (if NULL, there were none) */
+    ks_dict locals;
+
+    /* Closure to another frame, for variable references (if NULL, there is none) */
+    struct ksos_frame_s* closure;
+
+    /* Program counter, current position */
+    unsigned char* pc;
+
+}* ksos_frame;
 
 /* os.mutex - MUTual EXclusion lock object, which can be locked to ensure critical sections/data 
  *              or other resources are accessed without side effects
@@ -86,7 +112,9 @@ typedef struct ksos_mutex_s {
  */
 struct ksos_cstat {
 
-    /* Linux/Unix/BSD/MacOS */
+    /* Linux/Unix/BSD/MacOS 
+     * Also: Cygwin
+     */
     struct stat val;
 
 };
@@ -117,7 +145,6 @@ typedef struct ksos_stat_s {
 
     /* C-style status query value */
     struct ksos_cstat val;
-
 
 }* ksos_stat;
 
@@ -155,8 +182,6 @@ typedef struct ksos_path_s {
     ks_str str_;
 
 }* ksos_path;
-
-
 
 /* os.walk - Iterator over a directory tree structure
  *
@@ -196,8 +221,6 @@ typedef struct ksos_walk_s {
         ks_tuple res;
 
     }* stk;
-    
-
 
 
     /* Internal flag */
@@ -206,9 +229,75 @@ typedef struct ksos_walk_s {
 }* ksos_walk;
 
 
+/** Functions **/
+
+/* Get the current thread (i.e. the thread that you are in right now)
+ * NOTE: Does NOT return a rnew reference to the result! Don't DECREF!
+ */
+KS_API ksos_thread ksos_thread_get();
+
+/* Create a new thread, with a given function and arguments
+ * NOTE: Does not start executing the thread
+ */
+KS_API ksos_thread ksos_thread_new(ks_type tp, ks_str name, kso fn, int nargs, kso* args);
+
+/* Start executing the thread
+ */
+KS_API bool ksos_thread_start(ksos_thread self);
+
+/* Join the thread (i.e. wait for completion on the calling thread)
+ */
+KS_API bool ksos_thread_join(ksos_thread self);
 
 
+/* Create new 'os.frame'
+ */
+KS_API ksos_frame ksos_frame_new(kso fn);
 
+/* Create a copy of an 'os.frame', with shared reference to 'of''s variables,
+ *   but now is distinct (useful for when exceptions are thrown)
+ */
+KS_API ksos_frame ksos_frame_copy(ksos_frame of);
+
+/* Return a string representing the traceback of a frame's execution
+ */
+KS_API ks_str ksos_frame_get_tb(ksos_frame self);
+
+/* Returns information about the the given frame
+ * References are NOT returned to the output variables, and no exception is thrown if it returns false
+ */
+KS_API bool ksos_frame_get_info(ksos_frame self, ks_str* fname, ks_str* fn, int* line);
+
+/* Linearize the linked-list structure of the frames, returning a list of frames with 
+ *   'self' at the beginning
+ */
+KS_API ks_list ksos_frame_expand(ksos_frame self);
+
+
+/* Create a new mutex (which will be unlocked)
+ */
+KS_API ksos_mutex ksos_mutex_new(ks_type tp);
+
+/* Locks/unlocks the mutex
+ */
+KS_API void ksos_mutex_lock(ksos_mutex self);
+KS_API void ksos_mutex_unlock(ksos_mutex self);
+
+/* Attempts to lock the thread, returns 'true' if the lock was successful
+ */
+KS_API bool ksos_mutex_trylock(ksos_mutex self);
+
+
+/* Types */
+KS_API_DATA ks_type
+    kstos_proc,
+    kstos_thread,
+    kstos_frame,
+    kstos_mutex,
+    kstos_walk,
+    kstos_path,
+    kstos_stat
+;
 
 
 #endif /* KS_OS_H */

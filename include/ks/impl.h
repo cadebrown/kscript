@@ -13,9 +13,6 @@
 #include <ks/ks.h>
 
 
-
-
-
 void ksi_object();
 void ksi_dotdotdot();
 void ksi_undefined();
@@ -31,6 +28,7 @@ void ksi_rational();
 
 void ksi_str();
 void ksi_bytes();
+
 void ksi_regex();
 void ksi_range();
 void ksi_slice();
