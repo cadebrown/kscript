@@ -63,8 +63,7 @@ To build kscript, you first need to get a copy of the source code. To get the la
 
 Then, open a shell (`bash`, `zsh`, etc.) in the directory with the source code and follow the instructions below for your platform
 
-
-### On Linux/Unix/MacOS
+### On Linux/UNIX Systems
 
 Requirements:
 
@@ -96,6 +95,17 @@ $ ./configure # give it '--help' to display options
 $ make
 $ make check # runs the standard tests
 ```
+
+### On MacOS Systems
+
+Due to some library incompatibilities, the surefire way to build kscript on MacOS is:
+
+```shell
+$ ./configure --with-ffi off --with-readline off
+$ make bin/ks -j16
+```
+
+Some builds (external shared libraries, extra modules) may not work directly (TODO/WIP), but the basic functionality and the standard library should work just fine
 
 ### On Windows
 

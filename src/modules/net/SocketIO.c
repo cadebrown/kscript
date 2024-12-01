@@ -263,7 +263,7 @@ bool ksnet_SocketIO_connect(ksnet_SocketIO self, kso addr) {
         memset(&serv_addr,0,sizeof(serv_addr));
         serv_addr.sin_family = ufk;
         serv_addr.sin_port = htons((uint16_t)port);
-        memcpy(&serv_addr.sin_addr.s_addr, server->h_addr, server->h_length);
+        memcpy(&serv_addr.sin_addr.s_addr, server->h_addr_list[0], server->h_length);
 
         /* Connect to address */
         if (connect(self->fd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)  { 

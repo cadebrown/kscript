@@ -94,16 +94,16 @@ static KS_TFUNC(T, getattr) {
     } else if (ks_str_eq_c(attr, "mode", 4)) {
         return (kso)ks_int_new(self->val.val.st_mode);
     } else if (ks_str_eq_c(attr, "mtime", 5)) {
-        struct timespec t = self->val.val.st_mtim;
-        ks_cfloat x = t.tv_sec + t.tv_nsec / 1000000000.0;
+        time_t t = self->val.val.st_mtime;
+        ks_cfloat x = t;//t.tv_sec + t.tv_nsec / 1000000000.0;
         return (kso)ks_float_new(x);
     } else if (ks_str_eq_c(attr, "atime", 5)) {
-        struct timespec t = self->val.val.st_atim;
-        ks_cfloat x = t.tv_sec + t.tv_nsec / 1000000000.0;
+        time_t t = self->val.val.st_atime;
+        ks_cfloat x = t;//t.tv_sec + t.tv_nsec / 1000000000.0;
         return (kso)ks_float_new(x);
     } else if (ks_str_eq_c(attr, "ctime", 5)) {
-        struct timespec t = self->val.val.st_ctim;
-        ks_cfloat x = t.tv_sec + t.tv_nsec / 1000000000.0;
+        time_t t = self->val.val.st_ctime;
+        ks_cfloat x = t;//t.tv_sec + t.tv_nsec / 1000000000.0;
         return (kso)ks_float_new(x);
     }
 
