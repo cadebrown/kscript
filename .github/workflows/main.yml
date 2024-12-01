@@ -43,17 +43,17 @@ jobs:
       - name: Check
         run: make check
 
-      # Bundle and build into 'ks.tar.gz'
+      # Bundle and build into 'kscript.tar.gz'
       # NOTE: We must turn it into a tar, since zipping it will not
       #   preseve symlinks
       - name: Bundle
         run: |
           make bundle
-          tar -C .tmp/bundle -czvf ks.tar.gz include bin lib
+          tar -C .tmp/bundle -czvf kscript.tar.gz include bin lib
 
       # Upload a compiled version of this
       - name: Upload Bundle
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
-          name: kscript-bundle
-          path: ks.tar.gz
+          name: kscript-tarball
+          path: kscript.tar.gz
