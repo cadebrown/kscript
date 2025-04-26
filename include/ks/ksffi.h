@@ -1,4 +1,4 @@
-/* ks/ffi.h - header for the 'ffi' (Foreign Function Interface) module in kscript
+/* ks/ksffi.h - header for the 'ffi' (Foreign Function Interface) module in kscript
  *
  * Provides wrappers for interfacing with C functions/libraries, through Foreign Function Interface
  * 

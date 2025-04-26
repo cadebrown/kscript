@@ -98,14 +98,22 @@ $ make check # runs the standard tests
 
 ### On MacOS Systems
 
-Due to some library incompatibilities, the surefire way to build kscript on MacOS is:
+The simplest way is to just build like this:
 
 ```shell
-$ ./configure --with-ffi off --with-readline off
+$ ./configure
 $ make bin/ks -j16
 ```
 
-Some builds (external shared libraries, extra modules) may not work directly (TODO/WIP), but the basic functionality and the standard library should work just fine
+If you install `libffi`, you can build with FFI support like this:
+
+```shell
+$ brew install libffi
+$ export CFLAGS="-I/opt/homebrew/opt/libffi/include"
+$ export LDFLAGS="-L/opt/homebrew/opt/libffi/lib"
+$ ./configure --with-ffi on
+$ make bin/ks -j16
+```
 
 ### On Windows
 

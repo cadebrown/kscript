@@ -4,7 +4,7 @@
  * @author:    Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
-#include <ks/ffi.h>
+#include <ks/ksffi.h>
 
 #define M_NAME "ffi"
 

@@ -224,7 +224,9 @@ static void handle_sigint(int signum) {
 
     /* Regenerate prompt and clear text */
     rl_on_new_line();
+#ifndef __APPLE__
     rl_replace_line("", 0);
+#endif
     rl_set_prompt(prompt0->data);
     rl_redisplay();
 
@@ -274,8 +276,10 @@ bool ks_inter() {
             // don't append a space
             rl_completion_append_character = '\0';
 
+#ifndef __APPLE__
             rl_catch_signals = 0;
             rl_clear_signals();
+#endif
             
             #else
 

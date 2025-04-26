@@ -69,7 +69,7 @@
 #include <ks/inuklear_xlib_gl3.h>
 
 
-#elif defined(HS_KAVE_glfw)
+#elif defined(KS_HAVE_glfw)
 #define KSNK_DO 1
 
 

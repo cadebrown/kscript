@@ -7,8 +7,38 @@
 
 import ffi
 
+
+# what paths to use
+cands = [
+    'libc.so.6',
+    '/usr/lib/libSystem.dylib',
+]
+
+func attempt_open(cand) {
+    try {
+        ret ffi.open(cand)
+    } catch {
+        ret none
+    }
+}
+
+
 # C library
-lib = ffi.open('libc.so.6')
+lib = none
+for cand in cands {
+    lib = attempt_open(cand)
+    if lib != none {
+        print("Successfully opened:", cand)
+        break
+    } else {
+        print("Failed to open:", cand)
+    }
+}
+
+if lib == none {
+    throw Error("Failed to open any of the candidates")
+}
+
 
 # Load the 'puts' function, with the given signature
 cputs = lib.load('puts', ffi.func[ffi.int, (ffi.ptr[ffi.char], )])
