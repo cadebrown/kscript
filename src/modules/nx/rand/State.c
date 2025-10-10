@@ -228,10 +228,10 @@ bool nxrand_randf(nxrand_State self, nx_t R) {
     return !nx_apply_elem(kern_randf, 1, (nx_t[]){ R }, NULL, (void*)&data);
 }
 
-bool nxrand_normal(nxrand_State self, nx_t R) {
+bool nxrand_normal(nxrand_State self, nx_t R, nx_t U, nx_t O) {
     struct kern_data data;
     data.s = self;
-    return !nx_apply_elem(kern_normal, 3, (nx_t[]){ R }, NULL, (void*)&data);
+    return !nx_apply_elem(kern_normal, 3, (nx_t[]){ R, U, O }, NULL, (void*)&data);
 }
 
 
@@ -297,20 +297,57 @@ static KS_TFUNC(T, randf) {
     return (kso)res;
 }
 
+// static KS_TFUNC(T, normal) {
+//     nxrand_State self;
+//     int nS;
+//     kso* S;
+//     KS_ARGS("self:* *shape", &self, nxrandt_State, &nS, &S);
+
+//     int rank;
+//     ks_size_t shape[NX_MAXRANK];
+//     if (!nx_getshapev(nS, S, &rank, shape)) {
+//         return NULL;
+//     }
+
+//     double uf = 0.0;
+//     double of = 1.0;
+//     nx_t u = nx_make(&uf, nxd_D, rank, shape, NULL);
+//     nx_t o = nx_make(&of, nxd_D, rank, shape, NULL);
+//     nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, rank, shape, NULL);
+//     if (!nxrand_normal(self, res->val, u, o)) {
+//         KS_DECREF(res);
+//         return NULL;
+//     }
+
+//     return (kso)res;
+// }
+
 static KS_TFUNC(T, normal) {
     nxrand_State self;
-    int nS;
-    kso* S;
-    KS_ARGS("self:* *shape", &self, nxrandt_State, &nS, &S);
+    kso S, u = KSO_NONE, o = KSO_NONE;
+    KS_ARGS("self:* shape ?u ?o", &self, nxrandt_State, &S, &u, &o);
 
     int rank;
     ks_size_t shape[NX_MAXRANK];
-    if (!nx_getshapev(nS, S, &rank, shape)) {
+    if (!nx_getshapev(1, (kso[]){ S }, &rank, shape)) {
         return NULL;
     }
 
+    nx_t U;
+    kso Ur;
+    if (!nx_get(u, NULL, &U, &Ur)) {
+        return NULL;
+    }
+    nx_t O;
+    kso Or;
+    if (!nx_get(o, NULL, &O, &Or)) {
+        KS_NDECREF(Ur);
+        return NULL;
+    }
     nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, rank, shape, NULL);
-    if (!nxrand_normal(self, res->val)) {
+    KS_NDECREF(Ur);
+    KS_NDECREF(Or);
+    if (!nxrand_normal(self, res->val, U, O)) {
         KS_DECREF(res);
         return NULL;
     }
@@ -335,7 +372,7 @@ void _ksi_nxrand_State() {
         
         {"randb",                  ksf_wrap(T_randb_, T_NAME ".randb(self, num=1)", "Generate 'num' random bytes")},
         {"randf",                  ksf_wrap(T_randf_, T_NAME ".randf(self, *shape)", "Generate random floats in [0, 1)")},
-        {"normal",                 ksf_wrap(T_normal_, T_NAME ".normal(self, *shape)", "Generate random floats in the normal distribution")},
+        {"normal",                 ksf_wrap(T_normal_, T_NAME ".normal(self, shape, u = 0, o = 1)", "Generate random floats in the normal distribution")},
 
     ));
 }

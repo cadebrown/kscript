@@ -587,7 +587,7 @@ static KS_TFUNC(m, isclose) {
 
 ks_module _ksi_m() {
 
-    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'m' - math module\n\n    This module implements common mathematical operations", KS_IKV(
+    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'m' - math module\nThis module implements common mathematical operations", KS_IKV(
         /* Constants */
         
         {"pi",                     (kso)ks_float_new(KSM_PI)},
@@ -603,44 +603,44 @@ ks_module _ksi_m() {
         {"round",                  ksf_wrap(m_round_, M_NAME ".round(x)", "Round a quantitity to the nearest integer, or towards '+inf' if it was in between integers")},
 
         {"sgn",                    ksf_wrap(m_sgn_, M_NAME ".sgn(x)", "Calculate the sign of 'x', returning either -1, 0, or +1")},
-        {"frexp",                  ksf_wrap(m_frexp_, M_NAME ".frexp(x)", "Calculate '(m, e)' such that 'x == m * 2 ** e'\n\n    Real numbers only")},
-        {"abs",                    ksf_wrap(m_abs_, M_NAME ".abs(x)", "Calculate the absolute value of 'x'\n\n    For complex numbers, the modulus is returned as a `float` object")},
+        {"frexp",                  ksf_wrap(m_frexp_, M_NAME ".frexp(x)", "Calculate '(m, e)' such that 'x == m * 2 ** e'\nReal numbers only")},
+        {"abs",                    ksf_wrap(m_abs_, M_NAME ".abs(x)", "Calculate the absolute value of 'x'\nFor complex numbers, the modulus is returned as a `float` object")},
 
         {"rad",                    ksf_wrap(m_rad_, M_NAME ".rad(x)", "Convert 'x' (which is understood to be in degrees) to an equivalent amount of radians")},
         {"deg",                    ksf_wrap(m_deg_, M_NAME ".deg(x)", "Convert 'x' (which is understood to be in radians) to an equivalent amount of degrees")},
 
-        {"sin",                    ksf_wrap(m_sin_, M_NAME ".sin(x)", "Calculate the sine of 'x' (which is understood to be in radians)\n\n    More information: https://en.wikipedia.org/wiki/Sine")},
-        {"cos",                    ksf_wrap(m_cos_, M_NAME ".cos(x)", "Calculate the cosine of 'x' (which is understood to be in radians)\n\n    More information: https://en.wikipedia.org/wiki/Cosine")},
-        {"tan",                    ksf_wrap(m_tan_, M_NAME ".tan(x)", "Calculate the tangent of 'x' (which is understood to be in radians)\n\n    More information: https://en.wikipedia.org/wiki/Trigonometric_functions#tan")},
+        {"sin",                    ksf_wrap(m_sin_, M_NAME ".sin(x)", "Calculate the sine of 'x' (which is understood to be in radians)\nMore information: https://en.wikipedia.org/wiki/Sine")},
+        {"cos",                    ksf_wrap(m_cos_, M_NAME ".cos(x)", "Calculate the cosine of 'x' (which is understood to be in radians)\nMore information: https://en.wikipedia.org/wiki/Cosine")},
+        {"tan",                    ksf_wrap(m_tan_, M_NAME ".tan(x)", "Calculate the tangent of 'x' (which is understood to be in radians)\nMore information: https://en.wikipedia.org/wiki/Trigonometric_functions#tan")},
 
-        {"asin",                   ksf_wrap(m_asin_, M_NAME ".asin(x)", "Calculate the arcsine of 'x' (returned in radians)\n\n    More information: https://en.wikipedia.org/wiki/Inverse_trigonometric_functions")},
-        {"acos",                   ksf_wrap(m_acos_, M_NAME ".acos(x)", "Calculate the arccosine of 'x' (returned in radians)\n\n    More information: https://en.wikipedia.org/wiki/Inverse_trigonometric_functions")},
-        {"atan",                   ksf_wrap(m_atan_, M_NAME ".atan(x)", "Calculate the arctangent of 'x' (returned in radians)\n\n    More information: https://en.wikipedia.org/wiki/Inverse_trigonometric_functions")},
+        {"asin",                   ksf_wrap(m_asin_, M_NAME ".asin(x)", "Calculate the arcsine of 'x' (returned in radians)\nMore information: https://en.wikipedia.org/wiki/Inverse_trigonometric_functions")},
+        {"acos",                   ksf_wrap(m_acos_, M_NAME ".acos(x)", "Calculate the arccosine of 'x' (returned in radians)\nMore information: https://en.wikipedia.org/wiki/Inverse_trigonometric_functions")},
+        {"atan",                   ksf_wrap(m_atan_, M_NAME ".atan(x)", "Calculate the arctangent of 'x' (returned in radians)\nMore information: https://en.wikipedia.org/wiki/Inverse_trigonometric_functions")},
 
-        {"atan2",                  ksf_wrap(m_atan2_, M_NAME ".atan2(x, y)", "Calculate the 2-argument arctangent function (analogous to 'atan(y / x)', but with different phases for some arguments)\n\n    This gives the unique value such that '0 <= m.atan(y, x) < m.tau' (for all x, y != 0)\n\n    NOTE: This is different than the standard function in C, which returns a value in the range: '(-pi, pi)' and accepts the arguments in reverse order\n\n    More information: https://en.wikipedia.org/wiki/Atan2\n\n    To define a custom function which behaves the way the C one does, you can use: 'func atan2_likec(y, x) { r = m.atan2(x, y); if r > m.pi, r = r - tau; ret r }'")},
+        {"atan2",                  ksf_wrap(m_atan2_, M_NAME ".atan2(x, y)", "Calculate the 2-argument arctangent function (analogous to 'atan(y / x)', but with different phases for some arguments)\nThis gives the unique value such that '0 <= m.atan(y, x) < m.tau' (for all x, y != 0)\nNOTE: This is different than the standard function in C, which returns a value in the range: '(-pi, pi)' and accepts the arguments in reverse order\nMore information: https://en.wikipedia.org/wiki/Atan2\nTo define a custom function which behaves the way the C one does, you can use: 'func atan2_likec(y, x) { r = m.atan2(x, y); if r > m.pi, r = r - tau; ret r }'")},
         
-        {"sinh",                   ksf_wrap(m_sinh_, M_NAME ".sinh(x)", "Calculate the hyperbolic sine of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Hyperbolic_functions")},
-        {"cosh",                   ksf_wrap(m_cosh_, M_NAME ".cosh(x)", "Calculate the hyperbolic cosine of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Hyperbolic_functions")},
-        {"tanh",                   ksf_wrap(m_tanh_, M_NAME ".tanh(x)", "Calculate the hyperbolic tangent of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Hyperbolic_functions")},
+        {"sinh",                   ksf_wrap(m_sinh_, M_NAME ".sinh(x)", "Calculate the hyperbolic sine of 'x'\nMore information: https://en.wikipedia.org/wiki/Hyperbolic_functions")},
+        {"cosh",                   ksf_wrap(m_cosh_, M_NAME ".cosh(x)", "Calculate the hyperbolic cosine of 'x'\nMore information: https://en.wikipedia.org/wiki/Hyperbolic_functions")},
+        {"tanh",                   ksf_wrap(m_tanh_, M_NAME ".tanh(x)", "Calculate the hyperbolic tangent of 'x'\nMore information: https://en.wikipedia.org/wiki/Hyperbolic_functions")},
 
-        {"asinh",                  ksf_wrap(m_asinh_, M_NAME ".asinh(x)", "Calculate the inverse hyperbolic sine of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions")},
-        {"acosh",                  ksf_wrap(m_acosh_, M_NAME ".acosh(x)", "Calculate the inverse hyperbolic cosine of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions")},
-        {"atanh",                  ksf_wrap(m_atanh_, M_NAME ".atanh(x)", "Calculate the inverse hyperbolic tangent of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions")},
+        {"asinh",                  ksf_wrap(m_asinh_, M_NAME ".asinh(x)", "Calculate the inverse hyperbolic sine of 'x'\nMore information: https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions")},
+        {"acosh",                  ksf_wrap(m_acosh_, M_NAME ".acosh(x)", "Calculate the inverse hyperbolic cosine of 'x'\nMore information: https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions")},
+        {"atanh",                  ksf_wrap(m_atanh_, M_NAME ".atanh(x)", "Calculate the inverse hyperbolic tangent of 'x'\nMore information: https://en.wikipedia.org/wiki/Inverse_hyperbolic_functions")},
         
-        {"sqrt",                   ksf_wrap(m_sqrt_, M_NAME ".sqrt(x)", "Calculate the square root of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Square_root")},
-        {"cbrt",                   ksf_wrap(m_cbrt_, M_NAME ".cbrt(x)", "Calculate the cube root of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Cube_root")},
+        {"sqrt",                   ksf_wrap(m_sqrt_, M_NAME ".sqrt(x)", "Calculate the square root of 'x'\nMore information: https://en.wikipedia.org/wiki/Square_root")},
+        {"cbrt",                   ksf_wrap(m_cbrt_, M_NAME ".cbrt(x)", "Calculate the cube root of 'x'\nMore information: https://en.wikipedia.org/wiki/Cube_root")},
 
-        {"hypot",                  ksf_wrap(m_hypot_, M_NAME ".hypot(x, y)", "Calculate the hypotenuse of a right triangle with sides 'x' and 'y'\n\n    The value is equivalent to 'sqrt(x**2 + y**2)', but perhaps with better precision")},
+        {"hypot",                  ksf_wrap(m_hypot_, M_NAME ".hypot(x, y)", "Calculate the hypotenuse of a right triangle with sides 'x' and 'y'\nThe value is equivalent to 'sqrt(x**2 + y**2)', but perhaps with better precision")},
 
-        {"exp",                    ksf_wrap(m_exp_, M_NAME ".exp(x)", "Calculates the exponential function at 'x'\n\n    More information: https://en.wikipedia.org/wiki/Exponential_function")},
-        {"pow",                    ksf_wrap(ksf_pow->cfunc, M_NAME ".pow(x, y, m=none)", "Calculates 'x**y'\n\n    Note: This is an alias to the builtin 'pow()' function")},
+        {"exp",                    ksf_wrap(m_exp_, M_NAME ".exp(x)", "Calculates the exponential function at 'x'\nMore information: https://en.wikipedia.org/wiki/Exponential_function")},
+        {"pow",                    ksf_wrap(ksf_pow->cfunc, M_NAME ".pow(x, y, m=none)", "Calculates 'x**y'\nNote: This is an alias to the builtin 'pow()' function")},
 
-        {"log",                    ksf_wrap(m_log_, M_NAME ".log(x, base=m.e)", "Calculates the logarithm (default: natural) of 'x'\n\n    More information: https://en.wikipedia.org/wiki/Logarithm")},
-        {"erf",                    ksf_wrap(m_erf_, M_NAME ".erf(x)", "Calculate the (Guassian) error function, evaluated at 'x'\n\n    Defined as $\\frac{2}{\\pi}\\int_{0}^{x} e^{-t^{2}} dt$\n\n    More information: https://en.wikipedia.org/wiki/Error_function")},
-        {"erfc",                   ksf_wrap(m_erfc_, M_NAME ".erfc(x)", "Calculate the complimentary (Guassian) error function, evaluated at 'x'\n\n    Defined as '1-m.erf(x)'")},
+        {"log",                    ksf_wrap(m_log_, M_NAME ".log(x, base=m.e)", "Calculates the logarithm (default: natural) of 'x'\nMore information: https://en.wikipedia.org/wiki/Logarithm")},
+        {"erf",                    ksf_wrap(m_erf_, M_NAME ".erf(x)", "Calculate the (Guassian) error function, evaluated at 'x'\nDefined as $\\frac{2}{\\pi}\\int_{0}^{x} e^{-t^{2}} dt$\nMore information: https://en.wikipedia.org/wiki/Error_function")},
+        {"erfc",                   ksf_wrap(m_erfc_, M_NAME ".erfc(x)", "Calculate the complimentary (Guassian) error function, evaluated at 'x'\nDefined as '1-m.erf(x)'")},
         
-        {"zeta",                   ksf_wrap(m_zeta_, M_NAME ".zeta(x)", "Calculate the Riemann Zeta function evaluated at 'x'\n\n    At 'x=0' (a pole), the returned value is non-finite\n\n    More information: https://en.wikipedia.org/wiki/Riemann_zeta_function")},
-        {"gamma",                  ksf_wrap(m_gamma_, M_NAME ".gamma(x)", "Calculate the Gamma function at 'x'\n\n    At non-positive integers (i.e. 0, -1, -2, -3, ...), `nan` is returned\n\n    More information: https://en.wikipedia.org/wiki/Gamma_function")},
+        {"zeta",                   ksf_wrap(m_zeta_, M_NAME ".zeta(x)", "Calculate the Riemann Zeta function evaluated at 'x'\nAt 'x=0' (a pole), the returned value is non-finite\nMore information: https://en.wikipedia.org/wiki/Riemann_zeta_function")},
+        {"gamma",                  ksf_wrap(m_gamma_, M_NAME ".gamma(x)", "Calculate the Gamma function at 'x'\nAt non-positive integers (i.e. 0, -1, -2, -3, ...), `nan` is returned\nMore information: https://en.wikipedia.org/wiki/Gamma_function")},
 
         {"agm",                    ksf_wrap(m_agm_, M_NAME ".agm(x, y, err=float.EPS)", "Calculates the arithmetic-geometric mean of 'x' and 'y'")},
 
@@ -651,11 +651,11 @@ ks_module _ksi_m() {
 
         {"modinv",                 ksf_wrap(m_modinv_, M_NAME ".modinv(x, N)", "Calculate the multiplicative inverse of 'x' modulo 'N'")},
 
-        {"gcd",                    ksf_wrap(m_gcd_, M_NAME ".gcd(x, y)", "Compute the greatest common denominator of 'x' and 'y'\n\n    The result given by this function is always positive")},
-        {"egcd",                   ksf_wrap(m_egcd_, M_NAME ".egcd(x, y)", "Compute (via the extended greatest common denominator algorithm) a tuple of '(g, s, t)' such that: 'x*s + y*t == g == gcd(x, y)'\n\n    There are a few special cases:\n\n      * If 'abs(x) == abs(y)', then 's == 0' and 't == m.sgn(y)'")},
+        {"gcd",                    ksf_wrap(m_gcd_, M_NAME ".gcd(x, y)", "Compute the greatest common denominator of 'x' and 'y'\nThe result given by this function is always positive")},
+        {"egcd",                   ksf_wrap(m_egcd_, M_NAME ".egcd(x, y)", "Compute (via the extended greatest common denominator algorithm) a tuple of '(g, s, t)' such that: 'x*s + y*t == g == gcd(x, y)'\nThere are a few special cases:\n  * If 'abs(x) == abs(y)', then 's == 0' and 't == m.sgn(y)'")},
 
         {"fact",                   ksf_wrap(m_fact_, M_NAME ".fact(x)", "Calculate the factorial of 'x'")},
-        {"choose",                 ksf_wrap(m_choose_, M_NAME ".choose(n, k)", "Calculate the binomial coefficient at 'n' and 'k' (also known as 'n choose k')\n\n    This value is 'm.fact(n) // (m.fact(k) * m.fact(n - k))'")},
+        {"choose",                 ksf_wrap(m_choose_, M_NAME ".choose(n, k)", "Calculate the binomial coefficient at 'n' and 'k' (also known as 'n choose k')\nThis value is 'm.fact(n) // (m.fact(k) * m.fact(n - k))'")},
 
 
         {"isclose",                ksf_wrap(m_isclose_, M_NAME ".isclose(x, y, abs_err=1e-6, rel_err=1e-6)", "Calculate whether 'x' and 'y' are close, within a relative error of 'rel_err' and absolute error of 'abs_err'. By default, returns true if they are within 9 digits of accuracy")},

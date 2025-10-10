@@ -6,7 +6,8 @@ This references the code writtein in 'vecadd.c'. So, you'll have to compile that
 Here's how to run this example:
 
 ```
-$ make
+# from the root of the repository
+$ make -C examples/ffi/vecadd
 cc -fPIC -c vecadd.c -o vecadd.o
 cc -shared vecadd.o -o libvecadd.so
 $ ks vecadd.ks
@@ -21,10 +22,9 @@ import ffi
 
 import m
 
-
 # Load the library we compiled
 # If this fails, you need to run `make` inside the `vecadd` directory
-libvecadd = ffi.open('libvecadd.so')
+libvecadd = ffi.open('./examples/ffi/vecadd/libvecadd.so')
 
 # vec3f - Vector type (defined in 'vecadd.c')
 type vec3f extends ffi.struct[
@@ -53,11 +53,15 @@ for i in range(N) {
     C[i] = vec3f(3 * i + 0, 3 * i + 1, 3 * i + 2)
 }
 
+
 # Compute vecadd
 cvecadd(N, A, B, C)
 
 # Double check results
 for i in range(N) {
+    if i < 10 {
+        print("A[", i, "]:", A[i], " | B[", i, "]:", B[i], " | C[", i, "]:", C[i])
+    }
     assert m.isclose(A[i].x, B[i].x + C[i].x) && m.isclose(A[i].y, B[i].y + C[i].y) && m.isclose(A[i].z, B[i].z + C[i].z)
 }
 

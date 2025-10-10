@@ -82,13 +82,14 @@ static KS_TFUNC(T, call) {
         req_nargs--;
     }
 
+
     if (is_va) {
         if (nargs < req_nargs) {
             KS_THROW(kst_Error, "Variadic C-style function expected at least %i arguments, but only got %i", req_nargs, nargs);
             return NULL;
         }
     } else if (nargs != req_nargs) {
-        KS_THROW(kst_Error, "C-style function expected %i arguments, but got %i", req_nargs, nargs);
+        KS_THROW(kst_Error, "C-style function expected %i arguments, but got %i", (int)req_nargs, (int)nargs);
         return NULL;
     }
 
@@ -98,8 +99,10 @@ static KS_TFUNC(T, call) {
     ffi_type* f_restype = NULL;
     ks_type rtp = (ks_type)self->type->i__template->elems[0];
     if (!ksffi_libffi_type(rtp, &f_restype)) {
+
         return NULL;
     }
+
 
     /* Argument types */
     ffi_type** f_argtypes = ks_zmalloc(sizeof(*f_argtypes), nargs);
@@ -197,7 +200,7 @@ static KS_TFUNC(T, call) {
     ks_free(res);
     return rr;
 #else
-    KS_THROW(kst_PlatformWarning, "Failed to call C-style function wrapper: Platform had no libffi support (was not compiled with '--with-ffi')");
+    KS_THROW(kst_Error, "Failed to call C-style function wrapper: Platform had no libffi support (was not compiled with '--with-ffi')");
     return NULL;
 #endif
 }

@@ -176,7 +176,7 @@ static struct ks_type_s tp;
 ks_type kst_enum = &tp;
 
 void _ksi_enum() {
-    _ksinit(kst_enum, kst_int, T_NAME, sizeof(struct ks_enum_s), -1, "Enumeration of (integral) values, with associated names and values\n\n    This is a numeric (and integral) type, and is treated this way in expressions\n\n    SEE: https://en.wikipedia.org/wiki/Enumeration", KS_IKV(
+    _ksinit(kst_enum, kst_int, T_NAME, sizeof(struct ks_enum_s), -1, "Enumeration of (integral) values, with associated names and values\nThis is a numeric (and integral) type, and is treated this way in expressions\nSEE: https://en.wikipedia.org/wiki/Enumeration", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of)", "")},
         {"make",                   ksf_wrap(T_make_, T_NAME ".make(name, members)", "Creates a new enumeration from a dictionary or a list of tuples")},
         {"__getattr",              ksf_wrap(T_getattr_, T_NAME ".__getattr(self, attr)", "")},

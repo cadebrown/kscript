@@ -15,11 +15,15 @@ fp = av.open("./assets/video/rabbitman.mp4")
 vid = fp.best_video()
 aud = fp.best_audio()
 
-for frame in vid {
-    print (frame.shape)
-}
+print(vid)
 
-for chunk in aud {
-    print (chunk.shape)
-}
+
+
+#for frame in vid {
+#    print (frame.shape)
+#}
+
+#for chunk in aud {
+#    print (chunk.shape)
+#}
 

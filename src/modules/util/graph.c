@@ -583,7 +583,7 @@ void _ksi_graph() {
         {"__next",                 ksf_wrap(TD_next_, TD_NAME ".__next(self)", "")},
     ));
 
-    _ksinit(kst_graph, kst_object, T_NAME, sizeof(struct ks_graph_s), -1, "Graphs are collections of nodes and edges. Edges connect various nodes, and thus can represent relationships between nodes. Edges are directional, which means they have a 'from' and 'to' node (which may be the same node)\n\n    Bidirectional graphs may be emulated with two edges for each connection\n\n    SEE: https://en.wikipedia.org/wiki/Graph_(abstract_data_type)", KS_IKV(
+    _ksinit(kst_graph, kst_object, T_NAME, sizeof(struct ks_graph_s), -1, "Graphs are collections of nodes and edges. Edges connect various nodes, and thus can represent relationships between nodes. Edges are directional, which means they have a 'from' and 'to' node (which may be the same node)\nBidirectional graphs may be emulated with two edges for each connection\nSEE: https://en.wikipedia.org/wiki/Graph_(abstract_data_type)", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, nodes=none, edges=none)", "")},
@@ -593,7 +593,7 @@ void _ksi_graph() {
         {"__getelem",              ksf_wrap(T_getelem_, T_NAME ".__getelem(self, *args)", "Use like: '__getelem(self, u)' or '__getelem(self, u, v)'")},
         {"__setelem",              ksf_wrap(T_getelem_, T_NAME ".__setelem(self, *args)", "")},
 
-        {"_dotfile",               ksf_wrap(T_dotfile_, T_NAME "._dotfile(self)", "Generate a Graphviz dotfile source\n\n    SEE: https://graphviz.org/")},
+        {"_dotfile",               ksf_wrap(T_dotfile_, T_NAME "._dotfile(self)", "Generate a Graphviz dotfile source\nSEE: https://graphviz.org/")},
         {"bfs",                    KS_NEWREF(kst_graph_bfs)},
         {"dfs",                    KS_NEWREF(kst_graph_dfs)},
     ));

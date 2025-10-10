@@ -119,7 +119,7 @@ static struct ks_type_s tp;
 ks_type kst_ast = &tp;
 
 void _ksi_ast() {
-    E_kind = ks_enum_make(T_NAME, KS_EIKV(
+    E_kind = ks_enum_make(T_NAME ".Kind", KS_EIKV(
     {"CONST", KS_AST_CONST},
     {"NAME", KS_AST_NAME},
     {"LIST", KS_AST_LIST},

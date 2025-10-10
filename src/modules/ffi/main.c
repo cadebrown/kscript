@@ -39,7 +39,10 @@ bool ksffi_libffi_type(ks_type tp, ffi_type** res) {
 
     CASE(ksffit_float,  &ffi_type_float)
     CASE(ksffit_double,  &ffi_type_double)
+#if !defined(__APPLE__)
+    // no such longdouble on macOS
     CASE(ksffit_longdouble, &ffi_type_longdouble)
+#endif
     
     CASE(ksffit_ptr, &ffi_type_pointer)
 

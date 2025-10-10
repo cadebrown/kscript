@@ -41,6 +41,7 @@ p.opt("num", ["-n", "--num"], "Number of iterations of JPEG compression to apply
 
 args = p.parse()
 
+
 # Returns an image that has JPEG compression applied to it
 func jpegify(img, n=1) {
 
@@ -61,4 +62,5 @@ func jpegify(img, n=1) {
 }
 
 # Actually perform conversion
+
 av.imwrite(args.output, jpegify(av.imread(args.input), args.num))

@@ -131,9 +131,10 @@ uname_="$(uname -s)"
 
 # auto-detect
 if [ "x$PLATFORM" = 'xauto' ]; then
+    echo "Detecting platform... for uname: $uname_"
     case "${uname_}" in
         Linux*)     PLATFORM=linux;;
-        darwin*)    PLATFORM=darwin;;
+        darwin*|Darwin*)    PLATFORM=darwin;;
         CYGWIN*)    PLATFORM=cygwin;;
         MINGW*)     PLATFORM=mingw;;
         *)          PLATFORM="unknown-$uname_"
@@ -161,7 +162,7 @@ if [ "x$EXTSTATIC" = 'xauto' ]; then
     case "$PLATFORM" in
         cygwin*)    EXTSTATIC=".lib";;
         mingw*)     EXTSTATIC=".lib";;
-        web*)       EXTSHARED=".js";;
+        web*)       EXTSTATIC=".js";;
         *)          EXTSTATIC=".a"
     esac
 fi
@@ -170,7 +171,7 @@ if [ "x$EXTBINARY" = 'xauto' ]; then
     case "$PLATFORM" in
         cygwin*)    EXTBINARY=".exe";;
         mingw*)     EXTBINARY=".exe";;
-        web*)       EXTSHARED=".js";;
+        web*)       EXTBINARY=".js";;
         *)          EXTBINARY=""
     esac
 fi
@@ -181,6 +182,10 @@ if [ "x$COLORS" = 'xauto' ]; then
         *)      COLORS="on"
     esac
 fi
+
+
+
+echo "DETECTED: PLATFORM = $PLATFORM"
 
 
 # -- Detect Features --
@@ -422,37 +427,84 @@ int main(int argc, char** argv) {
 }
 "
 
-check_clib x "$WITH_x" "" "-lX11" "
-#ifdef KS_HAVE_WINDOWS_H
- #include <windows.h>
-#endif
 
-#include <X11/Xlib.h>
+if [ "$PLATFORM" != "web" ]; then
 
-int main(int argc, char** argv) {
-    XOpenDisplay(NULL);
-    return 0;
-}
-"
+    if [ "$PLATFORM" = "darwin" ]; then
+        # X11 not supported on macOS, so give an error if it was anything other than 'off' or 'auto'
+        if [ "$WITH_x" != "off" ] && [ "$WITH_x" != "auto" ]; then
+            echo "X11 is not supported on macOS, so --with-x must be 'off' or 'auto'"
+            exit 1
+        else
+            echo "X11 is not supported on macOS, so --with-x was set to 'off'"
+        fi
+    else
+        check_clib x "$WITH_x" "" "-lX11" "
+    #ifdef KS_HAVE_WINDOWS_H
+    #include <windows.h>
+    #endif
 
-check_clib opengl "$WITH_opengl" "" "-lGL" "
-#ifdef KS_HAVE_WINDOWS_H
- #include <windows.h>
-#endif
+    #include <X11/Xlib.h>
 
-int main(int argc, char** argv) {
-    glLoadIdentity();
-    return 0;
-}
-"
+    int main(int argc, char** argv) {
+        XOpenDisplay(NULL);
+        return 0;
+    }
+    "
+    fi
+    # different on macos/linux
+    if [ "$PLATFORM" = "darwin" ]; then
+        echo "Checking OpenGL for macOS"
+        check_clib opengl "$WITH_opengl" "" "-framework OpenGL" "
+    #ifdef KS_HAVE_WINDOWS_H
+    #include <windows.h>
+    #endif
 
-check_clib glfw "$WITH_glfw" "" "-lglfw" "
-#include <GLFW/glfw3.h>
+    #include <OpenGL/gl.h>
 
-int main(int argc, char** argv) {
-    return 0;
-}
-"
+    int main(int argc, char** argv) {
+        glLoadIdentity();
+        return 0;
+    }
+    "
+    else
+        check_clib opengl "$WITH_opengl" "" "-lGL" "
+    #ifdef KS_HAVE_WINDOWS_H
+    #include <windows.h>
+    #endif
+
+    //#include <OpenGL/gl.h>
+    #include <EGL/egl.h>
+
+    int main(int argc, char** argv) {
+        //glLoadIdentity();
+        return 0;
+    }
+    "
+    fi
+    # different on macos/linux
+    if [ "$PLATFORM" = "darwin" ]; then
+        # have to use 'framework' on macos
+        check_clib glfw "$WITH_glfw" "" "-lglfw -framework OpenGL -framework IOKit -framework Cocoa" "
+    #include <GLFW/glfw3.h>
+
+    int main(int argc, char** argv) {
+        return 0;
+    }
+    "
+    else
+        # normal on linux
+        check_clib glfw "$WITH_glfw" "" "-lglfw" "
+    #include <GLFW/glfw3.h>
+
+    int main(int argc, char** argv) {
+        return 0;
+    }
+    "
+    fi
+
+fi
+
 
 echo ""
 echo " -- Structures -- "
@@ -981,12 +1033,15 @@ echo "# Makefile (GENERATED) - auto-generated build script" > $T
 echo "" >> $T
 echo "# -*- Values -*-" >> $T
 echo "" >> $T
-echo "VERS             := 0.2.2" >> $T
+echo "VERS             := 0.3.1" >> $T
 echo "" >> $T
 echo "# -*- Paths -*-" >> $T
 echo "CC               := $CC" >> $T
 echo "CFLAGS           := $CFLAGS" >> $T
 echo "LDFLAGS          := $LDFLAGS" >> $T
+echo "LD_LIBRARY_PATH  := $LD_LIBRARY_PATH" >> $T
+echo "LIBRARY_PATH     := $LIBRARY_PATH" >> $T
+echo "C_INCLUDE_PATH   := $C_INCLUDE_PATH" >> $T
 echo "" >> $T
 echo "PREFIX           := $PREFIX" >> $T
 echo "DESTDIR          ?= $DESTDIR" >> $T
@@ -1029,7 +1084,12 @@ echo "" >> $T
 echo ".PHONY: default lib bin check install uninstall bundle clean docs FORCE" >> $T
 echo "" >> $T
 echo "# meta-rules that just are shorthands for other ones" >> $T
-echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN) \$(libksmext)" >> $T
+
+if [ "$PLATFORM" = "web" ]; then
+    echo "default: \$(libks_SHARED)" >> $T
+else
+    echo "default: \$(libks_SHARED) \$(libks_STATIC) \$(ks_BIN) \$(libksmext)" >> $T
+fi
 echo "lib: \$(libks_SHARED) \$(libks_STATIC) \$(libksmext)" >> $T
 echo "bin: \$(ks_BIN)" >> $T
 echo "clean: FORCE" >> $T
@@ -1051,8 +1111,9 @@ for dir in src/extmodules/*; do
     printf "	install -m 644 ksm_%s%s \$(TODIR)/lib/ks-\$(VERS)/kpm/%s\n" "${dir##*/}" "$EXTSHARED" "${dir##*/}" >> $T
 done
 
-echo "	strip \$(TODIR)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
-echo "	strip \$(TODIR)/lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN))" >> $T
+# stripping not really necessary
+#echo "	strip --strip-debug \$(TODIR)/lib/ks-\$(VERS)/lib/\$(notdir \$(libks_SHARED))" >> $T
+#echo "	strip --strip-debug \$(TODIR)/lib/ks-\$(VERS)/bin/\$(notdir \$(ks_BIN))" >> $T
 
 echo "	install -d \$(TODIR)/bin" >> $T
 echo "	install -d \$(TODIR)/include" >> $T
@@ -1101,7 +1162,15 @@ echo "\$(libks_SHARED): \$(libks_O)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
 echo "	\$(CC) -L./lib \\" >> $T
 echo "		\$(libks_O) \\" >> $T
-echo "		\$(LDFLAGS) -fPIC -shared -o \$@" >> $T
+if [ "$PLATFORM" = "darwin" ]; then
+    # macOS needs the install_name to be set for shared libraries
+    echo "		-install_name @rpath/\$(notdir \$@) \\" >> $T
+elif [ "$PLATFORM" = "web" ]; then
+    # emscripten needs special flags for shared libraries
+    echo "		-sMODULARIZE=1 -sASYNCIFY=1 -sFETCH -sEXPORT_NAME='libks' -sMAIN_MODULE=1 -lidbfs.js --pre-js src/web/pre.js --preload-file ./assets/image@/static/image --preload-file ./assets/text@/static/text \\" >> $T
+fi
+echo "		\$(LDFLAGS) -fPIC -shared \\" >> $T
+echo "		-o \$@" >> $T
 echo "" >> $T
 echo "\$(libks_STATIC): \$(libks_O)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
@@ -1109,9 +1178,24 @@ echo "	\$(AR) cr \$@ \$^" >> $T
 echo "" >> $T
 echo "\$(ks_BIN): \$(ks_O) \$(libks_SHARED)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
-echo "	\$(CC) -L./lib -Wl,-rpath,'\$\$ORIGIN' -Wl,-rpath,'\$\$ORIGIN/../lib' \\" >> $T
+
+echo "	\$(CC) \\" >> $T
+#echo "		\$(LDFLAGS) -Wl,-rpath,'@loader_path/../lib' -L./lib -lks -o \$@" >> $T
+echo "		\$(LDFLAGS) \\" >> $T
+
+if [ "$PLATFORM" = "linux" ]; then
+    # on Linux, use rpath origin semantics
+    echo "		-Wl,-rpath,'\$\$ORIGIN' -Wl,-rpath,'\$\$ORIGIN/../lib -L./lib -lks' \\" >> $T
+elif [ "$PLATFORM" = "darwin" ]; then
+    # macOS needs the install_name
+    echo "		-Wl,-rpath,'@loader_path/../lib' -L./lib -lks \\" >> $T
+fi
+
+# echo "		\$(LDFLAGS) -Wl,-rpath,'@loader_path/../lib' -L./lib -lks \\" >> $T
+
 echo "		\$(ks_O) \\" >> $T
-echo "		-lks \$(LDFLAGS) -o \$@" >> $T
+echo "		-o \$@" >> $T
+
 echo "" >> $T
 echo "docs: \$(docs_HTML_MONO) \$(docs_HTML_DIR) \$(docs_PDF)" >> $T
 echo "\$(docs_PDF): \$(docs_TEXI)" >> $T
@@ -1133,9 +1217,12 @@ for dir in src/extmodules/*; do
     echo "" >> $T
     echo "	@mkdir -p \$(dir \$@)" >> $T
     echo "	\$(CC) -L./lib \\" >> $T
-    printf "		\$(libksm_%s_O) -lks \\" "$mn" >> $T
-    echo "" >> $T
-    echo "		\$(LDFLAGS) -fPIC -shared -o \$@" >> $T
+    echo "		\$(libksm_${mn}_O) \\" >> $T
+    if [ "$PLATFORM" = "web" ]; then
+        echo "		\$(LDFLAGS) -fPIC -shared -sSIDE_MODULE=1 -sASYNCIFY=1 -o \$@" >> $T
+    else
+        echo "		\$(LDFLAGS) -lks -fPIC -shared -o \$@" >> $T
+    fi
 done
 echo "" >> $T
 echo "" >> $T

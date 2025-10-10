@@ -26,6 +26,9 @@ static const char
 ;
 
 bool ks_logger_clogv(ks_logger self, int level, const char* file, const char* func, int line, const char* fmt, va_list ap) {
+    if (!ks_has_init()) {
+        return true;
+    }
     ks_cint sl = self->level;
     if (sl <= 0) {
         /* Don't print anything */
@@ -94,6 +97,9 @@ bool ks_logger_clogv(ks_logger self, int level, const char* file, const char* fu
 }
 
 bool ks_logger_clog(ks_logger self, int level, const char* file, const char* func, int line, const char* fmt, ...) {
+    if (!ks_has_init()) {
+        return true;
+    }
     va_list ap;
     va_start(ap, fmt);
     bool res = ks_logger_clogv(self, level, file, func, line, fmt, ap);
@@ -121,6 +127,9 @@ bool ks_logger_klog(ks_logger self, int level, ksos_frame frame, const char* fmt
 /* C-API */
 
 ks_logger ks_logger_gett(ks_type tp, ks_str name) {
+    if (!ks_has_init()) {
+        return NULL;
+    }
     ks_tuple key = ks_tuple_new(2, (kso[]){ (kso)tp, (kso)name });
     ks_logger res = (ks_logger)ks_dict_get(all_loggers, (kso)key);
     if (res) {
@@ -146,9 +155,15 @@ ks_logger ks_logger_gett(ks_type tp, ks_str name) {
 }
 
 ks_logger ks_logger_get(ks_str name) {
+    if (!ks_has_init()) {
+        return NULL;
+    }
     return ks_logger_gett(kst_logger, name);
 }
 ks_logger ks_logger_get_c(const char* name) {
+    if (!ks_has_init()) {
+        return NULL;
+    }
     ks_str t0 = ks_str_new(-1, name);
     ks_logger res = ks_logger_get(t0);
     KS_DECREF(t0);

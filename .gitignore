@@ -2,6 +2,7 @@
 
 .vscode/
 
+install/
 
 # -*- COMPILING  -*-
 
@@ -14,16 +15,17 @@
 *.lib
 *.la
 *.dll
+*.dylib
 
-*.js
-*.wasm
-
+# *.js
+# *.wasm
 
 # -*- GENERATED -*-
 
 # by ./configure
 /makefile
 /include/ks/config.h
+
 
 # misc. folders for targets
 /lib/
@@ -46,9 +48,10 @@
 
 configure-test.c
 configure-test.o
+configure-test.wasm
 configure-check.c
 configure-check.o
-
+configure-check.wasm
 
 # TeXinfo
 
@@ -57,9 +60,13 @@ configure-check.o
 *.cps
 *.info
 *.toc
-*.html
 *.pdf
 *.log
+
+
+
+emsdk/
+
 
 
 ## Ignore Visual Studio temporary files, build results, and
@@ -79,6 +86,8 @@ configure-check.o
 
 # Mono auto generated files
 mono_crash.*
+
+.DS_Store
 
 # Build results
 [Dd]ebug/

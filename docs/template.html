@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang='en'>
+<head>
+    <meta charset='utf-8'>
+    <meta http-equiv='X-UA-Compatible' content='IE=edge'>
+    <meta name='viewport' content='width=device-width,initial-scale=1.0'>
+    <title>$title$</title>
+
+<!-- MathJax -->
+    <script>
+    MathJax = {
+        tex: {
+            inlineMath: [['$$$$', '$$$$']]
+        }
+    };
+    </script>
+    <script id='MathJax-script' async src='https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js'></script>
+
+<!-- highlight.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/styles/default.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script>
+    <script src='./site-hljs-kscript.js'></script>
+    <script>hljs.highlightAll();</script>
+
+<!-- kscript specific assets -->
+    <script src='./site.js'></script>
+    <link rel="stylesheet" href="./site.css"> 
+</head>
+<body>
+    <nav class="sidenav">
+        $toc$
+    </nav>
+    <main>
+        $body$
+    </main>
+</body>
+</html>

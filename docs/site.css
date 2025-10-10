@@ -1,0 +1,301 @@
+
+/** General CSS **/
+
+html {
+    font-size: 15px;
+}
+
+body {
+    
+    font-family: monospace, monospace;
+    
+    line-height: 1.15;
+    
+    margin: 0;
+    padding: 0;
+    width: 100%;
+
+
+    /* display: flex; */
+    /* Default text font */
+
+    /*display: flex;
+    flex-direction: row;
+    min-height: 100vh;
+    width: 100vw;
+    display: flex; */
+
+    /* margin-left: 350px; */
+}
+
+nav {
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    width: 350px;
+    height: 100%;
+    overflow-x: hidden;
+    padding: 0.5em;
+    font-size: 0.9rem;
+}
+
+
+main {
+    width: auto;
+    margin-left: 350px;
+    padding: 0 2em;
+}
+
+
+
+/* @media print { */
+
+@media print {
+    nav {
+        display: none;
+    }
+    main {
+        margin: 0;
+        /* margin: 1.5em; */
+    }
+    pre {
+        white-space: pre-wrap;
+    }
+
+    @page {
+        padding: 1em;
+    }
+}
+
+
+nav.asdf {
+    background: #ddd;
+    /* overflow: auto; */
+
+    position: fixed;
+
+    /* height: 100vh; */
+
+    /* height: 100%;
+    position: fixed;
+    z-index: 1;
+    top: 0;
+    left: 0;
+    overflow-x: hidden; */
+
+
+    width: 300px;
+    padding: 0.5em;
+    font-size: 0.85rem;
+
+    /* height: 100vh; */
+
+    /* background: #ddd;
+    font-size: 0.9rem;
+    width: 300px; */
+    /* flex: 0 0 300px; */
+    /* height: 100vh; */
+}
+
+
+
+main.asdf {
+    /* background: #eee; */
+    flex: 1;
+    /* overflow: auto; */
+    /* height: 100vh; */
+    /* overflow-x: hidden; */
+    padding: 0 1em;
+    padding-left: 320px;
+    width: auto;
+    /* margin: 0; */
+    /* padding: 1.0em; */
+}
+
+/* on the first level of TOC in the nav, don't make it a list */
+
+nav > ul  {
+    list-style: none;
+    /* padding-left: 0; */
+    padding: 0;
+    /* padding: 0.5em; */
+    margin: 0;
+    display: block;
+}
+
+/* on the first level of TOC in the nav, don't make it a list */
+nav > ul > li > ul {
+    list-style: none;
+    /* padding-left: 0; */
+    padding: 0;
+    /* padding: 0.5em; */
+    margin: 0;
+    display: block;
+}
+
+/* and, add an hr divider psuedo-element after each top-level list item */
+nav > ul > li > ul > li::after {
+    content: "";
+    display: block;
+    border-bottom: 1px solid #222;
+    margin: 0.5em 0;
+}
+
+
+/* second level, make it use the first-level list style */
+nav ul ul,
+nav ul ol,
+nav ol ul,
+nav ol ol {
+    list-style: initial;
+    padding-left: 1.6em;
+    margin: 0;
+}
+
+nav a {
+    text-decoration: none;
+    color: #0f52aa;
+}
+
+
+
+nav li,
+nav li {
+}
+
+
+dt {
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 1.1em;
+    margin-bottom: 0.25em;
+}
+
+dd {
+    margin-bottom: 1.25em;
+    margin-left: 2.0em;
+}
+/* code {
+    line-height: 1.4;
+    font-size: 110%;
+    background-color: #f0f0f0;
+    padding: 0.1em;
+} */
+
+pre {
+    /* font-size: 1.05em; */
+    background-color: #f0f0f0;
+    margin: 0.25em 0;
+}
+
+
+
+.anchor-link {
+    margin: 0 0.25em;
+    color: #0f52aa;
+
+    /* don't copy the text when copying */
+    user-select: none;
+
+    /* don't show by default */
+    visibility: hidden;
+
+    /* don't underline the link */
+    text-decoration: none;
+
+}
+
+.anchor-link::after {
+        
+    /* use section symbol */
+    content: "§";
+
+
+}
+h1:hover > .anchor-link,
+h2:hover > .anchor-link,
+h3:hover > .anchor-link,
+h4:hover > .anchor-link,
+h5:hover > .anchor-link,
+dt:hover > .anchor-link {
+    /* show when hovering over header */
+    visibility: visible;
+}
+
+*:hover > .anchor-link {
+    /* show when hovering over header */
+    visibility: visible;
+}
+
+/** Code Highlighting **/
+
+pre code.hljs {
+    background-color: transparent !important;
+    display: block;
+    overflow-x: auto;
+    background: white;
+    color: #272727;
+    padding: 0.5em;
+}
+
+.hljs-emphasis {
+    font-style: italic;
+}
+.hljs-strong {
+    font-weight: bold;
+}
+
+.hljs-comment,
+.hljs-quote {
+    color: #407e7e;
+}
+
+.hljs-meta,
+.hljs-link {
+    color: #c82829;
+}
+
+.hljs-variable,
+.hljs-template-variable,
+.hljs-tag,
+.hljs-name,
+.hljs-selector-id,
+.hljs-selector-class,
+.hljs-regexp,
+.hljs-deletion {
+    color: #c82829;
+}
+
+.hljs-built_in,
+.hljs-builtin-name,
+.hljs-type,
+.hljs-params {
+    color: #0048ce;
+}
+
+.hljs-attribute {
+    color: #eab700;
+}
+
+.hljs-number,
+.hljs-literal {
+    color: #1f85ce;
+}
+
+.hljs-string,
+.hljs-symbol,
+.hljs-bullet,
+.hljs-addition {
+    color: #3e9616;
+}
+
+.hljs-title,
+.hljs-section {
+    color: #108e97;
+}
+
+.hljs-keyword,
+.hljs-selector-tag {
+    color: #7d1cec;
+}

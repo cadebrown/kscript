@@ -232,6 +232,9 @@ static bool buildgraph(ks_type self, ks_graph res) {
     }
     int i;
     for (i = 0; i < self->n_subs; ++i) {
+        if (self->subs[i] == self) {
+            continue;
+        }
         if (!buildgraph(self->subs[i], res)) return false;
 
         if (!ks_graph_add_edge(res, (kso)self, (kso)self->subs[i], KSO_NONE, false)) {
@@ -262,7 +265,10 @@ static KS_TFUNC(T, graph) {
         lit = it;
         it = it->i__base;
 
-        ks_graph_add_node(res, (kso)it, false);
+        if (it != self) {
+            ks_graph_add_node(res, (kso)it, false);
+        }
+
         ks_graph_add_edge(res, (kso)it, (kso)lit, KSO_NONE, false);
 
     }  while (it != kst_object);

@@ -28,7 +28,7 @@ static int my_av_read(void* opaque, uint8_t* buf, int nbuf) {
 }
 
 /* libav IO 'write' callback */
-static int my_av_write(void* opaque, uint8_t* buf, int nbuf) {
+static int my_av_write(void* opaque, const uint8_t* buf, int nbuf) {
     ksav_IO self = (ksav_IO)opaque;
 
     ks_ssize_t rsz = ksio_writeb(self->iio, nbuf, buf);
@@ -379,7 +379,7 @@ static kso ksav_decode(ksav_IO self, int sidx, AVPacket* packet) {
         /* Return audio data */
 
         /* Number of channels in the audio */
-        int channels = s->codctx->channels;
+        int channels = s->codctx->ch_layout.nb_channels;
 
         /* Sample rate */
         int hz = s->codctx->sample_rate;

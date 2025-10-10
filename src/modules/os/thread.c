@@ -244,7 +244,7 @@ static struct ks_type_s tp;
 ks_type ksost_thread = &tp;
 
 void _ksi_os_thread() {
-    _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, "Thread of execution, which is a single strand of execution happening (possibly) at the same time as other threads\n\n    Although these are typically wrapped by OS-level threads, there is also the Global Interpreter Lock (GIL) which prevents bytecodes from executing at the same time", KS_IKV(
+    _ksinit(ksost_thread, kst_object, T_NAME, sizeof(struct ksos_thread_s), -1, "Thread of execution, which is a single strand of execution happening (possibly) at the same time as other threads\nAlthough these are typically wrapped by OS-level threads, there is also the Global Interpreter Lock (GIL) which prevents bytecodes from executing at the same time", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, of, args=none, name=none)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},

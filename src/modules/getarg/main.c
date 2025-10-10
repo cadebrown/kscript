@@ -20,7 +20,7 @@ ks_module _ksi_getarg() {
 
     _ksi_getarg_Parser();
     
-    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'getarg' - argument/option parser\n\n    ", KS_IKV(
+    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'getarg' - argument/option parser\n", KS_IKV(
 
         /* Types */
         {"Parser",                 KS_NEWREF(ksgat_Parser)},

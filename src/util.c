@@ -107,6 +107,48 @@ char* _ksem_repr_c_(kso obj) {
     return rr;
 }
 
+char* _ksem_display_c_(kso obj) {
+
+    /* for modules/types/func that have a __doc, let's display that */
+    ks_str res = NULL;
+    kso o_doc = NULL;
+    kso o_sig = NULL;
+    kso o_name = NULL;
+    
+    if (kso_isinst(obj, kst_type) || kso_isinst(obj, kst_module) || kso_isinst(obj, kst_func)) {
+        o_doc = kso_getattr_c(obj, "__doc");
+        if (o_doc == NULL) {
+            kso_catch_ignore();
+        }
+
+        o_name = kso_getattr_c(obj, "__name");
+        if (o_name == NULL) {
+            kso_catch_ignore();
+        }
+
+        o_sig = kso_getattr_c(obj, "__sig");
+        if (o_sig == NULL) {
+            kso_catch_ignore();
+        }
+    }
+
+    if (o_doc != NULL) {
+        res = ks_fmt("%R\n\n%S", obj, o_doc);
+    } else {
+        res = ks_fmt("%R", obj);
+    }
+
+    if (o_doc) KS_DECREF(o_doc);
+    if (o_name) KS_DECREF(o_name);
+    if (o_sig) KS_DECREF(o_sig);
+    if (!res) return NULL;
+
+    char* rr = ks_malloc(res->len_b + 1);
+    memcpy(rr, res->data, res->len_b + 1);
+    KS_DECREF(res);
+    return rr;
+}
+
 ks_cint _ksem_refs_c_(kso obj) {
     return obj->refs;
 }
@@ -116,4 +158,14 @@ ks_type _ksem_type_c_(kso obj) {
 
 ks_cint _ksem_iohash_c_() {
     return ksos_stdout->sz_w + ksos_stderr->sz_w;
+}
+
+ks_cint _ksem_list_len_c_(kso obj) {
+    return ((ks_list)obj)->len;
+}
+kso _ksem_list_get_c_(kso obj, ks_cint idx) {
+    ks_list lst = (ks_list)obj;
+    if (idx < 0 || idx >= lst->len) return 0;
+    KS_INCREF(lst->elems[idx]);
+    return lst->elems[idx];
 }

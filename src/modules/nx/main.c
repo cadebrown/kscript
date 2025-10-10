@@ -614,7 +614,7 @@ ks_module _ksi_nx() {
         {"pad",                    ksf_wrap(M_pad_, M_NAME ".pad(x, shape)", "Pads 'x' to the shape 'shape', either adding zeros or omitting entries that don't fit")},
 
 
-        {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim=none, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to (default: last dimension of 'x')\n\n    Indices in 'x' are taken modulo 'newdim'")},
+        {"onehot",                 ksf_wrap(M_onehot_, M_NAME ".onehot(x, newdim=none, r=none)", "Computes one-hot encoding, where 'x' are the indices, 'newdim' is the new dimension which the indices point to (default: last dimension of 'x')\nIndices in 'x' are taken modulo 'newdim'")},
 
         {"abs",                    ksf_wrap(M_abs_, M_NAME ".abs(x, r=none)", "Computes elementwise absolute value")},
         {"conj",                   ksf_wrap(M_conj_, M_NAME ".conj(x, r=none)", "Computes elementwise conjugation")},
@@ -659,7 +659,7 @@ ks_module _ksi_nx() {
 
         {"fmin",                   ksf_wrap(M_fmin_, M_NAME ".fmin(x, y, r=none)", "Computes elementwise minimum")},
         {"fmax",                   ksf_wrap(M_fmax_, M_NAME ".fmin(x, y, r=none)", "Computes elementwise maximum")},
-        {"clip",                   ksf_wrap(M_clip_, M_NAME ".clip(x, y, z, r=none)", "Computes elementwise clipping between 'y' (minimum) and 'z' (maximum)\n\n    Equivalent to 'nx.fmin(z, nx.fmax(y, x))'")},
+        {"clip",                   ksf_wrap(M_clip_, M_NAME ".clip(x, y, z, r=none)", "Computes elementwise clipping between 'y' (minimum) and 'z' (maximum)\nEquivalent to 'nx.fmin(z, nx.fmax(y, x))'")},
 
         {"add",                    ksf_wrap(M_add_, M_NAME ".add(x, y, r=none)", "Computes elementwise addition")},
         {"sub",                    ksf_wrap(M_sub_, M_NAME ".sub(x, y, r=none)", "Computes elementwise subtraction")},

@@ -263,7 +263,7 @@ static struct ks_type_s tpp;
 ks_type kst_partial = &tpp;
 
 void _ksi_func() {
-    _ksinit(kst_partial, kst_object, TP_NAME, sizeof(struct ks_partial_s), -1, "Partial application of a function, which has some of the arguments filled in, and when called, applies the extra arguments given and combines with the pre-filled ones\n\n    Most of the time, is used as a wrapper to create a member function object, partially filling the member instance\n\n    SEE: https://en.wikipedia.org/wiki/Partial_application", KS_IKV(
+    _ksinit(kst_partial, kst_object, TP_NAME, sizeof(struct ks_partial_s), -1, "Partial application of a function, which has some of the arguments filled in, and when called, applies the extra arguments given and combines with the pre-filled ones\nMost of the time, is used as a wrapper to create a member function object, partially filling the member instance\nSEE: https://en.wikipedia.org/wiki/Partial_application", KS_IKV(
         {"__free",                 ksf_wrap(TP_free_, TP_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(TP_new_, TP_NAME ".__new(tp, of, args)", "")},
         {"__repr",                 ksf_wrap(TP_str_, TP_NAME ".__repr(self)", "")},
@@ -271,7 +271,7 @@ void _ksi_func() {
 
     ));
 
-    _ksinit(kst_func, kst_object, T_NAME, sizeof(struct ks_func_s), offsetof(struct ks_func_s, attr), "Builtin function type, which can be called with a various number of arguments\n\n    Internally, it may either wrap a C-style function (implemented using the C-API), or a bytecode function (which is defined in kscript source code). Either way, the API is the same and they can be treated equally", KS_IKV(
+    _ksinit(kst_func, kst_object, T_NAME, sizeof(struct ks_func_s), offsetof(struct ks_func_s, attr), "Builtin function type, which can be called with a various number of arguments\nInternally, it may either wrap a C-style function (implemented using the C-API), or a bytecode function (which is defined in kscript source code). Either way, the API is the same and they can be treated equally", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},

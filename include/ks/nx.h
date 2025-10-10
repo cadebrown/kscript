@@ -993,7 +993,7 @@ KS_API bool nxrand_randf(nxrand_State self, nx_t R);
 /* Fills 'R' with values in a normal (Guassian) distribution
  *
  */
-KS_API bool nxrand_normal(nxrand_State self, nx_t R);
+KS_API bool nxrand_normal(nxrand_State self, nx_t R, nx_t U, nx_t O);
 
 
 /** Submodule: 'nx.la' (linear algebra) **/

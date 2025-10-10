@@ -221,7 +221,7 @@ static struct ks_type_s tp;
 ks_type kst_complex = &tp;
 
 void _ksi_complex() {
-    _ksinit(kst_complex, kst_number, T_NAME, sizeof(struct ks_complex_s), -1, "Complex numbers represent numbers that have two components: a 'real' and 'imaginary'. They are often written as 'a+b*i', where 'i' is the imaginary unit (the principal square root of -1)\n\n    SEE: https://en.wikipedia.org/wiki/Complex_number", KS_IKV(
+    _ksinit(kst_complex, kst_number, T_NAME, sizeof(struct ks_complex_s), -1, "Complex numbers represent numbers that have two components: a 'real' and 'imaginary'. They are often written as 'a+b*i', where 'i' is the imaginary unit (the principal square root of -1)\nSEE: https://en.wikipedia.org/wiki/Complex_number", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, obj=none, imag=none)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},

@@ -482,7 +482,7 @@ void _ksi_list() {
         {"__new",                ksf_wrap(TI_new_, TI_NAME ".__new(tp, of)", "")},
     ));
 
-    _ksinit(kst_list, kst_object, T_NAME, sizeof(struct ks_list_s), -1, "List of references to other objects, which is mutable\n\n    Internally, a 'list' is not a linked-list-like data structure, but closer to an array. Specifically, it is an array of references, so children are not copied or duplicated, only a reference is made to them", KS_IKV(
+    _ksinit(kst_list, kst_object, T_NAME, sizeof(struct ks_list_s), -1, "List of references to other objects, which is mutable\nInternally, a 'list' is not a linked-list-like data structure, but closer to an array. Specifically, it is an array of references, so children are not copied or duplicated, only a reference is made to them", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
         {"__init",               ksf_wrap(T_init_, T_NAME ".__init(self, objs=none)", "")},

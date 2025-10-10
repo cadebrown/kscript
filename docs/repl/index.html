@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>kscript REPL</title>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+    <!-- jQuery terminal -->
+    <script src="https://unpkg.com/jquery.terminal/js/jquery.terminal.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/jquery.terminal/css/jquery.terminal.min.css"/>
+
+    <!-- kscript web bindings -->
+    <!-- <script src="./v0.2.2/libks.js"></script> -->
+    <script src="./libks.js"></script>
+
+    <style>
+        :root {
+        --background: #000000;
+        --size: 1.36;
+    }
+    body {
+        margin: 0;
+        height: 100%;
+    }
+    .term {
+        height: 100%;
+        padding: 12px;
+    }
+    </style>
+
+</head>
+<body>
+    <div id='term' class='term'></div>
+</body>
+
+<template id="greetings">
+ ██ ▄█▀  ██████  ▄████▄   ██▀███   ██▓ ██▓███  ▄▄▄█████▓
+ ██▄█▒ ▒██    ▒ ▒██▀ ▀█  ▓██ ▒ ██▒▓██▒▓██░  ██▒▓  ██▒ ▓▒
+▓███▄░ ░ ▓██▄   ▒▓█    ▄ ▓██ ░▄█ ▒▒██▒▓██░ ██▓▒▒ ▓██░ ▒░
+▓██ █▄   ▒   ██▒▒▓▓▄ ▄██▒▒██▀▀█▄  ░██░▒██▄█▓▒ ▒░ ▓██▓ ░ 
+▒██▒ █▄▒██████▒▒▒ ▓███▀ ░░██▓ ▒██▒░██░▒██▒ ░  ░  ▒██▒ ░ 
+▒ ▒▒ ▓▒▒ ▒▓▒ ▒ ░░ ░▒ ▒  ░░ ▒▓ ░▒▓░░▓  ▒▓▒░ ░  ░  ▒ ░░   
+░ ░▒ ▒░░ ░▒  ░ ░  ░  ▒     ░▒ ░ ▒░ ▒ ░░▒ ░         ░    
+░ ░░ ░ ░  ░  ░  ░          ░░   ░  ▒ ░░░         ░      
+░  ░         ░  ░ ░         ░      ░                    
+                ░                                       
+</template>
+
+<template id="greetings2">
+$$\                                     $$\            $$\     
+$$ |                                    \__|           $$ |    
+$$ |  $$\  $$$$$$$\  $$$$$$$\  $$$$$$\  $$\  $$$$$$\ $$$$$$\   
+$$ | $$  |$$  _____|$$  _____|$$  __$$\ $$ |$$  __$$\\_$$  _|  
+$$$$$$  / \$$$$$$\  $$ /      $$ |  \__|$$ |$$ /  $$ | $$ |    
+$$  _$$<   \____$$\ $$ |      $$ |      $$ |$$ |  $$ | $$ |$$\ 
+$$ | \$$\ $$$$$$$  |\$$$$$$$\ $$ |      $$ |$$$$$$$  | \$$$$  |
+\__|  \__|\_______/  \_______|\__|      \__|$$  ____/   \____/ 
+                                            $$ |               
+                                            $$ |               
+                                            \__|               
+</template>
+
+<script>
+var ks = null;
+let hist_cmds = []
+let should_record_hist = false
+
+function customEncode(str) {
+    return encodeURIComponent(str)
+        .replace(/[!'()*]/g, function(c) {
+            return '%' + c.charCodeAt(0).toString(16);
+        })
+        .replace(/%25/g, '%'); // Replace %25 with %
+}
+
+/* Creates a kscript terminal from the document element 'id'
+*/
+function makeksterm(id) {
+    libks().then(function(_ks) {
+        ks = _ks
+        console.log('initializing kscript: ', ks)
+        ks.init()
+
+        // Create a locals array
+        let locals = ks.make_dict()
+        let ct = 0
+
+        // whether or not we are still initializing
+        let isearly = true
+        let write = text => {
+            text = $.terminal.escape_brackets(text)
+            term.echo(text)
+        }
+
+        // Create a terminal from the jQuery terminal plugin
+        let term = $('#' + id).terminal(function (cmd, term) {
+
+            if (cmd.trim() == "permalink") {
+                // print out a permalink to this session
+                // URI encode the hist_cmds joined by \n
+                let url = location.href.split('?')[0] + "?" + encodeURIComponent((hist_cmds.join('\n'))).replace(/[!'()*]/g, function(c) {
+                    return '%' + c.charCodeAt(0).toString(16);
+                }).replace(/%25/g, '%'); // Replace %25 with %
+
+
+                write(`permalink: ${url}`)
+                return
+            }
+
+            if (!term.has_init) {
+                term.has_init = true
+
+                // Add callbacks to write IO
+                ks._write_stdout.push(text => write(text))
+                ks._write_stderr.push(text => write(text))
+            }
+
+            // Get a hash of the IO objects so we can tell if something has been printed
+            let hash = ks.iohash()
+            let this_ct = ct
+            if (should_record_hist) {
+                hist_cmds.push(cmd)
+
+            }
+            
+            return ks.eval(cmd, "<inter-" + ct + ">", locals).then(res => {
+                if (res) {
+                    if (!isearly && ks.iohash() == hash) {
+                        // Nothing has been printed in the mean time, so print the result
+                        let r = ks.get_display(res)
+                        if (!(cmd.startsWith("import ") && r == "none"))  {
+                            write(r)
+
+                        } // don't print anything for imports
+                    }
+                    ks.decref(res)
+                } else {
+                    // Alert the user that there was an error
+                    term.echo("[[b;red;]ERROR] (see console)")
+                }
+
+                ct++
+            }).catch(err => {
+                console.error("Error during eval:", err)
+                term.echo("[[b;red;]ERROR] (see console)")
+            })
+        }, {
+            name: 'kscript',
+            // greetings: ks.verstr,
+            greetings: `[[b;purple;]` + $('#greetings').html(),
+            prompt: ">>> ",
+            completionEscape: false,
+            completion: function(command, callback) {
+               let res = ks.inter_completions(command, locals)
+               callback(res)
+            },
+
+        })
+
+        // disable formatting
+        // $.terminal.defaults.formatters = []
+        $.terminal.defaults.formatters.unshift([/(^|[^\x08]|\r\n)\x08/g, '', true]);
+
+
+        // write("")
+        // write("### kscript web terminal")
+        // write("#")
+        // write("# overall, similar to Python syntax, except:")
+        // write("#   * no relevant whitespace (use 'if x {...}')")
+        // write("#   * different naming scheme (true, false, inf, nan)")
+        // write("#   * use 'obj.__attr' for list of all attributes")
+        // write("#   * indexing arrays/tensors is like numpy (i.e. x[2:3, ::-1])")
+        // write("#")
+        // write("# math examples:")
+        // write("#   * 2**100")
+        // write("#   * m.isprime(2**7 - 1)")
+        // write("#   * m.zeta(2)")
+        // write("#   * nx.fft.fft([[1, 2], [3, 4]])")
+        // write("#   * abs(1+2i)")
+        // write("#")
+        // write("# quick links:")
+        // write("#   * https://docs.kscript.org/#Syntax")
+        // write("#   * https://docs.kscript.org/#Functions")
+        // write("#   * https://docs.kscript.org/#Modules")
+        // write("#")
+        // write("# author: Cade Brown https://cade.site/about")
+        // write("#")
+        // write("###")
+        // write("")
+
+        isearly = false
+
+        // Return the terminal object
+        return term
+    }).then(term => {
+        let cmds_builtin = [
+            "import m",
+            "import nx",
+            "import os",
+            "import util",
+            "import io",
+            "import time",
+            "import ucd",
+            "import gram",
+            "import net",
+            "import ffi",
+            "import getarg",
+            "import ffi",
+            "import ffi",
+            "import ucd",
+        ]
+
+
+        let cmds_requested = []
+        // Now, execute the lines in the URL, if there were any
+        var a = location.href;
+        var qi = a.indexOf("?");
+        if (qi > 0) {
+            var qt0 = decodeURIComponent(a.substring(qi+1))
+            let qt1 = qt0.replace('\\n', '\n')
+            var qt2 = qt1.split(/\n|\\\\/)
+            for (var i in qt2) {
+                var line = qt2[i]
+                cmds_requested.push(line)
+            }
+        }
+
+        // execute all the commands
+        term.exec(cmds_builtin, true).then(() => {
+            should_record_hist = true
+            return term.exec(cmds_requested)
+        }).catch(err => {
+            console.error("Error during initial commands:", err)
+            term.echo("[[b;red;]ERROR] (see console)")
+        })
+
+        return term
+    })
+}
+
+makeksterm('term');
+</script>
+
+</html>

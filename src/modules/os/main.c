@@ -877,22 +877,22 @@ ks_module _ksi_os() {
         {"stderr",                 KS_NEWREF(ksos_stderr)},
     
         /* Functions */
-        {"getenv",                 ksf_wrap(M_getenv_, M_NAME ".getenv(key, defa=none)", "Retrieves the environment entry indicated by 'key', or a default if it was not found\n\n    If 'defa' was not given, then an error is thrown")},
+        {"getenv",                 ksf_wrap(M_getenv_, M_NAME ".getenv(key, defa=none)", "Retrieves the environment entry indicated by 'key', or a default if it was not found\nIf 'defa' was not given, then an error is thrown")},
         {"setenv",                 ksf_wrap(M_setenv_, M_NAME ".setenv(key, val)", "Sets an environment entry to another string value")},
         {"cwd",                    ksf_wrap(M_getcwd_, M_NAME ".cwd()", "Returns current working directory")},
-        {"listdir",                ksf_wrap(M_listdir_, M_NAME ".listdir(path)", "Return a tuple of '(dirs, files)' present in 'path'\n\n    Does not include '.' or '..'")},
+        {"listdir",                ksf_wrap(M_listdir_, M_NAME ".listdir(path)", "Return a tuple of '(dirs, files)' present in 'path'\nDoes not include '.' or '..'")},
         {"glob",                   ksf_wrap(M_glob_, M_NAME ".glob(path)", "Return a list of matches to a glob path")},
         {"chdir",                  ksf_wrap(M_chdir_, M_NAME ".chdir(path)", "Change the current working directory to 'path'")},
-        {"mkdir",                  ksf_wrap(M_mkdir_, M_NAME ".mkdir(path, mode=0o777, parents=false)", "Creates a new directory 'path', with the given mode\n\n    If 'parents' is 'true', then all parent directories required are also created, otherwise this function throws an error if a path would require multiple directories to be created")},
-        {"rm",                     ksf_wrap(M_rm_, M_NAME ".rm(path, parents=false)", "Removes a file or directory from the filesystem\n\n    If 'parents' is 'true', and 'path' is a directory, then it is recursively deleted. Otherwise, if 'path' was a non-empty directory, an error is thrown")},
+        {"mkdir",                  ksf_wrap(M_mkdir_, M_NAME ".mkdir(path, mode=0o777, parents=false)", "Creates a new directory 'path', with the given mode\nIf 'parents' is 'true', then all parent directories required are also created, otherwise this function throws an error if a path would require multiple directories to be created")},
+        {"rm",                     ksf_wrap(M_rm_, M_NAME ".rm(path, parents=false)", "Removes a file or directory from the filesystem\nIf 'parents' is 'true', and 'path' is a directory, then it is recursively deleted. Otherwise, if 'path' was a non-empty directory, an error is thrown")},
 
         {"fstat",                  ksf_wrap(M_fstat_, M_NAME ".fstat(fd)", "Query the open file descriptor 'fd' (which should be an 'int') and return an 'os.stat' object describing it")},
-        {"lstat",                  ksf_wrap(M_lstat_, M_NAME ".lstat(path)", "Query the the file/directory 'path', but do not follow symbolic links\n\n    Useful if you want to get information about a link itself, rather than the file it points to")},
+        {"lstat",                  ksf_wrap(M_lstat_, M_NAME ".lstat(path)", "Query the the file/directory 'path', but do not follow symbolic links\nUseful if you want to get information about a link itself, rather than the file it points to")},
 
         {"exec",                   ksf_wrap(M_exec_, M_NAME ".exec(cmd)", "Attempts to execute a command as if typed in console - returns exit code")},
         {"fork",                   ksf_wrap(M_fork_, M_NAME ".fork()", "Creates a new process by duplicating the calling process - returns 0 in the child, PID > 0 in the parent")},
         {"pipe",                   ksf_wrap(M_pipe_, M_NAME ".pipe()", "Create a new pipe, and return a tuple of '(readio, writeio)' for the readable and writable ends respectively")},
-        {"dup",                    ksf_wrap(M_dup_, M_NAME ".dup(fd, to=-1)", "Duplicate a file descriptor 'fd'\n\n    If 'to < 0', then create a new file descriptor and return it. Otherwise, replace 'to' with a copy of 'fd'")},
+        {"dup",                    ksf_wrap(M_dup_, M_NAME ".dup(fd, to=-1)", "Duplicate a file descriptor 'fd'\nIf 'to < 0', then create a new file descriptor and return it. Otherwise, replace 'to' with a copy of 'fd'")},
     
     
     ));

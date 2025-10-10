@@ -187,7 +187,7 @@ ks_module _ksi_ucd() {
         /* Functions */
 
         {"lookup",                 ksf_wrap(lookup_, M_NAME ".lookup(name)", "Looks up a character by its Unicode name")},
-        {"info",                   ksf_wrap(info_, M_NAME ".info(chr)", "Returns information about a unicode codepoint\n\n    'chr' should be a string of length 1")},
+        {"info",                   ksf_wrap(info_, M_NAME ".info(chr)", "Returns information about a unicode codepoint\n'chr' should be a string of length 1")},
         {"name",                   ksf_wrap(name_, M_NAME ".name(chr)", "Returns the string name of a unicode character")},
 
         {"catgen",                 ksf_wrap(catgen_, M_NAME ".cat(chr)", "Returns the (string) general cateogory of a unicode character")},

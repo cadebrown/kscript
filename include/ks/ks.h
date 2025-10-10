@@ -51,8 +51,8 @@
  * 
  */
 #define KS_VERSION_MAJOR 0
-#define KS_VERSION_MINOR 2
-#define KS_VERSION_PATCH 2
+#define KS_VERSION_MINOR 3
+#define KS_VERSION_PATCH 1
 
 
 /** Platform detection **/
@@ -398,7 +398,12 @@ KS_API_DATA ks_func
     ksf_input,
     
     ksf_iter,
-    ksf_next
+    ksf_next,
+
+    ksf_import,
+    ksf_wget,
+    ksf_js,
+    ksf_man
 ;
 
 KS_API_DATA int ksg_logger_level_default;
@@ -727,6 +732,12 @@ KS_API void kso_exit_if_err();
  */
 KS_API ks_module ks_import(ks_str name);
 
+
+/* Import a base module, from a given path (or NULL for default path)
+ */
+KS_API ks_module ks_importx(ks_str name, kso given_path);
+
+
 /* Import submodule of another module
  */
 KS_API ks_module ks_import_sub(ks_module of, ks_str sub);
@@ -735,6 +746,13 @@ KS_API ks_module ks_import_sub(ks_module of, ks_str sub);
 /* Run the interactive shell
  */
 KS_API bool ks_inter();
+
+/* Compute tab completions for a given text, within the interpreter state (used for readline and REPL terminals)
+ *
+ * NOTE: locals can be NULL
+ */
+KS_API void ks_inter_completions(ks_list out, const char* text, ks_dict locals);
+
 
 /*** Conversions ***/
 
@@ -1271,11 +1289,13 @@ KS_API bool ks_logger_clog(ks_logger self, int level, const char* file, const ch
 
 /* Template */
 #define _ks_logT(_name, _level, ...) do { \
-    ks_logger _log = ks_logger_get_c(_name); \
-    assert(_log != NULL); \
-    bool _haderr = !ks_logger_clog(_log, _level, __FILE__, __func__, __LINE__, __VA_ARGS__); \
-    KS_DECREF(_log); \
-    assert(!_haderr); \
+    if (ks_has_init()) { \
+      ks_logger _log = ks_logger_get_c(_name); \
+      assert(_log != NULL); \
+      bool _haderr = !ks_logger_clog(_log, _level, __FILE__, __func__, __LINE__, __VA_ARGS__); \
+      KS_DECREF(_log); \
+      assert(!_haderr); \
+    } \
 } while (0);
 
 #define ks_trace(_name, ...) _ks_logT(_name, KS_LOGGER_TRACE, __VA_ARGS__)
@@ -1477,9 +1497,12 @@ KS_API void _ksem_incref_(kso obj);
 KS_API void _ksem_decref_(kso obj);
 KS_API char* _ksem_str_c_(kso obj);
 KS_API char* _ksem_repr_c_(kso obj);
+KS_API char* _ksem_display_c_(kso obj);
 KS_API ks_cint _ksem_refs_c_(kso obj);
 KS_API ks_type _ksem_type_c_(kso obj);
 KS_API ks_cint _ksem_iohash_c_();
+KS_API ks_cint _ksem_list_len_c_(kso obj);
+KS_API kso _ksem_list_get_c_(kso obj, ks_cint idx);
 
 /* Parse 'args' into a list of addresses, with optionally specifying types. Use the 'KS_ARGS' macros
  */

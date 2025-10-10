@@ -22,7 +22,7 @@
 #else
 
 /* Fallback (TODO: make even better) */
-//#warning Building kscript without 'readline', so limited interactivity and line editing features
+#warning Building kscript without 'readline', so limited interactivity and line editing features
 
 #endif
 
@@ -34,26 +34,26 @@ static bool is_tty_stdin = false;
 /* Misc. keywords that should be completed */
 static char* misc_complete[] = {
     "import ",
-    "from ",
+    // "from ",
 
-    "in ",
-    "as ",
+    // "in ",
+    // "as ",
 
-    "break ",
-    "cont ",
-    "ret ",
-    "throw ",
+    // "break ",
+    // "cont ",
+    // "ret ",
+    // "throw ",
 
     "if ",
-    "elif ",
-    "else ",
-    "while ",
+    // "elif ",
+    // "else ",
+    // "while ",
     "for ",
-    "try ",
-    "catch ",
-    "finally ",
+    // "try ",
+    // "catch ",
+    // "finally ",
 
-    "extends ",
+    // "extends ",
 
     NULL
 };
@@ -76,11 +76,12 @@ static void match(ks_list out, ks_dict root, int n_names, ks_str* names, int pos
         if (!k || k->type != kst_str) continue;
 
         /* Determine whether it should be ignored because it is only callable */
-        bool is_call = kso_is_callable(v) && dep != 0;
+        // bool is_call = kso_is_callable(v) && dep != 0;
+        bool is_call = kso_is_callable(v);
         if (req_call && !is_call) continue;
 
         /* What should be put after the match? */
-        char* postfix = is_call ? "(" : (kso_issub(v->type, kst_module) ? "." : "");
+        const char* postfix = is_call ? "(" : (kso_issub(v->type, kst_module) ? "." : "");
 
         if (n_names == 1) {
             /* Directly match without recursion */
@@ -116,7 +117,7 @@ static void match(ks_list out, ks_dict root, int n_names, ks_str* names, int pos
 
 
 /* Attempt to complete a given text buffer, storing possible matches/completions in 'out' */
-static void complete(ks_list out, const char* text) {
+void ks_inter_completions(ks_list out, const char* text, ks_dict locals) {
     int len = strlen(text);
 
     /* Find the position of the start of this 'word' (which includes '.', and the like), which will be the object
@@ -140,7 +141,11 @@ static void complete(ks_list out, const char* text) {
     KS_DECREF(dot);
 
     /* Now, complete from the set of roots (globals, interpreter variables) */
-    match(out, ksg_inter_vars, names->len, (ks_str*)names->elems, pos, text, 0, false);
+    //match(out, ksg_inter_vars, names->len, (ks_str*)names->elems, pos, text, 0, false);
+    if (locals != NULL) {
+        match(out, locals, names->len, (ks_str*)names->elems, pos, text, 0, false);
+    }
+
     match(out, ksg_globals, names->len, (ks_str*)names->elems, pos, text, 0, false);
 
     if (names->len == 1) {
@@ -175,7 +180,7 @@ static char* my_rl_gen(const char* text, int state) {
 
         /* Go ahead and compute completions */        
         out = ks_list_new(0, NULL);
-        complete(out, text);
+        ks_inter_completions(out, text, ksg_inter_vars);
         i = 0;
     }
 

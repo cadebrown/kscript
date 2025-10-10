@@ -47,7 +47,7 @@ ks_module _ksi_net() {
         {"BT_RFCOMM",              KSNET_PK_BT_RFCOMM},
     ));
 
-    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'net' - internet utilities\n\n    This module defines interacting with the internet", KS_IKV(
+    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'net' - internet utilities\nThis module defines interacting with the internet", KS_IKV(
 
         /* Submodules */
 

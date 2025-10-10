@@ -700,7 +700,7 @@ void _ksi_dict() {
         {"__new",                ksf_wrap(TI_new_, TI_NAME ".__new(tp, of)", "")},
     ));
 
-    _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, "Dictionaries, sometimes called associative arrays, are mappings between keys and values. The keys and values may be any objects, the only requirement is that keys are hashable. And, for keys which hash equally and compare equally, there is only one key stored\n\n    Entries are ordered by first insertion of the key, which is reset upon deletion\n\n    SEE: https://en.wikipedia.org/wiki/Associative_array", KS_IKV(
+    _ksinit(kst_dict, kst_object, T_NAME, sizeof(struct ks_dict_s), -1, "Dictionaries, sometimes called associative arrays, are mappings between keys and values. The keys and values may be any objects, the only requirement is that keys are hashable. And, for keys which hash equally and compare equally, there is only one key stored\nEntries are ordered by first insertion of the key, which is reset upon deletion\nSEE: https://en.wikipedia.org/wiki/Associative_array", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, objs)", "")},
         {"__bool",                 ksf_wrap(T_bool_, T_NAME ".__bool(self)", "")},

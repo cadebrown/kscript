@@ -239,7 +239,7 @@ ks_type ksiot_FileIO = &tp;
 
 void _ksi_io_FileIO() {
 
-    _ksinit(ksiot_FileIO, ksiot_BaseIO, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\n\n    Internally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
+    _ksinit(ksiot_FileIO, ksiot_BaseIO, T_NAME, sizeof(struct ksio_FileIO_s), -1, "File input/output stream, which implements read, write, flush, seek, and so forth\nInternally, uses the 'FILE*' type in C, and makes most of the functionality available", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, src, mode='r')", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},

@@ -519,7 +519,7 @@ void _ksi_set() {
     ));
 
 
-    _ksinit(kst_set, kst_object, T_NAME, sizeof(struct ks_set_s), -1, "A set of (unique) objects, which can be modified, ordered by first insertion order, resetting with deletion\n\n    Internally, it is a hash-set, which means only one object that hashes a certain way and compares equal with other keys may be contained. Therefore, you cannot store things like 'true' and '1' in the same hashset -- they will become the same item", KS_IKV(
+    _ksinit(kst_set, kst_object, T_NAME, sizeof(struct ks_set_s), -1, "A set of (unique) objects, which can be modified, ordered by first insertion order, resetting with deletion\nInternally, it is a hash-set, which means only one object that hashes a certain way and compares equal with other keys may be contained. Therefore, you cannot store things like 'true' and '1' in the same hashset -- they will become the same item", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, *args)", "")},
         {"__init",                 ksf_wrap(T_init_, T_NAME ".__init(self, objs=none)", "")},

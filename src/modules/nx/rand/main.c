@@ -53,22 +53,47 @@ static KS_TFUNC(M, randf) {
 }
 
 static KS_TFUNC(M, normal) {
-    int nS;
-    kso* S;
-    KS_ARGS("*shape", &nS, &S);
+    kso S, u = KSO_NONE, o = KSO_NONE;
+    KS_ARGS("shape ?u ?o", &S, &u, &o);
 
     int rank;
     ks_size_t shape[NX_MAXRANK];
-    if (!nx_getshapev(nS, S, &rank, shape)) {
+    if (!nx_getshapev(1, (kso[]){ S }, &rank, shape)) {
         return NULL;
+    }
+
+    double uf_default = 0.0;
+    double of_default = 1.0;
+
+    nx_t U;
+    kso Ur = KSO_NONE;
+    if (u == KSO_NONE) {
+        U = nx_make(&uf_default, nxd_D, 0, NULL, NULL);
+    } else {
+        if (!nx_get(u, nxd_D, &U, &Ur)) {
+            return NULL;
+        }
+    }
+    nx_t O;
+    kso Or = KSO_NONE;
+    if (o == KSO_NONE) {
+        O = nx_make(&of_default, nxd_D, 0, NULL, NULL);
+    } else {
+        if (!nx_get(o, NULL, &O, &Or)) {
+            KS_NDECREF(Ur);
+            return NULL;
+        }
     }
 
     nx_array res = nx_array_newc(nxt_array, NULL, nxd_D, rank, shape, NULL);
-    if (!nxrand_normal(nxrand_State_default, res->val)) {
+    if (!nxrand_normal(nxrand_State_default, res->val, U, O)) {
+        KS_NDECREF(Ur);
+        KS_NDECREF(Or);
         KS_DECREF(res);
         return NULL;
     }
-
+    KS_NDECREF(Ur);
+    KS_NDECREF(Or);
     return (kso)res;
 }
 

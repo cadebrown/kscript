@@ -19,7 +19,8 @@
 
 /* Versions of OpenGL to try to intiialize with */
 static int I_glvers[][2] = {
-    {3, 3},
+    {3, 0},
+    // {3, 3},
     {-1, -1},
 };
 
@@ -65,11 +66,6 @@ static void _GLFW_errorcb(int er, const char* d) {
     ks_warn("ks", "GLFW: %s [code: %i]", d, er);
 }
 
-/* Key input callback for GLFW */
-static void _GLFW_keycb(GLFWwindow *win, unsigned int codepoint) {
-    cNk_Context ctx = (cNk_Context)glfwGetWindowUserPointer(win);
-    nk_input_unicode(ctx->ctx, codepoint);
-}
 
 #endif
 
@@ -101,16 +97,16 @@ static ks_module get() {
     ks_debug("nuklear", "Initializing: gl3w");
 
 
-    int st;
-    if ((st = gl3wInit()) != 0) {
-        if (st == GL3W_ERROR_LIBRARY_OPEN) {
-            KS_THROW(kst_Error, "Failed to initialize gl3w: gl3wInit() returned GL3W_ERROR_LIBRARY_OPEN");
-            return NULL;
-        } else {
-            //KS_THROW(kst_Error, "Failed to initialize gl3w: gl3wInit() returned non-zero");
-            //return NULL;
-        }
-    }
+    // int st;
+    // if ((st = gl3wInit()) != 0) {
+    //     if (st == GL3W_ERROR_LIBRARY_OPEN) {
+    //         KS_THROW(kst_Error, "Failed to initialize gl3w: gl3wInit() returned GL3W_ERROR_LIBRARY_OPEN");
+    //         return NULL;
+    //     } else {
+    //         //KS_THROW(kst_Error, "Failed to initialize gl3w: gl3wInit() returned non-zero");
+    //         //return NULL;
+    //     }
+    // }
 
 
     /* Attempt to open different OpenGL versions */
@@ -135,31 +131,40 @@ static ks_module get() {
 
     ks_debug("ks", "Calling gl3wInit()...");
 
-    int stat;
-    // Initialize OpenGL extension wrangler
-    if (stat = gl3wInit()) {
-        if (stat == GL3W_ERROR_LIBRARY_OPEN) {
-            return ks_throw(ks_type_InternalError, "Could not initialize gl3w! (gl3wInit() failed!, reason: GL3W_ERROR_LIBRARY_OPEN)");
-        } else {
-            //return ks_throw(ks_type_InternalError, "Could not initialize gl3w! (gl3wInit() failed!)");
-        }
-    }
+    // on most platforms, must initialize gl3w here(?) IDK
+    // int stat;
+    // // Initialize OpenGL extension wrangler
+    // if (stat = gl3wInit()) {
+    //     if (stat == GL3W_ERROR_LIBRARY_OPEN) {
+    //         KS_THROW(kst_Error, "Could not initialize gl3w! (gl3wInit() failed!, reason: GL3W_ERROR_LIBRARY_OPEN)");
+    //         return NULL;
+    //     } else {
+    //         //return ks_throw(ks_type_InternalError, "Could not initialize gl3w! (gl3wInit() failed!)");
+    //     }
+    // }
+    
+    // // attempt to find a supported Major/Minor version of OpenGL
+    // int i;
+    // for (i = 0; I_glvers[i][0] > 0; ++i) {
+    //     int major = I_glvers[i][0], minor = I_glvers[i][1];
+    //     // see if this version is supported
+    //     ks_debug("ks", "Trying OpenGL %i.%i", major, minor);
+    //     if (gl3wIsSupported(major, minor) == 0) {
+    //         // set the version to the correct one
+    //         glMajor = major;
+    //         glMinor = minor;
+    //         break;
+    //     }
+    // }
 
-    // attempt to find a supported Major/Minor version of OpenGL
-    int i;
-    for (i = 0; _try_GLvers[i][0] > 0; ++i) {
-        int major = _try_GLvers[i][0], minor = _try_GLvers[i][1];
-        // see if this version is supported
-        ks_debug("ks", "Trying OpenGL %i.%i", major, minor);
-        if (gl3wIsSupported(major, minor) == 0) {
-            // set the version to the correct one
-            _GLvers[0] = major, _GLvers[1] = minor;
-            break;
-        }
-    }
+    glMajor = 2;
+    glMinor = 0;
 
     /* Ensure valid OpenGL */
-    if (_GLvers[0] < 0) return ks_throw(ks_type_Error, "Failed to initialize OpenGL");
+    if (glMajor < 0) {
+        KS_THROW(kst_Error, "Failed to initialize OpenGL");
+        return NULL;
+    }
 
     /* GLFW */
 
@@ -168,19 +173,20 @@ static ks_module get() {
 
     /* Initialize GLFW */
     if (!glfwInit()) {
-        return ks_throw(ks_type_Error, "Failed to initialize GLFW");
+        KS_THROW(kst_Error, "Failed to initialize GLFW");
+        return NULL;
     }
     ks_debug("ks", "Setting GLFW Window Hints......");
 
     /* Set the OpenGL version being used */
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, _GLvers[0]);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, _GLvers[1]);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, glMajor);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, glMinor);
 
     /* Set to core profile only (maximum compatibility) */
-    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+    // glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   #ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    // glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
   #endif
 
 #endif
@@ -302,7 +308,7 @@ static ks_module get() {
         {"EDITOR", NK_EDIT_EDITOR},
     ));
 
-    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'mm' - multimedia module\n\n    This module implements common media operations", KS_IKV(
+    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'mm' - multimedia module\nThis module implements common media operations", KS_IKV(
         /* Types */
         {"Context",                (kso)ksnkt_Context},
         {"Image",                  (kso)ksnkt_Image},

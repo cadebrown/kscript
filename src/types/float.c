@@ -449,7 +449,7 @@ ks_float ksg_nan, ksg_inf;
 
 void _ksi_float() {
     kst_float->ob_sz = sizeof(struct ks_float_s);
-    _ksinit(kst_float, kst_number, T_NAME, sizeof(struct ks_float_s), -1, "Floating point (real) number, which is a quanitity represented by a 'double' in C\n\n    SEE: https://en.wikipedia.org/wiki/Floating-point_arithmetic", KS_IKV(
+    _ksinit(kst_float, kst_number, T_NAME, sizeof(struct ks_float_s), -1, "Floating point (real) number, which is a quanitity represented by a 'double' in C\nSEE: https://en.wikipedia.org/wiki/Floating-point_arithmetic", KS_IKV(
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, obj=non, base=10)", "")},
         {"__str",                  ksf_wrap(T_str_, T_NAME ".__str(self)", "")},
         {"__repr",                 ksf_wrap(T_str_, T_NAME ".__repr(self)", "")},

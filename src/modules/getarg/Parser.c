@@ -774,8 +774,8 @@ void _ksi_getarg_Parser() {
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                ksf_wrap(T_new_, T_NAME ".__new(tp, name, version, doc, authors)", "")},
 
-        {"flag",                 ksf_wrap(T_flag_, T_NAME ".flag(self, name, opts, doc, action=none)", "Create a new flag for the parser\n\n    'opts' should contain option arguments, which begin with '-'")},
-        {"opt",                  ksf_wrap(T_opt_, T_NAME ".opt(self, name, opts, doc, trans=str, defa=none)", "Create a new option argument for the parser\n\n    'opts' should contain option arguments, which begin with '-'")},
+        {"flag",                 ksf_wrap(T_flag_, T_NAME ".flag(self, name, opts, doc, action=none)", "Create a new flag for the parser\n'opts' should contain option arguments, which begin with '-'")},
+        {"opt",                  ksf_wrap(T_opt_, T_NAME ".opt(self, name, opts, doc, trans=str, defa=none)", "Create a new option argument for the parser\n'opts' should contain option arguments, which begin with '-'")},
         {"pos",                  ksf_wrap(T_pos_, T_NAME ".pos(self, name, doc, num=1, trans=str)", "Create a new positional argument for the parser")},
 
         {"parse",                ksf_wrap(T_parse_, T_NAME ".parse(self, args=os.argv)", "Parse a list of arguments, returning a mapping which can be used to retrieve arguments")},

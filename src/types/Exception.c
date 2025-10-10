@@ -125,7 +125,7 @@ DO_SUBTYPES(DECL)
 
 
 void _ksi_Exception() {
-    _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, "Exception, which is an anomoly/error, is something that can be 'thrown' up the call stack. Only objects of types deriving from 'Exception' may be thrown\n\n    To throw an exception, use the 'throw' statement, like so: 'throw Exception(\"Reasoning here\")'", KS_IKV(
+    _ksinit(kst_Exception, kst_object, T_NAME, sizeof(struct ks_Exception_s), -1, "Exception, which is an anomoly/error, is something that can be 'thrown' up the call stack. Only objects of types deriving from 'Exception' may be thrown\nTo throw an exception, use the 'throw' statement, like so: 'throw Exception(\"Reasoning here\")'", KS_IKV(
         {"__free",               ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__init",               ksf_wrap(T_init_, T_NAME ".__init(self, what='')", "")},
         {"__str",                ksf_wrap(T_str_, T_NAME ".__str(self)", "")},

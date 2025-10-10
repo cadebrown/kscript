@@ -1,132 +1,165 @@
-# kscript (ks)
+# kscript (ks) - ARCHIVED
 
-kscript ([https://kscript.org](https://kscript.org)) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. Its primary aim is to allow developers to write platform agnostic programs that can run anywhere, and require little or no platform- or os- specific code.
+**NOTE: This project is no longer being actively developed or maintained, and has been archived. A spiritual successor is planned...**
 
-Documentation is available at [kscript.org](https://kscript.org), which provides examples, tutorials, and coverage of the standard library. Formal specifications are available at the GitHub repository ([https://github.com/ChemicalDevelopment/kscript](https://github.com/ChemicaldDvelopment/kscript)), within the `docs` folder.
+kscript ([ks.cade.io](https://ks.cade.io)) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. It's like Python, but better 😉.
+
+I wrote kscript mainly as a learning experience, to see if I could write a full programming language from scratch in C99. I did, but at what cost?
+
+* [ks.cade.io/repl](https://ks.cade.io/repl) - online REPL with WASM
+  * Run kscript in your browser!
+* [ks.cade.io](https://ks.cade.io) - online documentation
+  * A full documentation of the language and standard library, including examples
+
+## Usage
+
+### Online REPL via WASM
+
+To quickly test out kscript, run it online at [ks.cade.io](https://ks.cade.io). This is a REPL (Read-Eval-Print Loop) that runs locally in your browser using [WebAssembly (WASM)](https://webassembly.org/).
+
+### Running Locally
+
+To run kscript locally, download a pre-built binary from the [releases page](https://github.com/cadebrown/kscript/releases) for your platform.
+
+When you unarchive it, you should see a `bin/` folder with the `ks` executable inside. You can run it like so:
+
+```shell
+$ ./bin/ks -c 'print(1+2+3+4)'
+10
+```
+
+## Setup
+
+If you want to build it yourself, or check out how development works, follow these instructions for your platform:
+
+### Setup: Linux
+
+First, install the required dependencies for your system:
+
+```shell
+# on Debian/Ubuntu/apt-based Linux systems
+$ sudo apt install libpthread-stubs0-dev libgmp-dev libreadline-dev libfftw3-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libffi-dev
+
+# others: figure it out!
+```
+
+Now, configure the build system to find these dependencies:
+
+```shell
+# run with --help for more options
+$ ./configure --with-readline --with-ffi --with-pthreads --with-libav --with-opengl --with-glfw --prefix $PWD/install
+```
+
+And finally, build the entire project with:
+
+```shell
+# use -j<N> to parallelize the build with N jobs
+$ make -j16
+```
+
+Optionally, you can also "install" it to the location specified with `--prefix` above:
+
+```shell
+$ make install
+```
+
+### Setup: MacOS
+
+First, install the required dependencies for your system using [Homebrew](https://brew.sh/) (install Homebrew if you haven't already):
+
+```shell
+$ brew install libffi ffmpeg glfw
+```
+
+Next, we need to add these libraries to our path, so they are found by our configuration system:
+
+```shell
+# add the library path, where dynamic libraries are found
+$ export LIBRARY_PATH="$LIBRARY_PATH:/opt/homebrew/lib:/opt/homebrew/opt/libffi/lib"
+
+# add the include path, where C/C++ header files are found
+$ export C_INCLUDE_PATH="$C_INCLUDE_PATH:/opt/homebrew/include:/opt/homebrew/opt/libffi/include"
+```
+
+With those set, we can now configure kscript to find these libraries:
+
+```shell
+$ ./configure --with-readline --with-ffi --with-pthreads --with-libav --with-opengl --with-glfw
+```
+
+And finally, build the entire project with:
+
+```shell
+# use -j<N> to parallelize the build with N jobs
+$ make -j16
+```
+
+Optionally, you can also "install" it to the location specified with `--prefix` above:
+
+```shell
+$ make install
+```
+
+### Setup: Emscripten (WASM)
+
+You can also build WASM binaries using [Emscripten](https://emscripten.org/) (a great project, BTW). This allows you to run kscript in the browser, or anywhere that supports WebAssembly.
+
+First, install Emscripten by following their instructions: [Emscripten: Getting Started](https://emscripten.org/docs/getting_started/downloads.html). You should install and activate their SDK.
+
+For example, to install v4.0.15 (which is comfirmed to work with kscript), you can run:
+
+```shell
+$ git clone https://github.com/emscripten-core/emsdk.git
+$ cd emsdk
+$ ./emsdk install 4.0.15
+$ ./emsdk activate 4.0.15
+$ source ./emsdk_env.sh
+```
 
 
+Now, configure the build system to use Emscripten, which requires manually overriding some environment variables:
 
-## Current Status
+```shell
+$ CC=emcc CFLAGS="-O3 -Wno-ignored-attributes -sASSERTIONS=1" LDFLAGS='-O3 -sWASM=1 -sASSERTIONS=1 -sERROR_ON_UNDEFINED_SYMBOLS=0 -sEXPORTED_RUNTIME_METHODS=["cwrap","ccall","stringToUTF8","UTF8ToString"]' PLATFORM="web" ./configure
 
-kscript is currently a work-in-progress, aiming at an alpha release soon-ish. The most important internals are done (i.e. standard types, most standard functions). However, there are needs in a few areas:
 
-  * Distribution to popular platforms (Linux, MacOS, Windows)
-  * 
+Finally, you can build the same way as native builds:
 
+```shell
+# use -j<N> to parallelize the build with N jobs
+$ make -j16
+```
+
+
+### Setup: Windows
+
+Windows was never really fully supported, but can be built with the Visual Studio solution project in the [./winbuild](./winbuild) folder.
+
+Good luck!
 
 ## Running
 
-To run kscript, you should have either installed or built kscript. These examples will use `ks` as the binary (if it is only built locally, you may have to replace that with `./bin.ks` or `./bin/ks.exe` on Windows)
+```shell
+
+# the most basic program
+$ ./bin/ks examples/greet.ks
+hello, <user>
+
+# compute a Fibonacci number (the 10th in this example)
+$ ./bin/ks examples/fib.ks 10
+55
+
+```
+
+## Making Documentation
+
+Inside the `docs/` folder, you can run:
 
 ```shell
-$ ks -h
-Usage: ks [options] FILE [args...]
-       ks [options] -e 'EXPR' [args...]
-       ks [options] - [args...]
-
-Options:
-  -h,--help             Prints this help/usage message
-  -e,--expr [EXPR]      Run an inline expression, instead of a file
-  -                     Start an interactive REPL shell
-  -v[vv]                Increase verbosity (use '-vvv' for 'TRACE' level)
-  -V,--version          Print out just the version information for kscript
-
-kscript v0.0.1 release Mar 22 2020 14:12:31
-Cade Brown <brown.cade@gmail.com>
+$ pandoc DOCS.md -s --toc --toc-depth 4 --template template.html --lua-filter=pandoc/anchors.lua -o index.html --syntax-highlighting=none
 ```
 
-To execute and display an expression, run:
+## TODO for final release
 
-```shell
-$ ks -e '1 + 2**4'
-17
-```
-
-You can also run the interactive interpreter by running with no arguments (`ks`), or with `-` as the filename (`ks -`):
-
-```shell
-$ ks
->>> 1 + 2 ** 4
-17
->>>
-```
-
-## Installing
-
-Right now, it is in an early alpha stage, so installers aren't ready. Check out the section below, on building it
-
-## Building
-
-This is a quick description that will work for most people and platforms, but check out [BUILD.md](./BUILD.md) for a more complete and customizable installation process
-
-To build kscript, you first need to get a copy of the source code. To get the latest commit, use `git clone https://github.com/chemicaldevelopment/kscript`. This will clone the repo into a folder called `kscript`. You can also download a `.zip` from the [GitHub repo](https://github.com/chemicaldevelopment/kscript), and unzip it. 
-
-Then, open a shell (`bash`, `zsh`, etc.) in the directory with the source code and follow the instructions below for your platform
-
-### On Linux/UNIX Systems
-
-Requirements:
-
-  1. A C compiler that supports `C99`, although most compilers will work even if they don't fully support `C99`
-  2. A `make`-based build system
-
-Optional Dependencies:
-
-  1. The Posix threading library (`pthread`)
-    * If this is not present, then threading support is emulated and some problems may arise with multi-threaded code
-  2. The GNU Multiple Precision library (`gmp`)
-    * If this is not present, then kscript will use an implementation of a subset of GMP routines. This means operations with large integers will be slower
-  3. The GNU Readline library (`readline`)
-    * If this is not present, then the kscript interpreter will not have auto-completion and advanced line-editing features
-  4. The Fastest Fourier Transform in the West (`fftw3`)
-    * If this is not present, then the implementation of FFT plans may be slower
-  5. Libav (`libav`)
-    * If this is not present, then `mm` won't support nearly as many media formats
-
-
-For example, you can install these on various platforms:
-
-Debian/Ubuntu/etc.: `sudo apt install libpthread-stubs0-dev libgmp-dev libffi-dev libreadline-dev libfftw3-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev`
-
-Now, once you have installed the dependencies you want, you can build the library via:
-
-```shell
-$ ./configure # give it '--help' to display options
-$ make
-$ make check # runs the standard tests
-```
-
-### On MacOS Systems
-
-The simplest way is to just build like this:
-
-```shell
-$ ./configure
-$ make bin/ks -j16
-```
-
-If you install `libffi`, you can build with FFI support like this:
-
-```shell
-$ brew install libffi
-$ export CFLAGS="-I/opt/homebrew/opt/libffi/include"
-$ export LDFLAGS="-L/opt/homebrew/opt/libffi/lib"
-$ ./configure --with-ffi on
-$ make bin/ks -j16
-```
-
-### On Windows
-
-TODO: I've gotten it to build on Windows, but I need to make it more complete so others can reproduce it
-
-## Examples
-
-See the `examples/` folder for examples
-
-### Hello World
-
-This is the classic Hello World example:
-
-```ks
-print ("Hello World")
-```
+* implement sum/min/max functions
+* implement display in REPL with backslash-escaped printing

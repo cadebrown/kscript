@@ -935,7 +935,7 @@ void _ksi_io_BaseIO() {
         {"__iter",                 KS_NEWREF(ksiot_BaseIO_iter)},
 
         {"close",                  ksf_wrap(T_close_, T_NAME ".close(self)", "Closes the stream")},
-        {"seek",                   ksf_wrap(T_seek_, T_NAME ".seek(self, pos, whence=io.Seek.SET)", "Seeks to a position from a relative location\n\n    'whence': Either 'io.Seek.SET' (from start of stream), 'io.Seek.CUR' (from current position), or 'io.Seek.END' (from the end of the stream)")},
+        {"seek",                   ksf_wrap(T_seek_, T_NAME ".seek(self, pos, whence=io.Seek.SET)", "Seeks to a position from a relative location\n'whence': Either 'io.Seek.SET' (from start of stream), 'io.Seek.CUR' (from current position), or 'io.Seek.END' (from the end of the stream)")},
         {"tell",                   ksf_wrap(T_tell_, T_NAME ".tell(self)", "Return the current position of the stream, from the origin")},
         {"trunc",                  ksf_wrap(T_trunc_, T_NAME ".trunc(self, sz=0)", "Truncate the stream to a given size")},
         {"eof",                    ksf_wrap(T_eof_, T_NAME ".eof(self)", "Calculate whether the stream has hit the EOF indicator")},

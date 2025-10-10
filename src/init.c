@@ -255,6 +255,11 @@ _KS_DO_SPEC(_KSACT)
         {"bin", (kso)ksf_bin},
         {"oct", (kso)ksf_oct},
         {"hex", (kso)ksf_hex},
+
+        {"__import", (kso)ksf_import},
+        {"wget", (kso)ksf_wget},
+        {"js", (kso)ksf_js},
+        {"man", (kso)ksf_man},
     
     ));
 
@@ -264,6 +269,8 @@ _KS_DO_SPEC(_KSACT)
 
     /* Current position */
     ks_list_pushu(ksg_path, (kso)ks_str_new(-1, "."));
+
+    ks_list_pushu(ksg_path, (kso)ks_fmt("./"));
 
     /* Add the prefix configured */
     ks_list_pushu(ksg_path, (kso)ks_fmt("%s/lib/ks/kpm", KS_BUILD_PREFIX));
@@ -286,6 +293,49 @@ _KS_DO_SPEC(_KSACT)
         kso_catch_ignore();
     }
 
+
+#ifdef __EMSCRIPTEN__
+
+EM_ASM(
+
+    const disk_path = '/disk';
+    // Make a directory other than '/'
+    FS.mkdir(disk_path);
+
+    // Then mount with IDBFS type
+    FS.mount(IDBFS, {
+        autoPersist: true
+    }, disk_path);
+
+    // Then sync
+    FS.syncfs(true, function (err) {
+        if (err) {
+            console.log('IDBFS sync error: ' + err);
+        }
+
+        FS.chdir(disk_path); 
+
+    });
+);
+
+  EM_ASM(
+    // Ensure IndexedDB is closed at exit.
+    Module['onExit'] = function() {
+      assert(Object.keys(IDBFS.dbs).length == 0);
+    };
+    FS.syncfs(function (err) {
+        if (err) {
+            console.log('Initial IDBFS sync error: ' + err);
+        }
+    //   assert(!err);
+    //   ccall('success', 'v');
+    });
+  );
+
+
+#endif
+
+
     return has_init = true;
 }
 
@@ -298,7 +348,8 @@ bool ks_has_init() {
 const char* ks_get_verstr() {
     static char verstr[256] = { 0 };
     if (!verstr[0]) {
-        snprintf(verstr, sizeof(verstr) - 1, "kscript v%i.%i.%i (%s), compiled at %s %s", KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH, KS_PLATFORM, __DATE__, __TIME__);
+        snprintf(verstr, sizeof(verstr) - 1, "kscript v%i.%i.%i (%s)", KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH, KS_PLATFORM);
+        // snprintf(verstr, sizeof(verstr) - 1, "kscript v%i.%i.%i (%s), compiled at %s %s", KS_VERSION_MAJOR, KS_VERSION_MINOR, KS_VERSION_PATCH, KS_PLATFORM, __DATE__, __TIME__);
     }
     return verstr;
 }

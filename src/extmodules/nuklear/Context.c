@@ -6,6 +6,7 @@
  * @author:    Cade Brown <cade@kscript.org>
  */
 #include <ks/impl.h>
+
 #include <ks/nuklear.h>
 
 #define T_NAME "nuklear.Context"
@@ -20,7 +21,6 @@ static int ctx_max_verbuf = 512 * 1024;
 static int ctx_max_elebuf = 128 * 1024;
 
 #if defined(KSNK_XLIB_GL3)
-
 
 /* Return whether or not an extension string has a given extension */
 static bool _X_hasext(const char *string, const char *ext) {
@@ -41,6 +41,14 @@ static bool _X_hasext(const char *string, const char *ext) {
     }
 
     return false;
+}
+
+#elif defined(KSNK_GLFW_GL3)
+
+/* Key input callback for GLFW */
+static void _GLFW_keycb(GLFWwindow *win, unsigned int codepoint) {
+    ksnk_Context ctx = (ksnk_Context)glfwGetWindowUserPointer(win);
+    nk_input_unicode(ctx->ctx, codepoint);
 }
 
 #endif
@@ -239,14 +247,25 @@ static KS_TFUNC(T, new) {
 
 #elif defined(KSNK_GLFW_GL3)
 
+
     // construct a new GLFW window with the given parameters
-    self->window = glfwCreateWindow(width, height, title->chr, NULL, NULL);
+    self->window = glfwCreateWindow(w, h, name->data, NULL, NULL);
 
     glfwMakeContextCurrent(self->window);
     glfwSetCharCallback(self->window, _GLFW_keycb);
 
+
     // set user data to the context object
     glfwSetWindowUserPointer(self->window, self);
+
+    printf("BEFORE ALL THIS AS\n");
+
+    // // need to re-initialize gl3w
+    // // TODO: is this only on MacOS? I get segfaults if I don't do this
+    // if (gl3wInit() != 0) {
+    //     KS_THROW(kst_Error, "Failed to initialize gl3w");
+    //     return NULL;
+    // }
 
     // create a context from the GLFW window
     self->ctx = nk_glfw3_init(self->window, NK_GLFW3_INSTALL_CALLBACKS);
@@ -264,6 +283,8 @@ static KS_TFUNC(T, new) {
     nk_glfw3_font_stash_end();
 
 #endif
+
+
 
     /* load cursor assets */
 
@@ -290,7 +311,9 @@ static KS_TFUNC(T, getattr) {
         ww = self->x.attr.width;
         wh = self->x.attr.height;
 #elif defined(KSNK_GLFW_GL3)
-        glfwGetWindowSize(self->window, &ww, &wh);
+        // glfwGetWindowSize(self->window, &ww, &wh);
+        glfwGetFramebufferSize(self->window, &ww, &wh);
+
 #endif
 
         return (kso)ks_tuple_newn(2, (kso[]){
@@ -396,7 +419,8 @@ static KS_TFUNC(T, end_frame) {
     dw = self->x.attr.width;
     dh = self->x.attr.height;
 #elif defined(KSNK_GLFW_GL3)
-    glfwGetWindowSize(self->window, &dw, &dh);
+    // glfwGetWindowSize(self->window, &dw, &dh);
+    glfwGetFramebufferSize(self->window, &dw, &dh);
 #endif
 
 

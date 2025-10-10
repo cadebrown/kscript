@@ -51,7 +51,12 @@ ks_func
     ksf_isinst,
     
     ksf_iter,
-    ksf_next
+    ksf_next,
+
+    ksf_import,
+    ksf_wget,
+    ksf_js,
+    ksf_man
 ;
 
 static KS_FUNC(open) {
@@ -344,6 +349,162 @@ static KS_FUNC(input) {
 #endif
 }
 
+static KS_FUNC(import) {
+    ks_str name, path = NULL;
+    KS_ARGS("name:* ?path:*", &name, kst_str, &path, kst_str);
+
+    return (kso)ks_importx(name, (kso)path);
+}
+
+static KS_FUNC(wget) {
+    ks_str url, path = NULL;
+    KS_ARGS("url:* ?path:*", &url, kst_str, &path, kst_str);
+
+#ifdef EMSCRIPTEN
+
+    if (path == NULL) {
+        /* Use the last segment of the URL as the path */
+        path = ks_str_new(-1, strrchr(url->data, '/') + 1);
+        if (path->len_b == 0) {
+            KS_THROW(kst_Error, "Failed to determine filename from URL %R, please provide an explicit 'path' argument", url);
+            KS_DECREF(path);
+            return NULL;
+        }
+    } else {
+        KS_INCREF(path);
+    }
+
+    ks_printf("Downloading URL %R to path %R\n", url, path);
+    if (emscripten_wget(url->data, path->data) != 0) {
+        KS_THROW(kst_IOError, "Failed to start download of URL %S to path %S", url, path);
+        return NULL;
+    }
+
+    // NOTE: incref and decref, since we are returning the path
+    // convert to a 'correct' path
+
+    ksos_path path_real = ksos_path_new_o((kso)path);
+    KS_DECREF(path);
+    return (kso)path_real;
+
+#else
+    KS_THROW(kst_Error, "'geturl' is only implemented in the web/emscripten build of kscript");
+    return NULL;
+#endif
+}
+
+static KS_FUNC(js) {
+    ks_str code;
+    KS_ARGS("code:*", &code, kst_str);
+#ifdef EMSCRIPTEN
+    emscripten_run_script(code->data);
+    return KSO_NONE;
+#else
+    KS_THROW(kst_Error, "'js' is only implemented in the web/emscripten build of kscript");
+    return NULL;
+#endif
+}
+
+static KS_FUNC(man) {
+    kso obj;
+    KS_ARGS("obj", &obj);
+
+    ks_str res = ks_fmt("");
+    ks_str tmp = NULL;
+    if (kso_isinst(obj, kst_type)) {
+        ks_type tp = (ks_type)obj;
+        tmp = ks_fmt("type %S", tp->i__name);
+        KS_DECREF(res);
+        res = tmp;
+
+        kso s_doc = kso_getattr_c(obj, "__doc");
+        if (s_doc == NULL) {
+            kso_catch_ignore();
+            res = ks_fmt("%S\n\n    (no documentation)\n", res);
+        } else {
+            // split into lines
+            ks_list lines = ks_str_split_c(((ks_str)s_doc)->data, "\n");
+            if (!lines) {
+                kso_catch_ignore();
+            } else {
+                tmp = ks_fmt("%S\n\n    %J\n", res, "\n\n    ", (int)lines->len, lines->elems);
+                KS_DECREF(res);
+                res = tmp;
+                KS_DECREF(lines);
+            }
+            KS_DECREF(s_doc);
+        }
+
+        int i;
+        for (i = 0; i < tp->attr->len_ents; ++i) {
+            struct ks_dict_ent* ent = &tp->attr->ents[i];
+            if (ent->key != NULL) {
+                if (kso_isinst(ent->val, kst_func)) {
+                    kso sub_man = man_(1, (kso[]){ ent->val });
+                    if (!sub_man) {
+                        kso_catch_ignore();
+                        continue;
+                    }
+                    tmp = ks_fmt("%S\n%S", res, sub_man);
+                    KS_DECREF(res);
+                    res = tmp;
+                    KS_DECREF(sub_man);
+                }
+            }
+        }
+
+    } else if (kso_isinst(obj, kst_func)) {
+        ks_func f = (ks_func)obj;
+
+        kso s_sig = kso_getattr_c(obj, "__sig");
+        if (s_sig == NULL) {
+            kso_catch_ignore();
+            tmp = ks_fmt("%R", f);
+            KS_DECREF(res);
+            res = tmp;
+        } else {
+            tmp = ks_fmt("func %S", s_sig);
+            KS_DECREF(res);
+            res = tmp;
+            KS_DECREF(s_sig);
+        }
+        
+        kso s_doc = kso_getattr_c(obj, "__doc");
+        if (s_doc == NULL || ((ks_str)s_doc)->len_b == 0) {
+            kso_catch_ignore();
+            tmp = ks_fmt("%S\n\n    (no documentation)\n", res);
+            KS_DECREF(res);
+            res = tmp;
+            if (s_doc) KS_DECREF(s_doc);
+
+        } else {
+            if (kso_isinst(s_doc, kst_str)) {
+                // replace all newlines with additional indents
+                ks_list lines = ks_str_split_c(((ks_str)s_doc)->data, "\n");
+                if (!lines) {
+                    kso_catch_ignore();
+                } else {
+                    tmp = ks_fmt("%S\n\n    %J\n", res, "\n\n    ", (int)lines->len, lines->elems);
+                    KS_DECREF(res);
+                    res = tmp;
+                    KS_DECREF(lines);
+                }
+            }
+            KS_DECREF(s_doc);
+        }
+
+    } else {
+        KS_DECREF(res);
+        KS_THROW(kst_TypeError, "Expected a type, func, or module object to generate a manual page for, but got '%T' object", obj);
+        return NULL;
+    }
+
+    // print it out, and return it
+    ks_printf("%S\n", res);
+    return (kso)res;
+
+}
+
 void _ksi_funcs() {
 
     /* Create a function */
@@ -354,10 +515,10 @@ void _ksi_funcs() {
     F(print, "print(*args)", "Prints out all the arguments to 'os.stdout', seperated by spaces, and followed by a newline")
     F(printf, "printf(fmt, *args)", "Prints a formatted message to 'os.stdout', with no seperators or newline")
 
-    F(hash, "hash(obj)", "Computes the hash of an object, which is an integer\n\n    Delegates to 'type(obj).__hash(obj)'");
-    F(abs, "abs(obj)", "Computes absolute value of an object\n\n    Delegates to 'type(obj).__abs(obj)'");
-    F(len, "len(obj)", "Computes the length of an object, which is normally the number of elements in a collection\n\n    Delegates to 'type(obj).__hash(obj)'");
-    F(repr, "repr(obj)", "Computes the string representation of an object, which aims to be a string that can either be executed and result in the same value, or give as much information as possible\n\n    Delegates to 'type(obj).__repr(obj)'");
+    F(hash, "hash(obj)", "Computes the hash of an object, which is an integer\nDelegates to 'type(obj).__hash(obj)'");
+    F(abs, "abs(obj)", "Computes absolute value of an object\nDelegates to 'type(obj).__abs(obj)'");
+    F(len, "len(obj)", "Computes the length of an object, which is normally the number of elements in a collection\nDelegates to 'type(obj).__hash(obj)'");
+    F(repr, "repr(obj)", "Computes the string representation of an object, which aims to be a string that can either be executed and result in the same value, or give as much information as possible\nDelegates to 'type(obj).__repr(obj)'");
 
     F(exit, "exit(code=0)", "Exit the program with a given exit code")
     F(eval, "eval(src, fname='<expr>', locals=none)", "Evaluate kscript source code, and return the result")
@@ -370,8 +531,8 @@ void _ksi_funcs() {
     F(chr, "chr(ord)", "Convert an ordinal (i.e. an integral codepoint) into a length-1 string");
     F(ord, "ord(chr)", "Convert a length-1 string into an ordinal (i.e. an integral codepoint)");
 
-    F(iter, "iter(obj)", "Returns an iterator over the contents of 'obj'\n\n    Delegates to 'type(obj).__iter'")
-    F(next, "next(obj)", "Returns the next object in an iterator\n\n    Delegates to 'type(obj).__next', or 'next(iter(obj))'")
+    F(iter, "iter(obj)", "Returns an iterator over the contents of 'obj'\nDelegates to 'type(obj).__iter'")
+    F(next, "next(obj)", "Returns the next object in an iterator\nDelegates to 'type(obj).__next', or 'next(iter(obj))'")
     F(input, "input(prompt='')", "Print an (optional) prompt and then return the next line of user input")
 
     F(bin, "bin(obj)", "Return a string beginning with '0b' and containing the base-2 digits of 'obj' (which should be an integer)");
@@ -379,6 +540,11 @@ void _ksi_funcs() {
     F(hex, "hex(obj)", "Return a string beginning with '0x' and containing the base-16 digits of 'obj' (which should be an integer)");
 
     F(id, "id(obj)", "Return the id of an object, which is its memory location");
+
+    F(import, "__import(name, path=none)", "Import a base module by name (i.e. one without any '.' in the name) and return it");
+    F(wget, "wget(path, url)", "Download the contents of 'url' to a local file at 'path'\nOnly available in the web/emscripten build of kscript");
+    F(js, "js(code)", "Execute a snippet of JavaScript code\nOnly available in the web/emscripten build of kscript");
+    F(man, "man(obj)", "Generate a manual page for an object (typically, a type, func, or module)");
 
     #undef F
 

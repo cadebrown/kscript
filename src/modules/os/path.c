@@ -437,6 +437,77 @@ static KS_TFUNC(T, islink) {
 }
 
 
+static KS_TFUNC(T, save) {
+    kso self, data;
+    KS_ARGS("self data", &self, &data);
+
+
+    // open the path
+    ks_str sp = ksos_path_str(self);
+    if (!sp) return NULL;
+    FILE* fp = fopen(sp->data, "wb");
+    KS_DECREF(sp);
+    if (!fp) {
+        KS_THROW_ERRNO(errno, "Failed to open %R for writing", self);
+        return NULL;
+    }
+
+    // convert data to string
+    ks_str sdata = ks_fmt("%R", data);
+    if (!sdata) {
+        fclose(fp);
+        return NULL;
+    }
+    // write the data
+    size_t wlen = fwrite(sdata->data, 1, sdata->len_b, fp);
+    if (wlen != sdata->len_b) {
+        int err = ferror(fp);
+        KS_DECREF(sdata);
+        fclose(fp);
+        KS_THROW_ERRNO(err, "Failed to write data to %R", self);
+        return NULL;
+    }
+    KS_DECREF(sdata);
+    fclose(fp);
+    return KSO_NONE;
+}
+
+static KS_TFUNC(T, load) {
+    kso self;
+    KS_ARGS("self", &self);
+
+    // open the path
+    ks_str sp = ksos_path_str(self);
+    if (!sp) return NULL;
+    FILE* fp = fopen(sp->data, "rb");
+    KS_DECREF(sp);
+    if (!fp) {
+        KS_THROW_ERRNO(errno, "Failed to open %R for reading", self);
+        return NULL;
+    }
+
+    // read the data into the data
+    fseek(fp, 0, SEEK_END);
+    size_t len = ftell(fp);
+    fseek(fp, 0, SEEK_SET);
+
+    char* buf = ks_malloc(len + 1);
+    size_t rlen = fread(buf, 1, len, fp);
+    if (rlen != len) {
+        int err = ferror(fp);
+        fclose(fp);
+        ks_free(buf);
+        KS_THROW_ERRNO(err, "Failed to read data from %R", self);
+        return NULL;
+    }
+    buf[len] = '\0';
+    fclose(fp);
+    ks_str res = ks_str_new(len, buf);
+    ks_free(buf);
+    return (kso)res;
+}
+
+
 /* Export */
 
 static struct ks_type_s tp;
@@ -445,7 +516,7 @@ ks_type ksost_path = &tp;
 
 void _ksi_os_path() {
 
-    _ksinit(ksost_path, kst_object, T_NAME, sizeof(struct ksos_path_s), -1, "Path on the filesystem, which can be read, written, or 'stat'd to determine properties\n\n    This is a higher level interface than 'str', which can be used in many of the functions, but makes it difficult to reason about the path. Therefore, this type defines a more object-oriented approach to path treatment", KS_IKV(
+    _ksinit(ksost_path, kst_object, T_NAME, sizeof(struct ksos_path_s), -1, "Path on the filesystem, which can be read, written, or 'stat'd to determine properties\nThis is a higher level interface than 'str', which can be used in many of the functions, but makes it difficult to reason about the path. Therefore, this type defines a more object-oriented approach to path treatment", KS_IKV(
         {"__free",                 ksf_wrap(T_free_, T_NAME ".__free(self)", "")},
         {"__new",                  ksf_wrap(T_new_, T_NAME ".__new(tp, src='', root=none)", "")},
         {"__repr",                 ksf_wrap(T_repr_, T_NAME ".__repr(self)", "")},
@@ -460,12 +531,15 @@ void _ksi_os_path() {
         {"last",                   ksf_wrap(T_last_, T_NAME ".last(self)", "Computes the last element of the path")},
 
         {"join",                   ksf_wrap(T_join_, T_NAME ".join(*args)", "Joins paths together, accepts 'str', 'os.path', and other path-like objects")},
-        {"real",                   ksf_wrap(T_abs_, T_NAME ".real(self)", "Computes the real path (i.e. actual location within the filesystem)\n\n    Returns a path with an absolute root")},
+        {"real",                   ksf_wrap(T_abs_, T_NAME ".real(self)", "Computes the real path (i.e. actual location within the filesystem)\nReturns a path with an absolute root")},
 
         {"exists",                 ksf_wrap(T_exists_, T_NAME ".exists(self)", "Computes whether 'self' exists on the file system")},
         {"isfile",                 ksf_wrap(T_isfile_, T_NAME ".isfile(self)", "Computes whether 'self' is a regular file")},
         {"isdir",                  ksf_wrap(T_isdir_, T_NAME ".isdir(self)", "Computes whether 'self' is a directory")},
         {"islink",                 ksf_wrap(T_islink_, T_NAME ".islink(self)", "Computes whether 'self' is a symbolic link")},
+
+        {"load",                   ksf_wrap(T_load_, T_NAME ".load(self)", "Loads the contents of the file at 'self' and returns it as a 'str' object")},
+        {"save",                   ksf_wrap(T_save_, T_NAME ".save(self, data)", "Saves 'data' (which is converted to a 'str') to the file at 'self'")},
 
     ));
     

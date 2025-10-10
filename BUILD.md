@@ -2,6 +2,9 @@
 
 This document is a more in-depth guide to building kscript than is presented in the `README.md` file.
 
+
+export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:/opt/homebrew/lib"
+
 ## On Unix/Linux/MacOS
 
 Requirements:

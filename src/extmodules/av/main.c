@@ -363,7 +363,8 @@ static ks_module get() {
     }
     KS_DECREF(nxk);
 
-    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'av' - audio-video module\n\n    This module implements common media operations", KS_IKV(
+
+    ks_module res = ks_module_new(M_NAME, KS_BIMOD_SRC, "'av' - audio-video module\nThis module implements common media operations", KS_IKV(
         /* Types */
         {"IO",                     (kso)ksavt_IO},
         {"Stream",                 (kso)ksavt_Stream},
