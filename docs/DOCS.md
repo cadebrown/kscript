@@ -1,6 +1,17 @@
+---
+title: "kscript v0.3.1"
+author:
+  - "Cade Brown"
+date: "2025-10-14"
+subtitle: "a programming language"
+header-includes:
+  - \usepackage{enumitem}
+  - \setlist[description]{style=nextline}
+---
+
 # kscript: a programming language
 
-kscript is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. It's like Python, but better 😉.
+kscript is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. It's like Python, but better.
 
 Right now, you're reading kscript's documentation and reference manual. It aims to show you how to write kscript by example, as well as explain the design philosophy behind it. Also, it dives into internal implementation details, if you're into that sort of thing.
 
@@ -21,10 +32,9 @@ A few things I decided to reinvent the wheel for:
   * [bytecode compiler](https://github.com/cadebrown/kscript/blob/main/src/compiler.c), converting high level parse 
   * [bytecode virtual machine](https://github.com/cadebrown/kscript/blob/main/src/vm.c), which is the core of the interpreter using a stack-based execution model, with exceptions and scoping
 
-## FAQs: What/Why/Who/When/How is kscript? {.unnumbered .unlisted}
+## FAQs: What/Why/Who/When/How is kscript?
 
 What is kscript?
-
 : [kscript](https://ks.cade.io) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. Its primary aim is to allow developers to write platform agnostic programs that can run anywhere, and require little or no platform-specific or os-specific code.
 
   The language is object-oriented, duck-typed, and targets the web platform through [WASM](https://webassembly.org/) and [WASI](https://wasi.dev/). It is a learning project, so expect rough edges. It's fun to write and demonstrates some interesting concepts, so I hope you enjoy it!
@@ -55,13 +65,13 @@ How is kscript?
 
   There is also optional support for some common third party libraries, such as readline (for terminal support), libffi (for calling C functions in shared libraries), and others. In addition, there is platform support for web browers, made possible through [Emscripten](https://emscripten.org/) and [WebAssembly (WASM)](https://webassembly.org/).
 
-## kscript: A Practical Guide
+# kscript: A Practical Guide
 
 How might you actually use kscript? Let's explore writing some simple programs to introduce you to the language, its syntax, and its semantics.
 
 This guide will start out simple, explaining new concepts as they are naturally introduced. The goal is to grow in complexity, w
 
-### Chapter 0: Hello World
+## Chapter 0: Hello World
 
 In honor of tradition, here's the classic ["Hello, World!"](https://en.wikipedia.org/wiki/%22Hello,_World!%22_program) program, written in kscript:
 
@@ -77,11 +87,11 @@ Let's break it down:
 
 And that's it!
 
-### Chapter 1: Some Basic Uses
+## Chapter 1: Some Basic Uses
 
-### Chapter 2: Writing Reusable Functions
+## Chapter 2: Writing Reusable Functions
 
-### Chapter 3: Implementing Custom Types
+## Chapter 3: Implementing Custom Types
 
 ```ks
 
@@ -98,13 +108,13 @@ type Person {
 
 ```
 
-## Programming Philosophy
+# Programming Philosophy
 
 If I may be indulged, I'd like to describe the philosophy behind kscript. This section covers the reasoning and goals of kscript, and what design decisions were made to achieve those goals. At a high level, kscript is meant to be written and read as close to [pseudocode](https://en.wikipedia.org/wiki/Pseudocode) and [mathematical notation](https://en.wikipedia.org/wiki/Mathematical_notation) as possible. In other words, very little boiler plate is required, and instead the focus is on the core logic that code is trying to express.
 
 Performance is not the highest priority, but rather correctness, readability, and maintainability. kscript is meant to be a language that is easy to pick up and use for small tasks, but also powerful enough to be used for larger projects. It is also meant to be a language that is easy to learn, with a gentle learning curve. Minimizing extra "noise" is essential as well for REPL-like usage, where you want to quickly write and get output from your code without having to coax the language too much.
 
-### The Octologue: Rules of Thumb
+## The Octologue: Rules of Thumb
 
 These are the pillars of kscript, which the kscript standard library and all other kscript code should try to adhere to.
 
@@ -193,7 +203,7 @@ Thou Shalt Apply Judgement
 
   [People](https://en.wikipedia.org/wiki/List_of_religious_leaders_convicted_of_crimes) [that](https://en.wikipedia.org/wiki/Lord_Our_Righteousness_Church#History) [have](https://en.wikipedia.org/wiki/Jeffrey_Lundgren) [strong](https://en.wikipedia.org/wiki/Yahweh_Ben_Yahweh) [beliefs](https://en.wikipedia.org/wiki/Graham_Capill) [are](https://en.wikipedia.org/wiki/Dennis_Rader) [often](https://en.wikipedia.org/wiki/Catholic_Church_sexual_abuse_cases) [hypocritical](https://en.wikipedia.org/wiki/Kent_Hovind). Just refer to commandment 1 (Thou Shalt Not Take The Name Of KSCRIPT In Vain), and don't be as bad as those links.
 
-### Duck Typing Patterns
+## Duck Typing Patterns
 
 Patterns in kscript refer to sets of "magic attributes" and/or methods that objects are expected to have in order to fulfill a certain purpose. Objects that have those attributes and/or methods are said to "fit" a given pattern, and can be used like other objects that fit that pattern -- this is the basis of all [duck-typed](https://en.wikipedia.org/wiki/Duck_typing) programming languages.
 
@@ -206,7 +216,7 @@ Some examples of patterns in the standard library are:
 * **Number pattern**: documented by the abstract base type `number`
 * **IO pattern**: documented by the abstract base type `io.BaseIO`
 
-#### Magic Attributes
+### Magic Attributes
 
 Duck-typing concept
 
@@ -248,7 +258,7 @@ The above was just an example, but it shows how specially named attributes allow
 
 : Used for computing the length of a container, which is typically the number of elements. Should return an `int`.
 
-#### Operator Overloading
+### Operator Overloading
 
 There are a number of operators in kscript that can be used on builtin types and types in the standard library, such as `+` (addition), `-` (subtraction), and `*` (multiplication). However, you can also use them with custom types, which is covered in this section. Defining semantics for operators is called [operator overloading](https://en.wikipedia.org/wiki/Operator_overloading).
 
@@ -257,7 +267,7 @@ Operator overloading in kscript is done via magic attributes. Specifically, ther
 * For unary operators, such as `+x`, the magic attribute (in this case, `__pos` for `+`) is searched on `type(x)`. So, `type(x).__pos(x)` is attempted. If no such attribute existed, an `Error` is thrown.
 * For binary operators, such as `x+y`, the magic attribute (in this case, `__add` for `+`) is searched on `type(x)` and `type(y)`. So, `type(x).__add(x, y)` is attempted. If no such attribute existed, or the result was `undefined`, then `type(y).__add(x, y)` is attempted. If no such attribute existed, or the result was `undefined`, then an `Error` is thrown.
 
-##### Unary Operators
+#### Unary Operators
 
 `+(obj) == (obj).__pos()`
 
@@ -271,7 +281,7 @@ Operator overloading in kscript is done via magic attributes. Specifically, ther
 
 : For bitwise negation or complex number conjugation
 
-##### Binary Operators
+#### Binary Operators
 
 `(L)+(R) == (L).__add(R)`
 
@@ -375,7 +385,7 @@ C = A + B
 print (C.x, C.y)
 ```
 
-## The Standard Library
+# The Standard Library
 
 This section documents the builtin modules in kscript, of which there are plenty! The general philosophy in kscript is to make APIs as cross-platform and backend-independent as possible. What that means is that standard types, functions, and modules put forth names and functionality that might not directly map to a particular existing library -- even if kscript uses that library internally to perform the functionality. 
 
@@ -385,7 +395,7 @@ A good example of this is the `os` module, which uses the C standard library to 
 
 You can access modules by using the `import` statement. For example, `import os` will import the `os` module, and allow you to use `os.<funcname>`
 
-### Global Builtins
+## Global Builtins
 
 Types, functions, and values available everywhere
 
@@ -758,7 +768,7 @@ This type is a subtype of the `KeyError` type
   ```
 
 
-### m: Mathematical Utilities
+## m: Mathematical Utilities
 
 Math Module
 
@@ -766,7 +776,7 @@ This module, `m`, provides functionality to aid in mathematical problems/needs. 
 
 This module is meant to work with the types that follow the `number` pattern, such as `int`, `float`, and `complex`. Most functions are defined for real and complex evaluation. If a real number is given, then (generally) a real number is returned. If a complex number is given, then (generally) a complex number is returned. If a real number is given (for example, to `m.sqrt`) and the result would be a complex number (i.e. `m.sqrt(-1)`), then an error is thrown (this makes it easy to find bugs, and in general real numbers are what most people care about – and they would like an error on code such as `m.sqrt(-1)`). To get around this, you can write: `m.sqrt(complex(-1))`, and the result will always be a complex, and an error won’t be thrown for negative numbers.
 
-Constants are given in maximum precision possible within a float, but for all of these constants, their value is not exact. This causes some issues or unexpected results. For example, mathematically, {@math \sin(\pi) = 0}, but `m.sin(m.pi) == 1.22464679914735e-16`. This is expected when using finite precision. Just make sure to keep this in mind.
+Constants are given in maximum precision possible within a float, but for all of these constants, their value is not exact. This causes some issues or unexpected results. For example, mathematically, $$ \sin(\pi) = 0 $$, but `m.sin(m.pi) == 1.22464679914735e-16`. This is expected when using finite precision. Just make sure to keep this in mind.
 
 Here are some recommended ways to handle it:
 
@@ -919,7 +929,7 @@ Here are some recommended ways to handle it:
 
 : Computes the [error function](https://en.wikipedia.org/wiki/Error_function) of `x`
 
-  Defined as {@math \frac{2}{\sqrt \pi} \int_{0}^{x} e^{-t^2} dt}
+  Defined as $$ \frac{2}{\sqrt \pi} \int_{0}^{x} e^{-t^2} dt $$
 
 `m.erfc(x)`
 
@@ -927,15 +937,15 @@ Here are some recommended ways to handle it:
 
 `m.gamma(x)`
 
-: Computes the [Gamma function](https://en.wikipedia.org/wiki/Gamma_function) of `x`, {@math \Gamma(x)}
+: Computes the [Gamma function](https://en.wikipedia.org/wiki/Gamma_function) of `x`, $$ \Gamma(x) $$
 
 `m.zeta(x)`
 
-: Computes the [Riemann Zeta function](https://en.wikipedia.org/wiki/Riemann_zeta_function) of `x`, {@math \zeta(x)}
+: Computes the [Riemann Zeta function](https://en.wikipedia.org/wiki/Riemann_zeta_function) of `x`, $$ \zeta(x) $$
 
 `m.modinv(x, n)`
 
-: Computes the [modular inverse](https://en.wikipedia.org/wiki/Modular_multiplicative_inverse) of `x` within the ring of integers modulo `n` (i.e. {@math Z_n})
+: Computes the [modular inverse](https://en.wikipedia.org/wiki/Modular_multiplicative_inverse) of `x` within the ring of integers modulo `n` (i.e. $$ Z_n $$)
   
   A `MathError` is thrown if no such inverse exists
 
@@ -949,7 +959,7 @@ Here are some recommended ways to handle it:
   
   If `abs(x) == abs(y)`, then `(g, 0, m.sgn(y))` is returned
 
-### nx: NumeriX Tensor Library
+## nx: NumeriX Tensor Library
 
 The NumeriX module (`nx`) provides array operations, linear algebra algorithms, transforms, and other numerical algorithms. It is similar to the math module (`m`), but is intended to work for specific datatypes and compute the result in parallel for entire arrays. This is sometimes called [array programming](https://en.wikipedia.org/wiki/Array_programming).
 
@@ -1047,7 +1057,7 @@ You can access modules by using the `import` statement. For example, `import os`
 
 : Casts `x` to a datatype, storing in `r` (default: return new array). This is like `nx.cast`, except that it automatically converts to and from fixed point and floating point. For example, if going from integer to float types, the result is scaled to the `[0, 1]` range (unsigned values) or `[-1, 1]` range (signed values). Likewise, going from float to integer types, the result is scaled to the full range of the integer type, from the floating point scale.
 
-#### nx.la: Linear Algebra
+### nx.la: Linear Algebra
 
 This module is a submodule of the `nx` module. Specifically, it implements functionality related to dense linear algebra.
 
@@ -1139,7 +1149,7 @@ Most functions operate on arrays, which are expected to be of rank-2 or more (in
    [3.0, 4.0]]
   ```
 
-#### nx.fft: Fast Fourier Transforms
+### nx.fft: Fast Fourier Transforms
 
 This module is a submodule of the `nx` module. Specifically, it provides functionality related to [FFTs (Fast Fourier Transforms)](https://en.wikipedia.org/wiki/Fast_Fourier_transform).
 
@@ -1151,7 +1161,7 @@ Different languages/libraries use different conventions for FFT/IFFT/other trans
 
   The result of this function is always complex. If an integer datatype input is given, the result will be `nx.complexdouble` . All numeric datatypes are supported, and are to full precision. 
 
-  For a 1-D FFT, let {@math N} be the size, {@math x} be the input, and {@math X} be the output. Then, the corresponding entries of {@math X} are given by:
+  For a 1-D FFT, let $$ N $$ be the size, $$ x $$ be the input, and $$ X $$ be the output. Then, the corresponding entries of $$ X $$ are given by:
 
   $$ X_j = \sum_{k=0}^{N-1} x_k e^{-2 \pi i j k /N} $$
 
@@ -1172,11 +1182,11 @@ Different languages/libraries use different conventions for FFT/IFFT/other trans
 
   The result of this function is always complex. If an integer datatype input is given, the result will be `nx.complexdouble` . All numeric datatypes are supported, and are to full precision.
 
-  For a 1-D IFFT, let {@math N} be the size, {@math x} be the input, and {@math X} be the output. Then, the corresponding entries of {@math X} are given by:
+  For a 1-D IFFT, let $$ N $$ be the size, $$ x $$ be the input, and $$ X $$ be the output. Then, the corresponding entries of $$ X $$ are given by:
 
   $$ X_j = \sum_{k=0}^{N-1} \frac{x_k e^{2 \pi i j k / N}}{N} $$
 
-  Note that there is a {@math \frac{1}{N}} term in the summation. Some other libraries do different kinds of scaling. The kscript fft/ifft functions will always produce the same result (up to machine precision) when given: `nx.fft.ifft(nx.fft.fft(x))`
+  Note that there is a $$ \frac{1}{N} $$ term in the summation. Some other libraries do different kinds of scaling. The kscript fft/ifft functions will always produce the same result (up to machine precision) when given: `nx.fft.ifft(nx.fft.fft(x))`
 
   For an N-D IFFT, the result is equivalent to doing a 1D IFFT over each of `axes`
 
@@ -1189,7 +1199,7 @@ Different languages/libraries use different conventions for FFT/IFFT/other trans
   [2.5+0.0i, -0.5+0.5i, -0.5+0.0i, -0.5-0.5i]
   ```
 
-### os: Operating System
+## os: Operating System
 
 Operating System Module
 
@@ -1443,7 +1453,7 @@ os.rm(path, parents=false)`:
     ('relative', 'path', 'to', 'file.txt')
     ```
 
-### io: Input/Output
+## io: Input/Output
 
 The input/output module (`io`) provides functionality related to text and binary streams, and allows generic processing on streams from many sources.
 
@@ -1558,7 +1568,7 @@ Specifically, it provides file access (through `io.FileIO`), as well as in-memor
 
 : Represents an IO for byte-based information, being built in memory (i.e. not as a file on disk). It can be used in places where `io.FileIO` is typically used.
 
-### net: Networking
+## net: Networking
 
 The network module (`net`) provides functionality related to the world wide web, and other networks (i.e. LANs).
 
@@ -1650,7 +1660,7 @@ The network module (`net`) provides functionality related to the world wide web,
   
   : Accepts a new connection, returning a tuple of `(sock, name)`, where `sock` is a `net.SocketIO` object that can be read from and written to, and `name` is a string representing the client's name
 
-#### net.http: Hyper Text Transfer Protocol
+### net.http: Hyper Text Transfer Protocol
 
 The HTTP networking submodule (`net.http`) is a submodule of the `net` module. Specifically, it provides HTTP utilities built on top of the rest of the networking stack.
 
@@ -1774,8 +1784,7 @@ The HTTP networking submodule (`net.http`) is a submodule of the `net` module. S
   'I love to eat π'
   ```
 
-
-### ffi: Foreign Function Interface
+## ffi: Foreign Function Interface
 
 The [foreign function interface](https://en.wikipedia.org/wiki/Foreign_function_interface) module, `ffi`, provides functionality required to load and execute dynamically loaded code from other languages.
 
@@ -1991,7 +2000,7 @@ This module has definitions for C-style types (including pointers, structs and f
   
   If `sz > 0`, then that is the maximum size of the buffer (including NUL-terminator), and no more than `sz` bytes will be written
 
-### time: Times and Dates
+## time: Times and Dates
 
 This module, `time`, allows code to programmatically determine the current time, convert date-times to human readable formats, create timestamps, and reason about multiple dates.
 
@@ -2119,7 +2128,7 @@ This module, `time`, allows code to programmatically determine the current time,
 
   : The nanosecond as an integer
 
-### util: Common Utilities
+## util: Common Utilities
 
 This module, `util`, implements commonly used datastructures and algorithms that aren't in the builtins. While they are commonly used, they are not used frequently enough to use the global namespace and thus restrict developers from using those names in their own code. So, you can think of the `util` module as "builtins 2: electric boogaloo".
 
@@ -2196,7 +2205,7 @@ This module, `util`, implements commonly used datastructures and algorithms that
 
 : This type is currently being implemented, so this documentation is incomplete.
 
-### gram: Grammar Regonition
+## gram: Grammar Regonition
 
 Grammar Module
 
@@ -2255,11 +2264,11 @@ The grammar module (`gram`) provides commonly needed types and algorithms for de
   gram.Token(0, 'test')
   ```
 
-## Complete Syntax Reference
+# Complete Syntax Reference
 
 This section describes the syntax of the kscript language. It explains the actual formal specs of what is and what is not valid kscript code.
 
-### Formal Grammar EBNF
+## Formal Grammar EBNF
 
 [EBNF](https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form) is a notation to formalize computer grammars. In this page, the grammar of the kscript language is described using an EBNF-like syntax:
 
@@ -2450,13 +2459,13 @@ INT     : ? integer literal ?
 FLOAT   : ? floating point literal ?
 ```
 
-### Expressions
+## Expressions
 
 In kscript, many syntax elements are **expressions**, which means that they will result in a value after being evaluated. You can always assign the result of an expression to a variable, element index, attribute, or any other destination where you may store in any object. They can be used within other expressions (albeit, sometimes requiring `()` due to order-of-operations).
 
 In contrast to most languages, [Function Definitions](#function-definition) and [Type Definitions](#type-definition) are expressions (in most languages, they are statements and do not yield a value). You can, of course, use them like a statement (i.e. not embedded in another expression), but you can also return them, or assign them locally.
 
-#### Integer Literal
+### Integer Literal
 
 This is the syntax for constructing literal integers (of type `$int`). You can specify the base-10 digits within a kscript program, and it will be interpreted as an integer. You can also use a prefix for other notations -- see the table below for a list of valid ones:
 
@@ -2503,7 +2512,7 @@ Regardless of the notation, the result is an `$int` object with the specified va
 255
 ```
 
-#### Float Literal
+### Float Literal
 
 This is the syntax for constructing literal floating point numbers (of type `$float`). You can specify the base-10 digits within a kscript program, including a `.` for the whole number/fractional separator (which differentiates `$float` literals from [Integer Literal](#integer-literal)), and it will be interpreted as a real number, represented as accurately as the machine precision can (see `$float.EPS`). Additionally, an exponent is allowed (see: [scientific notation](https://en.wikipedia.org/wiki/Scientific_notation)) with the `e` or `E` characters. You can also use a prefix for other notations -- see the table below for a list of valid ones:
 
@@ -2573,7 +2582,7 @@ Scientific notation examples:
 1000000000.0
 ```
 
-#### Complex Literal
+### Complex Literal
 
 This is the syntax for constructing literal `$complex` values. Specifically, you can only construct imaginary literals -- you need to use the `+` operator to create a complex number with real and imaginary components.
 
@@ -2597,7 +2606,7 @@ Complex literals are created by placing an `i` or `I` directly after an [Integer
 (12.0+34.0i)
 ```
 
-#### String Literal
+### String Literal
 
 This is the syntax for constructing literal `$str` values. The basic syntax is a beginning quote character (one of `'`, `"`, `'''`, `"""`), followed by the contents of the string, and then an ending quote character that matched the one the string started with. The contents of the string can be either character literals, or escape codes.
 
@@ -2672,7 +2681,7 @@ ASCII `BEL` (bell/alarm)
 'a'
 ```
 
-#### List Literal
+### List Literal
 
 This is the syntax for constructing literal `$list` objects. A `$list` is a mutable collection.
 
@@ -2697,7 +2706,7 @@ List literals also support unpacking (`*` before an element) and comprehension (
 ['a', 'b', 'c', 'd']
 ```
 
-#### Tuple Literal
+### Tuple Literal
 
 This is the syntax for constructing literal `$tuple` objects. A `$tuple` is an immutable collection.
 
@@ -2722,7 +2731,7 @@ Tuple literals also support unpacking (`*` before an element) and comprehension 
 ('a', 'b', 'c', 'd')
 ```
 
-#### Set Literal
+### Set Literal
 
 This is the syntax for constructing literal `$set` objects. A `$set` is a mutable collection.
 
@@ -2747,7 +2756,7 @@ set()
 {3, 2, 1}
 ```
 
-#### Dict Literal
+### Dict Literal
 
 This is the syntax for constructing literal `$dict` objects. A `$dict` is a mutable collection.
 
@@ -2768,7 +2777,7 @@ Dict literals also support comprehension (`for` and optionally `if`).
 {'a': 4, 'b': 2, 'c': 3}
 ```
 
-#### Lambda Function Expression
+### Lambda Function Expression
 
 This is the syntax for constructing `$func` objects given a [lambda expression](https://en.wikipedia.org/wiki/Anonymous_function).
 
@@ -2791,7 +2800,7 @@ Parameters may be assigned a default, but they must be within a tuple literal.
 14
 ```
 
-#### Function Definition
+### Function Definition
 
 This is the syntax for constructing `$func` objects with the `func` keyword. In kscript, function definition is an **expression**, not only a statement.
 
@@ -2837,7 +2846,7 @@ func foo(x, *y, z) {
 
 You can also create a [Lambda Expression](#lambda-expression), which is a similar concept but different syntax.
 
-#### Type Definition
+### Type Definition
 
 This is the syntax for constructing `$type` objects with the `type` keyword. In kscript, type definition is an **expression**, not only a statement.
 
@@ -2862,7 +2871,7 @@ type MyType extends list {
 }
 ```
 
-#### Operators
+### Operators
 
 [Operators](https://en.wikipedia.org/wiki/Operator_(computer_programming)) are used to represent operations on other expressions (called "operands"). There are a few different kinds of operators:
 
@@ -2892,13 +2901,13 @@ Operators in kscript are divided into [precedence](https://en.wikipedia.org/wiki
 
 See the EBNF section for details on each operator.
 
-### Statements
+## Statements
 
 These elements do not yield a value, and are typically used for control flow.
 
 In contrast to most languages, [Function Definitions](#function-definition) and [Type Definitions](#type-definition) are expressions (in most languages, they are statements and do not yield a value). You can, of course, use them like a statement (i.e. not embedded in another expression), but you can also return them, or assign them locally.
 
-#### Expression Statement
+### Expression Statement
 
 The expression statement is an **expression**, which has a line break after it, or, equivalently, a semicolon (`;`). You can write code without using semicolons (`;`), and it is recommended to not use them.
 
@@ -2917,7 +2926,7 @@ bar();
 foo(); bar()
 ```
 
-#### Assert Statement
+### Assert Statement
 
 The `assert` statement is an example of [assertion syntax](https://en.wikipedia.org/wiki/Assertion_(software_development)) for the kscript language. It instructs the program to evaluate a conditional expression, check whether it is truthy (see `$bool`), and if it is not truthy, throws an `$AssertError` up the call stack.
 
@@ -2928,7 +2937,7 @@ The `assert` statement is an example of [assertion syntax](https://en.wikipedia.
 assert x
 ```
 
-#### Cont Statement
+### Cont Statement
 
 The `cont` statement prematurely terminates the innermost loop (which may be a [while statement](#while-statement), or [for statement](#for-statement)) and retries the next iteration.
 
@@ -2946,7 +2955,7 @@ while true {
 
 See also the [Break Statement](#break-statement).
 
-#### Break Statement
+### Break Statement
 
 The `break` statement prematurely terminates the innermost loop (which may be a [while statement](#while-statement), or [for statement](#for-statement)) and then stops executing the loop.
 
@@ -2964,7 +2973,7 @@ while true {
 
 See also the [Cont Statement](#cont-statement).
 
-#### Ret Statement
+### Ret Statement
 
 The `ret` statement is an example of [return syntax](https://en.wikipedia.org/wiki/Return_statement) for the kscript language. It instructs the program to return a value (or `none`) from the current function, and stop executing in that function.
 
@@ -2978,7 +2987,7 @@ ret a
 ret
 ```
 
-#### Throw Statement
+### Throw Statement
 
 The `throw` statement is an example of [exception handling syntax](https://en.wikipedia.org/wiki/Exception_handling_syntax) for the kscript language. It instructs the program to throw a value up the call stack, which searches through the current functions executing in the thread, until it finds a [try statement](#try-statement).
 
@@ -3010,7 +3019,7 @@ try {
 }
 ```
 
-#### If Statement
+### If Statement
 
 The `if` statement is an example of a [conditional statement](https://en.wikipedia.org/wiki/Conditional_(computer_programming)), which evaluates a condition, and then based on the result, either runs another statement, or does not.
 
@@ -3042,7 +3051,7 @@ Inline `if` syntax (single statement body):
 if a, b
 ```
 
-#### While Statement
+### While Statement
 
 The `while` statement is an example of a [conditional loop](https://en.wikipedia.org/wiki/Conditional_(computer_programming)), which evaluates a condition, and then based on the result, either runs another statement and then retries the condition, or exits the loop.
 
@@ -3072,7 +3081,7 @@ Inline `while` syntax (single statement body):
 while a, b
 ```
 
-#### For Statement
+### For Statement
 
 The `for` statement is an [iterator-based for loop](https://en.wikipedia.org/wiki/For_loop#Iterator-based_for-loops), which iterates over elements of an iterable.
 
@@ -3102,7 +3111,7 @@ Inline `for` syntax (single statement body):
 for a in b, c
 ```
 
-#### Try Statement
+### Try Statement
 
 The `try` statement (also called `try/catch` statement) is the [exception handling syntax](https://en.wikipedia.org/wiki/Exception_handling_syntax) for kscript. It allows exceptions thrown with the [throw statement](#throw-statement) while executing the body of the `try` statement to be "caught", and then handled appropriately.
 
@@ -3136,7 +3145,7 @@ try {
 }
 ```
 
-#### Import Statement
+### Import Statement
 
 To import a module (for example, one of the builtin modules), you can use the `import` statement. If there was an error finding or importing the module, an `$ImportError` is thrown.
 
@@ -3147,6 +3156,6 @@ import os
 import net
 ```
 
-## Implementation Details
+# Implementation Details
 
 TODO: add them here

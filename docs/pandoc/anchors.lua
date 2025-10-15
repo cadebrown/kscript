@@ -19,9 +19,6 @@ function DefinitionList(dl)
     -- first, start with just stringifying the content
     local id = pandoc.utils.stringify(term)
 
-    -- convert to lowercase
-    --id = id:lower()
-    
     -- cut it off at the first parenthesis
     id = id:match("^[^\\(]*")
 

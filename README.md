@@ -156,7 +156,13 @@ $ ./bin/ks examples/fib.ks 10
 Inside the `docs/` folder, you can run:
 
 ```shell
-$ pandoc DOCS.md -s --toc --toc-depth 4 --template template.html --lua-filter=pandoc/anchors.lua -o index.html --syntax-highlighting=none
+$ pandoc DOCS.md -o index.html --template template.html -s --toc --number-sections --lua-filter=pandoc/anchors.lua --syntax-highlighting=none
+```
+
+And, to generate a PDF copy:
+
+```shell
+$ pandoc DOCS.md -o kscript.pdf -s --toc --number-sections --pdf-engine=xelatex -V geometry:a4paper -V geometry:margin=2cm -V fontsize=12pt
 ```
 
 ## TODO for final release

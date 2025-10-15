@@ -1180,18 +1180,15 @@ echo "\$(ks_BIN): \$(ks_O) \$(libks_SHARED)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
 
 echo "	\$(CC) \\" >> $T
-#echo "		\$(LDFLAGS) -Wl,-rpath,'@loader_path/../lib' -L./lib -lks -o \$@" >> $T
 echo "		\$(LDFLAGS) \\" >> $T
 
 if [ "$PLATFORM" = "linux" ]; then
     # on Linux, use rpath origin semantics
-    echo "		-Wl,-rpath,'\$\$ORIGIN' -Wl,-rpath,'\$\$ORIGIN/../lib -L./lib -lks' \\" >> $T
+    echo "		-Wl,-rpath,'\$\$ORIGIN' -Wl,-rpath,'\$\$ORIGIN/../lib' -L./lib -lks \\" >> $T
 elif [ "$PLATFORM" = "darwin" ]; then
     # macOS needs the install_name
     echo "		-Wl,-rpath,'@loader_path/../lib' -L./lib -lks \\" >> $T
 fi
-
-# echo "		\$(LDFLAGS) -Wl,-rpath,'@loader_path/../lib' -L./lib -lks \\" >> $T
 
 echo "		\$(ks_O) \\" >> $T
 echo "		-o \$@" >> $T

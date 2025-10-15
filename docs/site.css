@@ -38,83 +38,18 @@ nav {
     overflow-x: hidden;
     padding: 0.5em;
     font-size: 0.9rem;
+    background: #ddd;
 }
 
 
 main {
     width: auto;
     margin-left: 350px;
-    padding: 0 2em;
+    padding: 1em 2em;
 }
 
-
-
-/* @media print { */
-
-@media print {
-    nav {
-        display: none;
-    }
-    main {
-        margin: 0;
-        /* margin: 1.5em; */
-    }
-    pre {
-        white-space: pre-wrap;
-    }
-
-    @page {
-        padding: 1em;
-    }
-}
-
-
-nav.asdf {
-    background: #ddd;
-    /* overflow: auto; */
-
-    position: fixed;
-
-    /* height: 100vh; */
-
-    /* height: 100%;
-    position: fixed;
-    z-index: 1;
-    top: 0;
-    left: 0;
-    overflow-x: hidden; */
-
-
-    width: 300px;
-    padding: 0.5em;
-    font-size: 0.85rem;
-
-    /* height: 100vh; */
-
-    /* background: #ddd;
-    font-size: 0.9rem;
-    width: 300px; */
-    /* flex: 0 0 300px; */
-    /* height: 100vh; */
-}
-
-
-
-main.asdf {
-    /* background: #eee; */
-    flex: 1;
-    /* overflow: auto; */
-    /* height: 100vh; */
-    /* overflow-x: hidden; */
-    padding: 0 1em;
-    padding-left: 320px;
-    width: auto;
-    /* margin: 0; */
-    /* padding: 1.0em; */
-}
 
 /* on the first level of TOC in the nav, don't make it a list */
-
 nav > ul  {
     list-style: none;
     /* padding-left: 0; */
@@ -124,18 +59,9 @@ nav > ul  {
     display: block;
 }
 
-/* on the first level of TOC in the nav, don't make it a list */
-nav > ul > li > ul {
-    list-style: none;
-    /* padding-left: 0; */
-    padding: 0;
-    /* padding: 0.5em; */
-    margin: 0;
-    display: block;
-}
 
 /* and, add an hr divider psuedo-element after each top-level list item */
-nav > ul > li > ul > li::after {
+nav > ul > li::after {
     content: "";
     display: block;
     border-bottom: 1px solid #222;
@@ -144,24 +70,17 @@ nav > ul > li > ul > li::after {
 
 
 /* second level, make it use the first-level list style */
-nav ul ul,
-nav ul ol,
-nav ol ul,
-nav ol ol {
+nav ul ul {
     list-style: initial;
     padding-left: 1.6em;
     margin: 0;
 }
 
+
+/* color links, but don't underline them */
 nav a {
     text-decoration: none;
     color: #0f52aa;
-}
-
-
-
-nav li,
-nav li {
 }
 
 
@@ -211,8 +130,8 @@ pre {
     /* use section symbol */
     content: "§";
 
-
 }
+
 h1:hover > .anchor-link,
 h2:hover > .anchor-link,
 h3:hover > .anchor-link,
@@ -227,6 +146,72 @@ dt:hover > .anchor-link {
     /* show when hovering over header */
     visibility: visible;
 }
+
+
+
+/* for printing to a physical page, we style it differently */
+@media print {
+    /* hide the nav, since it will show up on each page */
+    nav {
+        display: none;
+    }
+
+    /* don't need any margin on the main content */
+    main {
+        margin: 0;
+    }
+
+    /* overflow would be hidden, since there is no scrollbar */
+    pre {
+        white-space: pre-wrap;
+    }
+
+    /* and each actual page should have some padding as well */
+    @page {
+        padding: 1em;
+    }
+}
+
+
+
+
+
+/* Highlight.js Line Numbers Styling */
+
+/* for block of numbers */
+.hljs-ln-numbers {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+
+    text-align: center;
+    color: #333;
+    border-right: 1px solid #333;
+    vertical-align: top;
+    /* padding-right: 5px; */
+
+    /* your custom style here */
+}
+
+/* for block of code */
+.hljs-ln-code {
+    padding-left: 5px !important;
+}
+
+
+.hljs-ln td {
+    /* padding: 0 !important; */
+}
+
+
+.hljs-ln-n {
+    padding-right: 5px !important;
+    text-align: right !important;
+}
+
 
 /** Code Highlighting **/
 

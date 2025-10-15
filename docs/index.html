@@ -4,7 +4,7 @@
     <meta charset='utf-8'>
     <meta http-equiv='X-UA-Compatible' content='IE=edge'>
     <meta name='viewport' content='width=device-width,initial-scale=1.0'>
-    <title></title>
+    <title>kscript v0.3.1 - docs</title>
 
 <!-- MathJax -->
     <script>
@@ -22,158 +22,213 @@
     <script src='./site-hljs-kscript.js'></script>
     <script>hljs.highlightAll();</script>
 
+    <script src="//cdn.jsdelivr.net/npm/highlightjs-line-numbers.js@2.9.0/dist/highlightjs-line-numbers.min.js"></script>
+    <script>hljs.initLineNumbersOnLoad();</script>
+
 <!-- kscript specific assets -->
     <script src='./site.js'></script>
-    <link rel="stylesheet" href="./site.css"> 
+    <link rel="stylesheet" href="./site.css">
+
+
 </head>
 <body>
     <nav class="sidenav">
         <ul>
         <li><a href="#kscript-a-programming-language"
-        id="toc-kscript-a-programming-language">kscript: a programming
+        id="toc-kscript-a-programming-language"><span
+        class="toc-section-number">1</span> kscript: a programming
         language</a>
         <ul>
+        <li><a href="#faqs-whatwhywhowhenhow-is-kscript"
+        id="toc-faqs-whatwhywhowhenhow-is-kscript"><span
+        class="toc-section-number">1.1</span> FAQs:
+        What/Why/Who/When/How is kscript?</a></li>
+        </ul></li>
         <li><a href="#kscript-a-practical-guide"
-        id="toc-kscript-a-practical-guide">kscript: A Practical
+        id="toc-kscript-a-practical-guide"><span
+        class="toc-section-number">2</span> kscript: A Practical
         Guide</a>
         <ul>
         <li><a href="#chapter-0-hello-world"
-        id="toc-chapter-0-hello-world">Chapter 0: Hello World</a></li>
+        id="toc-chapter-0-hello-world"><span
+        class="toc-section-number">2.1</span> Chapter 0: Hello
+        World</a></li>
         <li><a href="#chapter-1-some-basic-uses"
-        id="toc-chapter-1-some-basic-uses">Chapter 1: Some Basic
+        id="toc-chapter-1-some-basic-uses"><span
+        class="toc-section-number">2.2</span> Chapter 1: Some Basic
         Uses</a></li>
         <li><a href="#chapter-2-writing-reusable-functions"
-        id="toc-chapter-2-writing-reusable-functions">Chapter 2: Writing
+        id="toc-chapter-2-writing-reusable-functions"><span
+        class="toc-section-number">2.3</span> Chapter 2: Writing
         Reusable Functions</a></li>
         <li><a href="#chapter-3-implementing-custom-types"
-        id="toc-chapter-3-implementing-custom-types">Chapter 3:
-        Implementing Custom Types</a></li>
+        id="toc-chapter-3-implementing-custom-types"><span
+        class="toc-section-number">2.4</span> Chapter 3: Implementing
+        Custom Types</a></li>
         </ul></li>
         <li><a href="#programming-philosophy"
-        id="toc-programming-philosophy">Programming Philosophy</a>
+        id="toc-programming-philosophy"><span
+        class="toc-section-number">3</span> Programming Philosophy</a>
         <ul>
         <li><a href="#the-octologue-rules-of-thumb"
-        id="toc-the-octologue-rules-of-thumb">The Octologue: Rules of
+        id="toc-the-octologue-rules-of-thumb"><span
+        class="toc-section-number">3.1</span> The Octologue: Rules of
         Thumb</a></li>
         <li><a href="#duck-typing-patterns"
-        id="toc-duck-typing-patterns">Duck Typing Patterns</a>
+        id="toc-duck-typing-patterns"><span
+        class="toc-section-number">3.2</span> Duck Typing Patterns</a>
         <ul>
-        <li><a href="#magic-attributes" id="toc-magic-attributes">Magic
+        <li><a href="#magic-attributes" id="toc-magic-attributes"><span
+        class="toc-section-number">3.2.1</span> Magic
         Attributes</a></li>
         <li><a href="#operator-overloading"
-        id="toc-operator-overloading">Operator Overloading</a></li>
+        id="toc-operator-overloading"><span
+        class="toc-section-number">3.2.2</span> Operator
+        Overloading</a></li>
         </ul></li>
         </ul></li>
         <li><a href="#the-standard-library"
-        id="toc-the-standard-library">The Standard Library</a>
+        id="toc-the-standard-library"><span
+        class="toc-section-number">4</span> The Standard Library</a>
         <ul>
-        <li><a href="#global-builtins" id="toc-global-builtins">Global
-        Builtins</a></li>
+        <li><a href="#global-builtins" id="toc-global-builtins"><span
+        class="toc-section-number">4.1</span> Global Builtins</a></li>
         <li><a href="#m-mathematical-utilities"
-        id="toc-m-mathematical-utilities">m: Mathematical
+        id="toc-m-mathematical-utilities"><span
+        class="toc-section-number">4.2</span> m: Mathematical
         Utilities</a></li>
         <li><a href="#nx-numerix-tensor-library"
-        id="toc-nx-numerix-tensor-library">nx: NumeriX Tensor
+        id="toc-nx-numerix-tensor-library"><span
+        class="toc-section-number">4.3</span> nx: NumeriX Tensor
         Library</a>
         <ul>
         <li><a href="#nx.la-linear-algebra"
-        id="toc-nx.la-linear-algebra">nx.la: Linear Algebra</a></li>
+        id="toc-nx.la-linear-algebra"><span
+        class="toc-section-number">4.3.1</span> nx.la: Linear
+        Algebra</a></li>
         <li><a href="#nx.fft-fast-fourier-transforms"
-        id="toc-nx.fft-fast-fourier-transforms">nx.fft: Fast Fourier
+        id="toc-nx.fft-fast-fourier-transforms"><span
+        class="toc-section-number">4.3.2</span> nx.fft: Fast Fourier
         Transforms</a></li>
         </ul></li>
         <li><a href="#os-operating-system"
-        id="toc-os-operating-system">os: Operating System</a></li>
-        <li><a href="#io-inputoutput" id="toc-io-inputoutput">io:
-        Input/Output</a></li>
-        <li><a href="#net-networking" id="toc-net-networking">net:
-        Networking</a>
+        id="toc-os-operating-system"><span
+        class="toc-section-number">4.4</span> os: Operating
+        System</a></li>
+        <li><a href="#io-inputoutput" id="toc-io-inputoutput"><span
+        class="toc-section-number">4.5</span> io: Input/Output</a></li>
+        <li><a href="#net-networking" id="toc-net-networking"><span
+        class="toc-section-number">4.6</span> net: Networking</a>
         <ul>
         <li><a href="#net.http-hyper-text-transfer-protocol"
-        id="toc-net.http-hyper-text-transfer-protocol">net.http: Hyper
-        Text Transfer Protocol</a></li>
+        id="toc-net.http-hyper-text-transfer-protocol"><span
+        class="toc-section-number">4.6.1</span> net.http: Hyper Text
+        Transfer Protocol</a></li>
         </ul></li>
         <li><a href="#ffi-foreign-function-interface"
-        id="toc-ffi-foreign-function-interface">ffi: Foreign Function
+        id="toc-ffi-foreign-function-interface"><span
+        class="toc-section-number">4.7</span> ffi: Foreign Function
         Interface</a></li>
         <li><a href="#time-times-and-dates"
-        id="toc-time-times-and-dates">time: Times and Dates</a></li>
+        id="toc-time-times-and-dates"><span
+        class="toc-section-number">4.8</span> time: Times and
+        Dates</a></li>
         <li><a href="#util-common-utilities"
-        id="toc-util-common-utilities">util: Common Utilities</a></li>
+        id="toc-util-common-utilities"><span
+        class="toc-section-number">4.9</span> util: Common
+        Utilities</a></li>
         <li><a href="#gram-grammar-regonition"
-        id="toc-gram-grammar-regonition">gram: Grammar
+        id="toc-gram-grammar-regonition"><span
+        class="toc-section-number">4.10</span> gram: Grammar
         Regonition</a></li>
         </ul></li>
         <li><a href="#complete-syntax-reference"
-        id="toc-complete-syntax-reference">Complete Syntax Reference</a>
+        id="toc-complete-syntax-reference"><span
+        class="toc-section-number">5</span> Complete Syntax
+        Reference</a>
         <ul>
         <li><a href="#formal-grammar-ebnf"
-        id="toc-formal-grammar-ebnf">Formal Grammar EBNF</a></li>
-        <li><a href="#expressions" id="toc-expressions">Expressions</a>
+        id="toc-formal-grammar-ebnf"><span
+        class="toc-section-number">5.1</span> Formal Grammar
+        EBNF</a></li>
+        <li><a href="#expressions" id="toc-expressions"><span
+        class="toc-section-number">5.2</span> Expressions</a>
         <ul>
-        <li><a href="#integer-literal" id="toc-integer-literal">Integer
-        Literal</a></li>
-        <li><a href="#float-literal" id="toc-float-literal">Float
-        Literal</a></li>
-        <li><a href="#complex-literal" id="toc-complex-literal">Complex
-        Literal</a></li>
-        <li><a href="#string-literal" id="toc-string-literal">String
-        Literal</a></li>
-        <li><a href="#list-literal" id="toc-list-literal">List
-        Literal</a></li>
-        <li><a href="#tuple-literal" id="toc-tuple-literal">Tuple
-        Literal</a></li>
-        <li><a href="#set-literal" id="toc-set-literal">Set
-        Literal</a></li>
-        <li><a href="#dict-literal" id="toc-dict-literal">Dict
-        Literal</a></li>
+        <li><a href="#integer-literal" id="toc-integer-literal"><span
+        class="toc-section-number">5.2.1</span> Integer Literal</a></li>
+        <li><a href="#float-literal" id="toc-float-literal"><span
+        class="toc-section-number">5.2.2</span> Float Literal</a></li>
+        <li><a href="#complex-literal" id="toc-complex-literal"><span
+        class="toc-section-number">5.2.3</span> Complex Literal</a></li>
+        <li><a href="#string-literal" id="toc-string-literal"><span
+        class="toc-section-number">5.2.4</span> String Literal</a></li>
+        <li><a href="#list-literal" id="toc-list-literal"><span
+        class="toc-section-number">5.2.5</span> List Literal</a></li>
+        <li><a href="#tuple-literal" id="toc-tuple-literal"><span
+        class="toc-section-number">5.2.6</span> Tuple Literal</a></li>
+        <li><a href="#set-literal" id="toc-set-literal"><span
+        class="toc-section-number">5.2.7</span> Set Literal</a></li>
+        <li><a href="#dict-literal" id="toc-dict-literal"><span
+        class="toc-section-number">5.2.8</span> Dict Literal</a></li>
         <li><a href="#lambda-function-expression"
-        id="toc-lambda-function-expression">Lambda Function
+        id="toc-lambda-function-expression"><span
+        class="toc-section-number">5.2.9</span> Lambda Function
         Expression</a></li>
         <li><a href="#function-definition"
-        id="toc-function-definition">Function Definition</a></li>
-        <li><a href="#type-definition" id="toc-type-definition">Type
+        id="toc-function-definition"><span
+        class="toc-section-number">5.2.10</span> Function
         Definition</a></li>
-        <li><a href="#operators" id="toc-operators">Operators</a></li>
+        <li><a href="#type-definition" id="toc-type-definition"><span
+        class="toc-section-number">5.2.11</span> Type
+        Definition</a></li>
+        <li><a href="#operators" id="toc-operators"><span
+        class="toc-section-number">5.2.12</span> Operators</a></li>
         </ul></li>
-        <li><a href="#statements" id="toc-statements">Statements</a>
+        <li><a href="#statements" id="toc-statements"><span
+        class="toc-section-number">5.3</span> Statements</a>
         <ul>
         <li><a href="#expression-statement"
-        id="toc-expression-statement">Expression Statement</a></li>
-        <li><a href="#assert-statement" id="toc-assert-statement">Assert
+        id="toc-expression-statement"><span
+        class="toc-section-number">5.3.1</span> Expression
         Statement</a></li>
-        <li><a href="#cont-statement" id="toc-cont-statement">Cont
+        <li><a href="#assert-statement" id="toc-assert-statement"><span
+        class="toc-section-number">5.3.2</span> Assert
         Statement</a></li>
-        <li><a href="#break-statement" id="toc-break-statement">Break
-        Statement</a></li>
-        <li><a href="#ret-statement" id="toc-ret-statement">Ret
-        Statement</a></li>
-        <li><a href="#throw-statement" id="toc-throw-statement">Throw
-        Statement</a></li>
-        <li><a href="#if-statement" id="toc-if-statement">If
-        Statement</a></li>
-        <li><a href="#while-statement" id="toc-while-statement">While
-        Statement</a></li>
-        <li><a href="#for-statement" id="toc-for-statement">For
-        Statement</a></li>
-        <li><a href="#try-statement" id="toc-try-statement">Try
-        Statement</a></li>
-        <li><a href="#import-statement" id="toc-import-statement">Import
+        <li><a href="#cont-statement" id="toc-cont-statement"><span
+        class="toc-section-number">5.3.3</span> Cont Statement</a></li>
+        <li><a href="#break-statement" id="toc-break-statement"><span
+        class="toc-section-number">5.3.4</span> Break Statement</a></li>
+        <li><a href="#ret-statement" id="toc-ret-statement"><span
+        class="toc-section-number">5.3.5</span> Ret Statement</a></li>
+        <li><a href="#throw-statement" id="toc-throw-statement"><span
+        class="toc-section-number">5.3.6</span> Throw Statement</a></li>
+        <li><a href="#if-statement" id="toc-if-statement"><span
+        class="toc-section-number">5.3.7</span> If Statement</a></li>
+        <li><a href="#while-statement" id="toc-while-statement"><span
+        class="toc-section-number">5.3.8</span> While Statement</a></li>
+        <li><a href="#for-statement" id="toc-for-statement"><span
+        class="toc-section-number">5.3.9</span> For Statement</a></li>
+        <li><a href="#try-statement" id="toc-try-statement"><span
+        class="toc-section-number">5.3.10</span> Try Statement</a></li>
+        <li><a href="#import-statement" id="toc-import-statement"><span
+        class="toc-section-number">5.3.11</span> Import
         Statement</a></li>
         </ul></li>
         </ul></li>
         <li><a href="#implementation-details"
-        id="toc-implementation-details">Implementation Details</a></li>
-        </ul></li>
+        id="toc-implementation-details"><span
+        class="toc-section-number">6</span> Implementation
+        Details</a></li>
         </ul>
     </nav>
     <main>
-        <h1 id="kscript-a-programming-language">kscript: a programming
+        <h1 data-number="1" id="kscript-a-programming-language"><span
+        class="header-section-number">1</span> kscript: a programming
         language<a href="#kscript-a-programming-language"
         class="anchor-link"></a></h1>
         <p>kscript is a dynamic programming language with expressive
         syntax, cross platform support, and a rich standard library.
-        It’s like Python, but better 😉.</p>
+        It’s like Python, but better.</p>
         <p>Right now, you’re reading kscript’s documentation and
         reference manual. It aims to show you how to write kscript by
         example, as well as explain the design philosophy behind it.
@@ -226,8 +281,9 @@
         a stack-based execution model, with exceptions and scoping</li>
         </ul></li>
         </ul>
-        <h2 class="unnumbered unlisted"
-        id="faqs-whatwhywhowhenhow-is-kscript">FAQs:
+        <h2 data-number="1.1"
+        id="faqs-whatwhywhowhenhow-is-kscript"><span
+        class="header-section-number">1.1</span> FAQs:
         What/Why/Who/When/How is kscript?<a
         href="#faqs-whatwhywhowhenhow-is-kscript"
         class="anchor-link"></a></h2>
@@ -235,21 +291,20 @@
         <dt><span id="What-is-kscript">What is kscript?<a
         href="#What-is-kscript" class="anchor-link"></a></span></dt>
         <dd>
-        <p><a href="https://ks.cade.io">kscript</a> is a dynamic
+        <a href="https://ks.cade.io">kscript</a> is a dynamic
         programming language with expressive syntax, cross platform
         support, and a rich standard library. Its primary aim is to
         allow developers to write platform agnostic programs that can
         run anywhere, and require little or no platform-specific or
-        os-specific code.</p>
-        <p>The language is object-oriented, duck-typed, and targets the
-        web platform through <a href="https://webassembly.org/">WASM</a>
-        and <a href="https://wasi.dev/">WASI</a>. It is a learning
-        project, so expect rough edges. It’s fun to write and
-        demonstrates some interesting concepts, so I hope you enjoy
-        it!</p>
-        <p>You’re currently reading the docs, which is a formal
+        os-specific code.
+        The language is object-oriented, duck-typed, and targets the web
+        platform through <a href="https://webassembly.org/">WASM</a> and
+        <a href="https://wasi.dev/">WASI</a>. It is a learning project,
+        so expect rough edges. It’s fun to write and demonstrates some
+        interesting concepts, so I hope you enjoy it!
+        You’re currently reading the docs, which is a formal
         specification of the language, builtins, standard library, and
-        semantics.</p>
+        semantics.
         </dd>
         <dt><span id="Why-is-kscript">Why is kscript?<a
         href="#Why-is-kscript" class="anchor-link"></a></span></dt>
@@ -314,16 +369,20 @@
         href="https://webassembly.org/">WebAssembly (WASM)</a>.</p>
         </dd>
         </dl>
-        <h2 id="kscript-a-practical-guide">kscript: A Practical Guide<a
-        href="#kscript-a-practical-guide" class="anchor-link"></a></h2>
+        <h1 data-number="2" id="kscript-a-practical-guide"><span
+        class="header-section-number">2</span> kscript: A Practical
+        Guide<a href="#kscript-a-practical-guide"
+        class="anchor-link"></a></h1>
         <p>How might you actually use kscript? Let’s explore writing
         some simple programs to introduce you to the language, its
         syntax, and its semantics.</p>
         <p>This guide will start out simple, explaining new concepts as
         they are naturally introduced. The goal is to grow in
         complexity, w</p>
-        <h3 id="chapter-0-hello-world">Chapter 0: Hello World<a
-        href="#chapter-0-hello-world" class="anchor-link"></a></h3>
+        <h2 data-number="2.1" id="chapter-0-hello-world"><span
+        class="header-section-number">2.1</span> Chapter 0: Hello
+        World<a href="#chapter-0-hello-world"
+        class="anchor-link"></a></h2>
         <p>In honor of tradition, here’s the classic <a
         href="https://en.wikipedia.org/wiki/%22Hello,_World!%22_program">“Hello,
         World!”</a> program, written in kscript:</p>
@@ -338,16 +397,21 @@ print(&quot;hello, world&quot;)</code></pre>
         sequence of characters enclosed in double quotes</li>
         </ul>
         <p>And that’s it!</p>
-        <h3 id="chapter-1-some-basic-uses">Chapter 1: Some Basic Uses<a
-        href="#chapter-1-some-basic-uses" class="anchor-link"></a></h3>
-        <h3 id="chapter-2-writing-reusable-functions">Chapter 2: Writing
+        <h2 data-number="2.2" id="chapter-1-some-basic-uses"><span
+        class="header-section-number">2.2</span> Chapter 1: Some Basic
+        Uses<a href="#chapter-1-some-basic-uses"
+        class="anchor-link"></a></h2>
+        <h2 data-number="2.3"
+        id="chapter-2-writing-reusable-functions"><span
+        class="header-section-number">2.3</span> Chapter 2: Writing
         Reusable Functions<a
         href="#chapter-2-writing-reusable-functions"
-        class="anchor-link"></a></h3>
-        <h3 id="chapter-3-implementing-custom-types">Chapter 3:
-        Implementing Custom Types<a
-        href="#chapter-3-implementing-custom-types"
-        class="anchor-link"></a></h3>
+        class="anchor-link"></a></h2>
+        <h2 data-number="2.4"
+        id="chapter-3-implementing-custom-types"><span
+        class="header-section-number">2.4</span> Chapter 3: Implementing
+        Custom Types<a href="#chapter-3-implementing-custom-types"
+        class="anchor-link"></a></h2>
         <pre class="ks"><code>
 type Person {
     func __init(self, name, age) {
@@ -360,8 +424,9 @@ type Person {
     }
 }
 </code></pre>
-        <h2 id="programming-philosophy">Programming Philosophy<a
-        href="#programming-philosophy" class="anchor-link"></a></h2>
+        <h1 data-number="3" id="programming-philosophy"><span
+        class="header-section-number">3</span> Programming Philosophy<a
+        href="#programming-philosophy" class="anchor-link"></a></h1>
         <p>If I may be indulged, I’d like to describe the philosophy
         behind kscript. This section covers the reasoning and goals of
         kscript, and what design decisions were made to achieve those
@@ -382,9 +447,10 @@ type Person {
         well for REPL-like usage, where you want to quickly write and
         get output from your code without having to coax the language
         too much.</p>
-        <h3 id="the-octologue-rules-of-thumb">The Octologue: Rules of
+        <h2 data-number="3.1" id="the-octologue-rules-of-thumb"><span
+        class="header-section-number">3.1</span> The Octologue: Rules of
         Thumb<a href="#the-octologue-rules-of-thumb"
-        class="anchor-link"></a></h3>
+        class="anchor-link"></a></h2>
         <p>These are the pillars of kscript, which the kscript standard
         library and all other kscript code should try to adhere to.</p>
         <dl>
@@ -563,8 +629,9 @@ if A {
         KSCRIPT In Vain), and don’t be as bad as those links.</p>
         </dd>
         </dl>
-        <h3 id="duck-typing-patterns">Duck Typing Patterns<a
-        href="#duck-typing-patterns" class="anchor-link"></a></h3>
+        <h2 data-number="3.2" id="duck-typing-patterns"><span
+        class="header-section-number">3.2</span> Duck Typing Patterns<a
+        href="#duck-typing-patterns" class="anchor-link"></a></h2>
         <p>Patterns in kscript refer to sets of “magic attributes”
         and/or methods that objects are expected to have in order to
         fulfill a certain purpose. Objects that have those attributes
@@ -598,8 +665,9 @@ if A {
         <li><strong>IO pattern</strong>: documented by the abstract base
         type <code>io.BaseIO</code></li>
         </ul>
-        <h4 id="magic-attributes">Magic Attributes<a
-        href="#magic-attributes" class="anchor-link"></a></h4>
+        <h3 data-number="3.2.1" id="magic-attributes"><span
+        class="header-section-number">3.2.1</span> Magic Attributes<a
+        href="#magic-attributes" class="anchor-link"></a></h3>
         <p>Duck-typing concept</p>
         <p>Magic attributes are the name we use to describe how the
         standard library (or external packages) inspect objects to
@@ -677,8 +745,10 @@ if A {
         <code>int</code>.</p>
         </dd>
         </dl>
-        <h4 id="operator-overloading">Operator Overloading<a
-        href="#operator-overloading" class="anchor-link"></a></h4>
+        <h3 data-number="3.2.2" id="operator-overloading"><span
+        class="header-section-number">3.2.2</span> Operator
+        Overloading<a href="#operator-overloading"
+        class="anchor-link"></a></h3>
         <p>There are a number of operators in kscript that can be used
         on builtin types and types in the standard library, such as
         <code>+</code> (addition), <code>-</code> (subtraction), and
@@ -704,8 +774,9 @@ if A {
         attribute existed, or the result was <code>undefined</code>,
         then an <code>Error</code> is thrown.</li>
         </ul>
-        <h5 id="unary-operators">Unary Operators<a
-        href="#unary-operators" class="anchor-link"></a></h5>
+        <h4 data-number="3.2.2.1" id="unary-operators"><span
+        class="header-section-number">3.2.2.1</span> Unary Operators<a
+        href="#unary-operators" class="anchor-link"></a></h4>
         <dl>
         <dt><span><code>+(obj) == (obj).__pos()</code><a href="#"
         class="anchor-link"></a></span></dt>
@@ -723,8 +794,9 @@ if A {
         <p>For bitwise negation or complex number conjugation</p>
         </dd>
         </dl>
-        <h5 id="binary-operators">Binary Operators<a
-        href="#binary-operators" class="anchor-link"></a></h5>
+        <h4 data-number="3.2.2.2" id="binary-operators"><span
+        class="header-section-number">3.2.2.2</span> Binary Operators<a
+        href="#binary-operators" class="anchor-link"></a></h4>
         <dl>
         <dt><span><code>(L)+(R) == (L).__add(R)</code><a href="#"
         class="anchor-link"></a></span></dt>
@@ -845,8 +917,9 @@ B = Point2d(5, 5)
 # Prints &#39;6 7&#39;
 C = A + B
 print (C.x, C.y)</code></pre>
-        <h2 id="the-standard-library">The Standard Library<a
-        href="#the-standard-library" class="anchor-link"></a></h2>
+        <h1 data-number="4" id="the-standard-library"><span
+        class="header-section-number">4</span> The Standard Library<a
+        href="#the-standard-library" class="anchor-link"></a></h1>
         <p>This section documents the builtin modules in kscript, of
         which there are plenty! The general philosophy in kscript is to
         make APIs as cross-platform and backend-independent as possible.
@@ -867,8 +940,9 @@ print (C.x, C.y)</code></pre>
         statement. For example, <code>import os</code> will import the
         <code>os</code> module, and allow you to use
         <code>os.&lt;funcname&gt;</code></p>
-        <h3 id="global-builtins">Global Builtins<a
-        href="#global-builtins" class="anchor-link"></a></h3>
+        <h2 data-number="4.1" id="global-builtins"><span
+        class="header-section-number">4.1</span> Global Builtins<a
+        href="#global-builtins" class="anchor-link"></a></h2>
         <p>Types, functions, and values available everywhere</p>
         <p>Builtins in kscript are the types, functions, and values that
         are available in the global namespace and thus available
@@ -1403,8 +1477,10 @@ open(&quot;NonExistantFile.txt&quot;)
 In &lt;thread &#39;main&#39;&gt;</code></pre>
         </dd>
         </dl>
-        <h3 id="m-mathematical-utilities">m: Mathematical Utilities<a
-        href="#m-mathematical-utilities" class="anchor-link"></a></h3>
+        <h2 data-number="4.2" id="m-mathematical-utilities"><span
+        class="header-section-number">4.2</span> m: Mathematical
+        Utilities<a href="#m-mathematical-utilities"
+        class="anchor-link"></a></h2>
         <p>Math Module</p>
         <p>This module, <code>m</code>, provides functionality to aid in
         mathematical problems/needs. This module contains common
@@ -1432,8 +1508,8 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         <p>Constants are given in maximum precision possible within a
         float, but for all of these constants, their value is not exact.
         This causes some issues or unexpected results. For example,
-        mathematically, {<span class="citation"
-        data-cites="math">@math</span> () = 0}, but
+        mathematically, <span
+        class="math display">sin (<em>π</em>) = 0</span>, but
         <code>m.sin(m.pi) == 1.22464679914735e-16</code>. This is
         expected when using finite precision. Just make sure to keep
         this in mind.</p>
@@ -1634,9 +1710,8 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         <p>Computes the <a
         href="https://en.wikipedia.org/wiki/Error_function">error
         function</a> of <code>x</code></p>
-        <p>Defined as {<span class="citation"
-        data-cites="math">@math</span> _{0}^{x} e<sup>{-t</sup>2}
-        dt}</p>
+        <p>Defined as <span class="math display">$$ \frac{2}{\sqrt \pi}
+        \int_{0}^{x} e^{-t^2} dt $$</span></p>
         </dd>
         <dt><span id="m.erfc"><code>m.erfc(x)</code><a href="#m.erfc"
         class="anchor-link"></a></span></dt>
@@ -1649,16 +1724,16 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         <dd>
         <p>Computes the <a
         href="https://en.wikipedia.org/wiki/Gamma_function">Gamma
-        function</a> of <code>x</code>, {<span class="citation"
-        data-cites="math">@math</span> (x)}</p>
+        function</a> of <code>x</code>, <span
+        class="math display"><em>Γ</em>(<em>x</em>)</span></p>
         </dd>
         <dt><span id="m.zeta"><code>m.zeta(x)</code><a href="#m.zeta"
         class="anchor-link"></a></span></dt>
         <dd>
         <p>Computes the <a
         href="https://en.wikipedia.org/wiki/Riemann_zeta_function">Riemann
-        Zeta function</a> of <code>x</code>, {<span class="citation"
-        data-cites="math">@math</span> (x)}</p>
+        Zeta function</a> of <code>x</code>, <span
+        class="math display"><em>ζ</em>(<em>x</em>)</span></p>
         </dd>
         <dt><span id="m.modinv"><code>m.modinv(x, n)</code><a
         href="#m.modinv" class="anchor-link"></a></span></dt>
@@ -1666,8 +1741,8 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         <p>Computes the <a
         href="https://en.wikipedia.org/wiki/Modular_multiplicative_inverse">modular
         inverse</a> of <code>x</code> within the ring of integers modulo
-        <code>n</code> (i.e. {<span class="citation"
-        data-cites="math">@math</span> Z_n})</p>
+        <code>n</code> (i.e. <span
+        class="math display"><em>Z</em><sub><em>n</em></sub></span>)</p>
         <p>A <code>MathError</code> is thrown if no such inverse
         exists</p>
         </dd>
@@ -1692,8 +1767,10 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         <code>(g, 0, m.sgn(y))</code> is returned</p>
         </dd>
         </dl>
-        <h3 id="nx-numerix-tensor-library">nx: NumeriX Tensor Library<a
-        href="#nx-numerix-tensor-library" class="anchor-link"></a></h3>
+        <h2 data-number="4.3" id="nx-numerix-tensor-library"><span
+        class="header-section-number">4.3</span> nx: NumeriX Tensor
+        Library<a href="#nx-numerix-tensor-library"
+        class="anchor-link"></a></h2>
         <p>The NumeriX module (<code>nx</code>) provides array
         operations, linear algebra algorithms, transforms, and other
         numerical algorithms. It is similar to the math module
@@ -1884,8 +1961,10 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         point scale.</p>
         </dd>
         </dl>
-        <h4 id="nx.la-linear-algebra">nx.la: Linear Algebra<a
-        href="#nx.la-linear-algebra" class="anchor-link"></a></h4>
+        <h3 data-number="4.3.1" id="nx.la-linear-algebra"><span
+        class="header-section-number">4.3.1</span> nx.la: Linear
+        Algebra<a href="#nx.la-linear-algebra"
+        class="anchor-link"></a></h3>
         <p>This module is a submodule of the <code>nx</code> module.
         Specifically, it implements functionality related to dense
         linear algebra.</p>
@@ -1994,9 +2073,11 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
  [3.0, 4.0]]</code></pre>
         </dd>
         </dl>
-        <h4 id="nx.fft-fast-fourier-transforms">nx.fft: Fast Fourier
+        <h3 data-number="4.3.2"
+        id="nx.fft-fast-fourier-transforms"><span
+        class="header-section-number">4.3.2</span> nx.fft: Fast Fourier
         Transforms<a href="#nx.fft-fast-fourier-transforms"
-        class="anchor-link"></a></h4>
+        class="anchor-link"></a></h3>
         <p>This module is a submodule of the <code>nx</code> module.
         Specifically, it provides functionality related to <a
         href="https://en.wikipedia.org/wiki/Fast_Fourier_transform">FFTs
@@ -2018,13 +2099,12 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         datatype input is given, the result will be
         <code>nx.complexdouble</code> . All numeric datatypes are
         supported, and are to full precision.</p>
-        <p>For a 1-D FFT, let {<span class="citation"
-        data-cites="math">@math</span> N} be the size, {<span
-        class="citation" data-cites="math">@math</span> x} be the input,
-        and {<span class="citation" data-cites="math">@math</span> X} be
-        the output. Then, the corresponding entries of {<span
-        class="citation" data-cites="math">@math</span> X} are given
-        by:</p>
+        <p>For a 1-D FFT, let <span
+        class="math display"><em>N</em></span> be the size, <span
+        class="math display"><em>x</em></span> be the input, and <span
+        class="math display"><em>X</em></span> be the output. Then, the
+        corresponding entries of <span
+        class="math display"><em>X</em></span> are given by:</p>
         <p><span class="math display">$$ X_j = \sum_{k=0}^{N-1} x_k
         e^{-2 \pi i j k /N} $$</span></p>
         <p>For an N-D FFT, the result is equivalent to doing a 1D FFT
@@ -2047,20 +2127,19 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
         datatype input is given, the result will be
         <code>nx.complexdouble</code> . All numeric datatypes are
         supported, and are to full precision.</p>
-        <p>For a 1-D IFFT, let {<span class="citation"
-        data-cites="math">@math</span> N} be the size, {<span
-        class="citation" data-cites="math">@math</span> x} be the input,
-        and {<span class="citation" data-cites="math">@math</span> X} be
-        the output. Then, the corresponding entries of {<span
-        class="citation" data-cites="math">@math</span> X} are given
-        by:</p>
+        <p>For a 1-D IFFT, let <span
+        class="math display"><em>N</em></span> be the size, <span
+        class="math display"><em>x</em></span> be the input, and <span
+        class="math display"><em>X</em></span> be the output. Then, the
+        corresponding entries of <span
+        class="math display"><em>X</em></span> are given by:</p>
         <p><span class="math display">$$ X_j = \sum_{k=0}^{N-1}
         \frac{x_k e^{2 \pi i j k / N}}{N} $$</span></p>
-        <p>Note that there is a {<span class="citation"
-        data-cites="math">@math</span> } term in the summation. Some
-        other libraries do different kinds of scaling. The kscript
-        fft/ifft functions will always produce the same result (up to
-        machine precision) when given:
+        <p>Note that there is a <span class="math display">$$
+        \frac{1}{N} $$</span> term in the summation. Some other
+        libraries do different kinds of scaling. The kscript fft/ifft
+        functions will always produce the same result (up to machine
+        precision) when given:
         <code>nx.fft.ifft(nx.fft.fft(x))</code></p>
         <p>For an N-D IFFT, the result is equivalent to doing a 1D IFFT
         over each of <code>axes</code></p>
@@ -2071,8 +2150,9 @@ In &lt;thread &#39;main&#39;&gt;</code></pre>
 [2.5+0.0i, -0.5+0.5i, -0.5+0.0i, -0.5-0.5i]</code></pre>
         </dd>
         </dl>
-        <h3 id="os-operating-system">os: Operating System<a
-        href="#os-operating-system" class="anchor-link"></a></h3>
+        <h2 data-number="4.4" id="os-operating-system"><span
+        class="header-section-number">4.4</span> os: Operating System<a
+        href="#os-operating-system" class="anchor-link"></a></h2>
         <p>Operating System Module</p>
         <p>This module, <code>os</code>, allows code to interact with
         the operating system (OS) that the program is running on. For
@@ -2502,8 +2582,9 @@ none</code></pre>
         </dl>
         </dd>
         </dl>
-        <h3 id="io-inputoutput">io: Input/Output<a
-        href="#io-inputoutput" class="anchor-link"></a></h3>
+        <h2 data-number="4.5" id="io-inputoutput"><span
+        class="header-section-number">4.5</span> io: Input/Output<a
+        href="#io-inputoutput" class="anchor-link"></a></h2>
         <p>The input/output module (<code>io</code>) provides
         functionality related to text and binary streams, and allows
         generic processing on streams from many sources.</p>
@@ -2709,8 +2790,9 @@ none</code></pre>
         where <code>io.FileIO</code> is typically used.</p>
         </dd>
         </dl>
-        <h3 id="net-networking">net: Networking<a href="#net-networking"
-        class="anchor-link"></a></h3>
+        <h2 data-number="4.6" id="net-networking"><span
+        class="header-section-number">4.6</span> net: Networking<a
+        href="#net-networking" class="anchor-link"></a></h2>
         <p>The network module (<code>net</code>) provides functionality
         related to the world wide web, and other networks
         (i.e. LANs).</p>
@@ -2859,10 +2941,12 @@ none</code></pre>
         </dl>
         </dd>
         </dl>
-        <h4 id="net.http-hyper-text-transfer-protocol">net.http: Hyper
-        Text Transfer Protocol<a
+        <h3 data-number="4.6.1"
+        id="net.http-hyper-text-transfer-protocol"><span
+        class="header-section-number">4.6.1</span> net.http: Hyper Text
+        Transfer Protocol<a
         href="#net.http-hyper-text-transfer-protocol"
-        class="anchor-link"></a></h4>
+        class="anchor-link"></a></h3>
         <p>The HTTP networking submodule (<code>net.http</code>) is a
         submodule of the <code>net</code> module. Specifically, it
         provides HTTP utilities built on top of the rest of the
@@ -3062,9 +3146,10 @@ none</code></pre>
 &#39;I love to eat π&#39;</code></pre>
         </dd>
         </dl>
-        <h3 id="ffi-foreign-function-interface">ffi: Foreign Function
+        <h2 data-number="4.7" id="ffi-foreign-function-interface"><span
+        class="header-section-number">4.7</span> ffi: Foreign Function
         Interface<a href="#ffi-foreign-function-interface"
-        class="anchor-link"></a></h3>
+        class="anchor-link"></a></h2>
         <p>The <a
         href="https://en.wikipedia.org/wiki/Foreign_function_interface">foreign
         function interface</a> module, <code>ffi</code>, provides
@@ -3354,8 +3439,9 @@ type vec3f extends ffi.struct[
         <code>sz</code> bytes will be written</p>
         </dd>
         </dl>
-        <h3 id="time-times-and-dates">time: Times and Dates<a
-        href="#time-times-and-dates" class="anchor-link"></a></h3>
+        <h2 data-number="4.8" id="time-times-and-dates"><span
+        class="header-section-number">4.8</span> time: Times and Dates<a
+        href="#time-times-and-dates" class="anchor-link"></a></h2>
         <p>This module, <code>time</code>, allows code to
         programmatically determine the current time, convert date-times
         to human readable formats, create timestamps, and reason about
@@ -3569,8 +3655,10 @@ type vec3f extends ffi.struct[
         </dl>
         </dd>
         </dl>
-        <h3 id="util-common-utilities">util: Common Utilities<a
-        href="#util-common-utilities" class="anchor-link"></a></h3>
+        <h2 data-number="4.9" id="util-common-utilities"><span
+        class="header-section-number">4.9</span> util: Common
+        Utilities<a href="#util-common-utilities"
+        class="anchor-link"></a></h2>
         <p>This module, <code>util</code>, implements commonly used
         datastructures and algorithms that aren’t in the builtins. While
         they are commonly used, they are not used frequently enough to
@@ -3698,8 +3786,10 @@ util.BST({0: &#39;hey&#39;, 1: &#39;b&#39;, 2: &#39;a&#39;})</code></pre>
         documentation is incomplete.</p>
         </dd>
         </dl>
-        <h3 id="gram-grammar-regonition">gram: Grammar Regonition<a
-        href="#gram-grammar-regonition" class="anchor-link"></a></h3>
+        <h2 data-number="4.10" id="gram-grammar-regonition"><span
+        class="header-section-number">4.10</span> gram: Grammar
+        Regonition<a href="#gram-grammar-regonition"
+        class="anchor-link"></a></h2>
         <p>Grammar Module</p>
         <p>The grammar module (<code>gram</code>) provides commonly
         needed types and algorithms for dealing with computer grammars
@@ -3774,13 +3864,16 @@ gram.Token(1, &#39;456&#39;)
 gram.Token(0, &#39;test&#39;)</code></pre>
         </dd>
         </dl>
-        <h2 id="complete-syntax-reference">Complete Syntax Reference<a
-        href="#complete-syntax-reference" class="anchor-link"></a></h2>
+        <h1 data-number="5" id="complete-syntax-reference"><span
+        class="header-section-number">5</span> Complete Syntax
+        Reference<a href="#complete-syntax-reference"
+        class="anchor-link"></a></h1>
         <p>This section describes the syntax of the kscript language. It
         explains the actual formal specs of what is and what is not
         valid kscript code.</p>
-        <h3 id="formal-grammar-ebnf">Formal Grammar EBNF<a
-        href="#formal-grammar-ebnf" class="anchor-link"></a></h3>
+        <h2 data-number="5.1" id="formal-grammar-ebnf"><span
+        class="header-section-number">5.1</span> Formal Grammar EBNF<a
+        href="#formal-grammar-ebnf" class="anchor-link"></a></h2>
         <p><a
         href="https://en.wikipedia.org/wiki/Extended_Backus%E2%80%93Naur_form">EBNF</a>
         is a notation to formalize computer grammars. In this page, the
@@ -3970,8 +4063,9 @@ STR     : ? string literal ?
 REGEX   : ? regex literal ?
 INT     : ? integer literal ?
 FLOAT   : ? floating point literal ?</code></pre>
-        <h3 id="expressions">Expressions<a href="#expressions"
-        class="anchor-link"></a></h3>
+        <h2 data-number="5.2" id="expressions"><span
+        class="header-section-number">5.2</span> Expressions<a
+        href="#expressions" class="anchor-link"></a></h2>
         <p>In kscript, many syntax elements are
         <strong>expressions</strong>, which means that they will result
         in a value after being evaluated. You can always assign the
@@ -3986,8 +4080,9 @@ FLOAT   : ? floating point literal ?</code></pre>
         You can, of course, use them like a statement (i.e. not embedded
         in another expression), but you can also return them, or assign
         them locally.</p>
-        <h4 id="integer-literal">Integer Literal<a
-        href="#integer-literal" class="anchor-link"></a></h4>
+        <h3 data-number="5.2.1" id="integer-literal"><span
+        class="header-section-number">5.2.1</span> Integer Literal<a
+        href="#integer-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal integers (of type
         <code>$int</code>). You can specify the base-10 digits within a
         kscript program, and it will be interpreted as an integer. You
@@ -4054,8 +4149,9 @@ FLOAT   : ? floating point literal ?</code></pre>
 123
 &gt;&gt;&gt; 0b11111111 # Base-2
 255</code></pre>
-        <h4 id="float-literal">Float Literal<a href="#float-literal"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.2" id="float-literal"><span
+        class="header-section-number">5.2.2</span> Float Literal<a
+        href="#float-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal floating point
         numbers (of type <code>$float</code>). You can specify the
         base-10 digits within a kscript program, including a
@@ -4151,8 +4247,9 @@ FLOAT   : ? floating point literal ?</code></pre>
 1.234
 &gt;&gt;&gt; 1e9
 1000000000.0</code></pre>
-        <h4 id="complex-literal">Complex Literal<a
-        href="#complex-literal" class="anchor-link"></a></h4>
+        <h3 data-number="5.2.3" id="complex-literal"><span
+        class="header-section-number">5.2.3</span> Complex Literal<a
+        href="#complex-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal
         <code>$complex</code> values. Specifically, you can only
         construct imaginary literals – you need to use the
@@ -4180,8 +4277,9 @@ FLOAT   : ? floating point literal ?</code></pre>
 123.0i
 &gt;&gt;&gt; 0xC+0x22i   # Base-16
 (12.0+34.0i)</code></pre>
-        <h4 id="string-literal">String Literal<a href="#string-literal"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.4" id="string-literal"><span
+        class="header-section-number">5.2.4</span> String Literal<a
+        href="#string-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal <code>$str</code>
         values. The basic syntax is a beginning quote character (one of
         <code>'</code>, <code>"</code>, <code>'''</code>,
@@ -4277,8 +4375,9 @@ FLOAT   : ? floating point literal ?</code></pre>
 &#39;a&#39;
 &gt;&gt;&gt; &#39;\N[LATIN SMALL LETTER A]&#39;
 &#39;a&#39;</code></pre>
-        <h4 id="list-literal">List Literal<a href="#list-literal"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.5" id="list-literal"><span
+        class="header-section-number">5.2.5</span> List Literal<a
+        href="#list-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal
         <code>$list</code> objects. A <code>$list</code> is a mutable
         collection.</p>
@@ -4303,8 +4402,9 @@ FLOAT   : ? floating point literal ?</code></pre>
 [&#39;Any&#39;, &#39;Type&#39;, &#39;CanBeStored&#39;]
 &gt;&gt;&gt; [*&quot;abcd&quot;]
 [&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;]</code></pre>
-        <h4 id="tuple-literal">Tuple Literal<a href="#tuple-literal"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.6" id="tuple-literal"><span
+        class="header-section-number">5.2.6</span> Tuple Literal<a
+        href="#tuple-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal
         <code>$tuple</code> objects. A <code>$tuple</code> is an
         immutable collection.</p>
@@ -4330,8 +4430,9 @@ FLOAT   : ? floating point literal ?</code></pre>
 (&#39;Any&#39;, &#39;Type&#39;, &#39;CanBeStored&#39;)
 &gt;&gt;&gt; (*&quot;abcd&quot;)
 (&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;)</code></pre>
-        <h4 id="set-literal">Set Literal<a href="#set-literal"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.7" id="set-literal"><span
+        class="header-section-number">5.2.7</span> Set Literal<a
+        href="#set-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal <code>$set</code>
         objects. A <code>$set</code> is a mutable collection.</p>
         <p>Set literals are created by surrounding the elements of the
@@ -4355,8 +4456,9 @@ set()
 {&#39;a&#39;, &#39;b&#39;, &#39;c&#39;, &#39;d&#39;}
 &gt;&gt;&gt; {3, 2, 1, 2, 3}    # Duplicate elements are not added
 {3, 2, 1}</code></pre>
-        <h4 id="dict-literal">Dict Literal<a href="#dict-literal"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.8" id="dict-literal"><span
+        class="header-section-number">5.2.8</span> Dict Literal<a
+        href="#dict-literal" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing literal
         <code>$dict</code> objects. A <code>$dict</code> is a mutable
         collection.</p>
@@ -4376,8 +4478,10 @@ set()
 {&#39;a&#39;: 1, &#39;b&#39;: 2, &#39;c&#39;: 3}
 &gt;&gt;&gt; {&#39;a&#39;: 1, &#39;b&#39;: 2, &#39;c&#39;: 3, &#39;a&#39;: 4} # Duplicate elements update the value, but do not add entries
 {&#39;a&#39;: 4, &#39;b&#39;: 2, &#39;c&#39;: 3}</code></pre>
-        <h4 id="lambda-function-expression">Lambda Function Expression<a
-        href="#lambda-function-expression" class="anchor-link"></a></h4>
+        <h3 data-number="5.2.9" id="lambda-function-expression"><span
+        class="header-section-number">5.2.9</span> Lambda Function
+        Expression<a href="#lambda-function-expression"
+        class="anchor-link"></a></h3>
         <p>This is the syntax for constructing <code>$func</code>
         objects given a <a
         href="https://en.wikipedia.org/wiki/Anonymous_function">lambda
@@ -4401,8 +4505,10 @@ set()
 12
 &gt;&gt;&gt; foo(10, 4)
 14</code></pre>
-        <h4 id="function-definition">Function Definition<a
-        href="#function-definition" class="anchor-link"></a></h4>
+        <h3 data-number="5.2.10" id="function-definition"><span
+        class="header-section-number">5.2.10</span> Function
+        Definition<a href="#function-definition"
+        class="anchor-link"></a></h3>
         <p>This is the syntax for constructing <code>$func</code>
         objects with the <code>func</code> keyword. In kscript, function
         definition is an <strong>expression</strong>, not only a
@@ -4450,8 +4556,9 @@ func foo(x, *y, z) {
         <p>You can also create a <a href="#lambda-expression">Lambda
         Expression</a>, which is a similar concept but different
         syntax.</p>
-        <h4 id="type-definition">Type Definition<a
-        href="#type-definition" class="anchor-link"></a></h4>
+        <h3 data-number="5.2.11" id="type-definition"><span
+        class="header-section-number">5.2.11</span> Type Definition<a
+        href="#type-definition" class="anchor-link"></a></h3>
         <p>This is the syntax for constructing <code>$type</code>
         objects with the <code>type</code> keyword. In kscript, type
         definition is an <strong>expression</strong>, not only a
@@ -4478,8 +4585,9 @@ type MyType {
 type MyType extends list {
     ...
 }</code></pre>
-        <h4 id="operators">Operators<a href="#operators"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.2.12" id="operators"><span
+        class="header-section-number">5.2.12</span> Operators<a
+        href="#operators" class="anchor-link"></a></h3>
         <p><a
         href="https://en.wikipedia.org/wiki/Operator_(computer_programming)">Operators</a>
         are used to represent operations on other expressions (called
@@ -4522,8 +4630,9 @@ type MyType extends list {
         <li><code>., ++ (post), -- (post)</code></li>
         </ol>
         <p>See the EBNF section for details on each operator.</p>
-        <h3 id="statements">Statements<a href="#statements"
-        class="anchor-link"></a></h3>
+        <h2 data-number="5.3" id="statements"><span
+        class="header-section-number">5.3</span> Statements<a
+        href="#statements" class="anchor-link"></a></h2>
         <p>These elements do not yield a value, and are typically used
         for control flow.</p>
         <p>In contrast to most languages, <a
@@ -4533,8 +4642,10 @@ type MyType extends list {
         You can, of course, use them like a statement (i.e. not embedded
         in another expression), but you can also return them, or assign
         them locally.</p>
-        <h4 id="expression-statement">Expression Statement<a
-        href="#expression-statement" class="anchor-link"></a></h4>
+        <h3 data-number="5.3.1" id="expression-statement"><span
+        class="header-section-number">5.3.1</span> Expression
+        Statement<a href="#expression-statement"
+        class="anchor-link"></a></h3>
         <p>The expression statement is an <strong>expression</strong>,
         which has a line break after it, or, equivalently, a semicolon
         (<code>;</code>). You can write code without using semicolons
@@ -4550,8 +4661,9 @@ bar();
 
 # Don&#39;t do this, it&#39;s less readable
 foo(); bar()</code></pre>
-        <h4 id="assert-statement">Assert Statement<a
-        href="#assert-statement" class="anchor-link"></a></h4>
+        <h3 data-number="5.3.2" id="assert-statement"><span
+        class="header-section-number">5.3.2</span> Assert Statement<a
+        href="#assert-statement" class="anchor-link"></a></h3>
         <p>The <code>assert</code> statement is an example of <a
         href="https://en.wikipedia.org/wiki/Assertion_(software_development)">assertion
         syntax</a> for the kscript language. It instructs the program to
@@ -4561,8 +4673,9 @@ foo(); bar()</code></pre>
         <p><strong>Example:</strong></p>
         <pre class="ks"><code># Evaluates `x` and asserts that it is true
 assert x</code></pre>
-        <h4 id="cont-statement">Cont Statement<a href="#cont-statement"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.3.3" id="cont-statement"><span
+        class="header-section-number">5.3.3</span> Cont Statement<a
+        href="#cont-statement" class="anchor-link"></a></h3>
         <p>The <code>cont</code> statement prematurely terminates the
         innermost loop (which may be a <a href="#while-statement">while
         statement</a>, or <a href="#for-statement">for statement</a>)
@@ -4577,8 +4690,9 @@ while true {
 }</code></pre>
         <p>See also the <a href="#break-statement">Break
         Statement</a>.</p>
-        <h4 id="break-statement">Break Statement<a
-        href="#break-statement" class="anchor-link"></a></h4>
+        <h3 data-number="5.3.4" id="break-statement"><span
+        class="header-section-number">5.3.4</span> Break Statement<a
+        href="#break-statement" class="anchor-link"></a></h3>
         <p>The <code>break</code> statement prematurely terminates the
         innermost loop (which may be a <a href="#while-statement">while
         statement</a>, or <a href="#for-statement">for statement</a>)
@@ -4593,8 +4707,9 @@ while true {
 }</code></pre>
         <p>See also the <a href="#cont-statement">Cont
         Statement</a>.</p>
-        <h4 id="ret-statement">Ret Statement<a href="#ret-statement"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.3.5" id="ret-statement"><span
+        class="header-section-number">5.3.5</span> Ret Statement<a
+        href="#ret-statement" class="anchor-link"></a></h3>
         <p>The <code>ret</code> statement is an example of <a
         href="https://en.wikipedia.org/wiki/Return_statement">return
         syntax</a> for the kscript language. It instructs the program to
@@ -4606,8 +4721,9 @@ ret a
 
 # Equivalent to `ret none`
 ret</code></pre>
-        <h4 id="throw-statement">Throw Statement<a
-        href="#throw-statement" class="anchor-link"></a></h4>
+        <h3 data-number="5.3.6" id="throw-statement"><span
+        class="header-section-number">5.3.6</span> Throw Statement<a
+        href="#throw-statement" class="anchor-link"></a></h3>
         <p>The <code>throw</code> statement is an example of <a
         href="https://en.wikipedia.org/wiki/Exception_handling_syntax">exception
         handling syntax</a> for the kscript language. It instructs the
@@ -4634,8 +4750,9 @@ try {
 } catch as err {
     print (&quot;I got:&quot;, type(err))
 }</code></pre>
-        <h4 id="if-statement">If Statement<a href="#if-statement"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.3.7" id="if-statement"><span
+        class="header-section-number">5.3.7</span> If Statement<a
+        href="#if-statement" class="anchor-link"></a></h3>
         <p>The <code>if</code> statement is an example of a <a
         href="https://en.wikipedia.org/wiki/Conditional_(computer_programming)">conditional
         statement</a>, which evaluates a condition, and then based on
@@ -4657,8 +4774,9 @@ try {
 }</code></pre>
         <p>Inline <code>if</code> syntax (single statement body):</p>
         <pre class="ks"><code>if a, b</code></pre>
-        <h4 id="while-statement">While Statement<a
-        href="#while-statement" class="anchor-link"></a></h4>
+        <h3 data-number="5.3.8" id="while-statement"><span
+        class="header-section-number">5.3.8</span> While Statement<a
+        href="#while-statement" class="anchor-link"></a></h3>
         <p>The <code>while</code> statement is an example of a <a
         href="https://en.wikipedia.org/wiki/Conditional_(computer_programming)">conditional
         loop</a>, which evaluates a condition, and then based on the
@@ -4679,8 +4797,9 @@ try {
 }</code></pre>
         <p>Inline <code>while</code> syntax (single statement body):</p>
         <pre class="ks"><code>while a, b</code></pre>
-        <h4 id="for-statement">For Statement<a href="#for-statement"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.3.9" id="for-statement"><span
+        class="header-section-number">5.3.9</span> For Statement<a
+        href="#for-statement" class="anchor-link"></a></h3>
         <p>The <code>for</code> statement is an <a
         href="https://en.wikipedia.org/wiki/For_loop#Iterator-based_for-loops">iterator-based
         for loop</a>, which iterates over elements of an iterable.</p>
@@ -4699,8 +4818,9 @@ try {
 }</code></pre>
         <p>Inline <code>for</code> syntax (single statement body):</p>
         <pre class="ks"><code>for a in b, c</code></pre>
-        <h4 id="try-statement">Try Statement<a href="#try-statement"
-        class="anchor-link"></a></h4>
+        <h3 data-number="5.3.10" id="try-statement"><span
+        class="header-section-number">5.3.10</span> Try Statement<a
+        href="#try-statement" class="anchor-link"></a></h3>
         <p>The <code>try</code> statement (also called
         <code>try/catch</code> statement) is the <a
         href="https://en.wikipedia.org/wiki/Exception_handling_syntax">exception
@@ -4730,8 +4850,9 @@ try {
 } finally {
     b
 }</code></pre>
-        <h4 id="import-statement">Import Statement<a
-        href="#import-statement" class="anchor-link"></a></h4>
+        <h3 data-number="5.3.11" id="import-statement"><span
+        class="header-section-number">5.3.11</span> Import Statement<a
+        href="#import-statement" class="anchor-link"></a></h3>
         <p>To import a module (for example, one of the builtin modules),
         you can use the <code>import</code> statement. If there was an
         error finding or importing the module, an
@@ -4739,8 +4860,9 @@ try {
         <p><strong>Syntax:</strong></p>
         <pre class="ks"><code>import os
 import net</code></pre>
-        <h2 id="implementation-details">Implementation Details<a
-        href="#implementation-details" class="anchor-link"></a></h2>
+        <h1 data-number="6" id="implementation-details"><span
+        class="header-section-number">6</span> Implementation Details<a
+        href="#implementation-details" class="anchor-link"></a></h1>
         <p>TODO: add them here</p>
     </main>
 </body>

@@ -64,6 +64,8 @@ configure-check.wasm
 *.log
 
 
+# keep the actual PDF copy
+!docs/kscript.pdf
 
 emsdk/
 
