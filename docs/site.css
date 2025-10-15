@@ -1,31 +1,18 @@
-
 /** General CSS **/
 
 html {
-    font-size: 15px;
 }
 
+
 body {
-    
-    font-family: monospace, monospace;
-    
-    line-height: 1.15;
-    
+    height: 100%;
+    width: 100%;
     margin: 0;
     padding: 0;
-    width: 100%;
 
-
-    /* display: flex; */
-    /* Default text font */
-
-    /*display: flex;
-    flex-direction: row;
-    min-height: 100vh;
-    width: 100vw;
-    display: flex; */
-
-    /* margin-left: 350px; */
+    font-family: monospace, monospace;
+    font-size: 15px;
+    line-height: 1.15;
 }
 
 nav {
@@ -41,11 +28,14 @@ nav {
     background: #ddd;
 }
 
-
 main {
     width: auto;
     margin-left: 350px;
     padding: 1em 2em;
+
+    /* never allow text to overflow */
+    overflow-wrap: normal;
+    overflow-x: hidden;
 }
 
 
@@ -146,6 +136,32 @@ dt:hover > .anchor-link {
     /* show when hovering over header */
     visibility: visible;
 }
+
+
+/* on mobile and small screens */
+@media screen and (max-width: 768px) {
+    main {
+        margin-left: 0;
+        padding: 1em;
+    }
+    nav {
+        display: none;
+    }
+}
+
+
+/*
+@media screen and (max-width: 768px) {
+    main {
+        margin-left: 40vw;
+    }
+    nav {
+        width: 40vw;
+    }
+}
+
+*/
+
 
 
 

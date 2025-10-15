@@ -32,7 +32,7 @@ A few things I decided to reinvent the wheel for:
   * [bytecode compiler](https://github.com/cadebrown/kscript/blob/main/src/compiler.c), converting high level parse 
   * [bytecode virtual machine](https://github.com/cadebrown/kscript/blob/main/src/vm.c), which is the core of the interpreter using a stack-based execution model, with exceptions and scoping
 
-## FAQs: What/Why/Who/When/How is kscript?
+## FAQs
 
 What is kscript?
 : [kscript](https://ks.cade.io) is a dynamic programming language with expressive syntax, cross platform support, and a rich standard library. Its primary aim is to allow developers to write platform agnostic programs that can run anywhere, and require little or no platform-specific or os-specific code.

@@ -9,4 +9,3 @@ function doq_togglesidenav() {
         x.style.display = "block";
     }
 }
-

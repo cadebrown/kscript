@@ -1180,6 +1180,7 @@ echo "\$(ks_BIN): \$(ks_O) \$(libks_SHARED)" >> $T
 echo "	@mkdir -p \$(dir \$@)" >> $T
 
 echo "	\$(CC) \\" >> $T
+echo "		\$(ks_O) \\" >> $T
 echo "		\$(LDFLAGS) \\" >> $T
 
 if [ "$PLATFORM" = "linux" ]; then
@@ -1190,7 +1191,6 @@ elif [ "$PLATFORM" = "darwin" ]; then
     echo "		-Wl,-rpath,'@loader_path/../lib' -L./lib -lks \\" >> $T
 fi
 
-echo "		\$(ks_O) \\" >> $T
 echo "		-o \$@" >> $T
 
 echo "" >> $T
